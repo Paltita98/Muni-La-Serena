@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGR - Panel de Funcionario</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- SIDEBAR -->
+        <aside class="w-64 bg-slate-900 text-white flex flex-col">
+            <div class="h-16 flex items-center px-6 border-b border-slate-700">
+                <span class="text-xl font-bold tracking-wider text-blue-400">SGR</span>
+                <span class="ml-2 text-sm text-slate-400">Sistema de Gestión</span>
+            </div>
+            <nav class="flex-1 px-4 py-6 space-y-2">
+                <a href="#" class="flex items-center px-4 py-3 bg-blue-600 text-white rounded-lg">
+                    <span>📊</span><span class="ml-3 font-medium">Mi Tablero</span>
+                </a>
+                <a href="#" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
+                    <span>📝</span><span class="ml-3 font-medium">Actividades</span>
+                </a>
+                <a href="#" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
+                    <span>📅</span><span class="ml-3 font-medium">Agenda Colectiva</span>
+                </a>
+                <a href="#" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
+                    <span>📎</span><span class="ml-3 font-medium">Mis Evidencias</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 flex flex-col h-screen overflow-y-auto">
+            
+            <!-- TOP NAVBAR -->
+            <header class="h-16 bg-white shadow-sm flex justify-between items-center px-8">
+                <div class="w-96 relative">
+                    <input type="text" placeholder="Buscar ID de actividad o compromiso..." class="w-full bg-gray-100 text-sm rounded-full pl-4 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <span class="absolute right-3 top-2 text-gray-400">🔍</span>
+                </div>
+                <div class="flex items-center space-x-6">
+                    <button class="relative text-gray-500 hover:text-blue-600">
+                        🔔
+                        <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">2</span>
+                    </button>
+                    <div class="flex items-center border-l pl-6">
+                        <div class="w-8 h-8 rounded-full bg-blue-200 flex items-center justify-center text-blue-700 font-bold">
+                            IA
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-semibold">Iván Araus</p>
+                            <p class="text-xs text-gray-500">Funcionario</p>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- DASHBOARD CONTENT -->
+            <div class="p-8 space-y-6">
+                
+                <!-- HEADER & ACTIONS -->
+                <div class="flex justify-between items-end">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">Ficha Personal y Desempeño</h1>
+                        <p class="text-sm text-gray-500 mt-1">Delegación: La Serena Centro | Cargo: Asistente Territorial</p>
+                    </div>
+                    <div class="flex space-x-3">
+                        <button class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition shadow-sm">
+                            📎 Subir Evidencia
+                        </button>
+                        <a href="{% url 'nuevo_compromiso_view' %}" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-700 transition shadow-sm inline-flex items-center">
+                            📅 Nuevo Compromiso
+                        </a>
+                        <a href="{% url 'registrar_actividad_view' %}" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition shadow-sm inline-flex items-center">
+                            + Registrar Actividad
+                        </a>
+                    </div>
+                </div>
+
+                <!-- METRICS WIDGETS -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-yellow-400">
+                        <p class="text-sm font-medium text-gray-500">Semáforo de Cumplimiento</p>
+                        <div class="mt-2 flex items-center">
+                            <div class="w-4 h-4 rounded-full bg-yellow-400 mr-2 animate-pulse"></div>
+                            <h3 class="text-2xl font-bold text-gray-900">Ámbar</h3>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">Requiere atención para alcanzar la meta esperada.</p>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <p class="text-sm font-medium text-gray-500">Avance Real Consolidado</p>
+                        <h3 class="text-3xl font-bold text-gray-900 mt-2">65.2%</h3>
+                        <p class="text-xs text-green-600 mt-2 font-medium">↑ +2.5% desde la última semana</p>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <p class="text-sm font-medium text-gray-500">Meta Esperada al Día</p>
+                        <h3 class="text-3xl font-bold text-gray-900 mt-2">70.0%</h3>
+                        <div class="w-full bg-gray-200 rounded-full h-1.5 mt-3">
+                            <div class="bg-blue-600 h-1.5 rounded-full" style="width: 70%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BOTTOM TABLES -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    
+                    <!-- AGENDA COLECTIVA -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+                        <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                            <h2 class="text-lg font-bold text-gray-900">Agenda Colectiva</h2>
+                            <span class="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded-full">Próximos a vencer</span>
+                        </div>
+                        <div class="p-4 space-y-3">
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div>
+                                    <p class="text-sm font-bold text-gray-900">Reunión JJVV Sector Antena</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">Vence: 12/09/2026 | Solicitante: Dirigente Vecinal</p>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-xs font-medium text-yellow-700 bg-yellow-100 px-2 py-1 rounded">Pendiente</span>
+                                    <button class="text-blue-600 text-sm hover:underline font-medium">Actualizar</button>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div>
+                                    <p class="text-sm font-bold text-gray-900">Entrega insumos sede centro</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">Vence: 14/09/2026 | Solicitante: Depto. Social</p>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-1 rounded">En Proceso</span>
+                                    <button class="text-blue-600 text-sm hover:underline font-medium">Actualizar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ACTIVIDADES RECIENTES -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+                        <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                            <h2 class="text-lg font-bold text-gray-900">Actividades Recientes</h2>
+                            <a href="#" class="text-sm text-blue-600 hover:underline">Ver historial</a>
+                        </div>
+                        <div class="p-4 space-y-3">
+                            <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:border-blue-300 transition cursor-pointer">
+                                <div>
+                                    <p class="text-sm font-bold text-gray-900">Atención caso social N°45</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">Código: ID-098 | 10/09/2026</p>
+                                </div>
+                                <span class="text-xs font-medium text-green-700 bg-green-100 px-2 py-1 rounded-full">✔ Aprobada</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:border-blue-300 transition cursor-pointer">
+                                <div>
+                                    <p class="text-sm font-bold text-gray-900">Visita a terreno inspección</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">Código: ID-099 | 10/09/2026</p>
+                                </div>
+                                <span class="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded-full">⏳ Validando</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-white border border-red-200 rounded-lg hover:border-red-300 transition cursor-pointer">
+                                <div>
+                                    <p class="text-sm font-bold text-gray-900">Registro fotográfico evento</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">Código: ID-097 | 09/09/2026</p>
+                                </div>
+                                <span class="text-xs font-medium text-red-700 bg-red-100 px-2 py-1 rounded-full">✖ Rechazada</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+</body>
+</html>

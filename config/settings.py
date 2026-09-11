@@ -37,6 +37,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'main',
+    'admin_demo_app',
+    'funcionario_demo_app',
 ]
 
 MIDDLEWARE = [
@@ -54,13 +57,14 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'main.context_processors.connected_users',
             ],
         },
     },
@@ -115,8 +119,36 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+
+# Media files (user uploads)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Admin emails to force admin dashboard (can be adjusted)
+ADMIN_EMAILS = [
+    'admin@example.com',
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# Use signed cookie sessions so no DB is needed for sessions
+SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
+
+# Usuarios ficticios (sin base de datos)
+FAKE_USERS = {
+    'admin@muni.test': {
+        'password': 'AdminPass123!',
+        'role': 'ADMIN',
+        'name': 'Administrador Municipal',
+        'territory': '',
+    },
+    'func@muni.test': {
+        'password': 'FuncPass123!',
+        'role': 'FUNCIONARIO',
+        'name': 'Funcionario Ejemplo',
+        'territory': 'NORTE',
+    }
+}

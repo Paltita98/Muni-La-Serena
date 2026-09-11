@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SGR - Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-800">
+  <div class="max-w-6xl mx-auto p-8">
+    <header class="flex items-center justify-between mb-8">
+      <div>
+        <h1 class="text-2xl font-bold">Panel de Administrador</h1>
+        <p class="text-sm text-gray-500">Visión general del sistema</p>
+      </div>
+      <div>
+        <button class="bg-red-600 text-white px-4 py-2 rounded">Cerrar sesión (demo)</button>
+      </div>
+    </header>
+
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      <div class="bg-white p-6 rounded shadow">Total Usuarios<br><span class="text-2xl font-bold">2</span></div>
+      <div class="bg-white p-6 rounded shadow">Formularios<br><span class="text-2xl font-bold">12</span></div>
+      <div class="bg-white p-6 rounded shadow">Compromisos<br><span class="text-2xl font-bold">8</span></div>
+    </section>
+
+    <section class="bg-white rounded shadow p-6">
+      <h2 class="font-bold mb-4">Últimos eventos</h2>
+      <ul class="space-y-3">
+        <li class="flex justify-between">
+          <div>Usuario nuevo registrado</div>
+          <div class="text-sm text-gray-500">10/09/2026</div>
+        </li>
+        <li class="flex justify-between">
+          <div>Compromiso actualizado</div>
+          <div class="text-sm text-gray-500">09/09/2026</div>
+        </li>
+      </ul>
+    </section>
+  </div>
+</body>
+</html>
