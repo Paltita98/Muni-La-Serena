@@ -4,20 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SGR - Nuevo Compromiso</title>
+    {% load static %}
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans p-8">
+<body class="bg-gray-50 text-gray-800 font-sans p-8 page-shell">
 
-    <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="form-card">
         
         <!-- HEADER -->
-        <div class="bg-slate-800 px-6 py-4 flex items-center justify-between">
+        <div class="form-header dark">
             <h1 class="text-lg font-bold text-white">Registrar Nuevo Compromiso</h1>
             <a href="{% url 'funcionario_demo_view' %}" class="text-slate-300 hover:text-white text-sm font-medium">✕ Cerrar</a>
         </div>
 
         <!-- FORMULARIO -->
-        <form class="p-6 space-y-5">
+        <form class="form-body space-y-5">
             
             <div class="grid grid-cols-2 gap-5">
                 <!-- Fecha Límite -->

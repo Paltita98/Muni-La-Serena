@@ -1,0 +1,143 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGR - Agenda Colectiva</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body class="page-shell">
+    <div class="flex h-screen overflow-hidden">
+        <aside class="sidebar w-64 text-white flex flex-col">
+            <div class="h-16 flex items-center px-4 border-b border-white/15">
+                <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo">
+            </div>
+            <nav class="flex-1 px-4 py-6 space-y-2">
+                <a href="{% url 'funcionario_demo_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
+                    <span>📊</span><span class="ml-3 font-medium">Mi Tablero</span>
+                </a>
+                <a href="{% url 'actividades_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
+                    <span>📝</span><span class="ml-3 font-medium">Actividades</span>
+                </a>
+                <a href="{% url 'agenda_colectiva_view' %}" class="flex items-center px-4 py-3 bg-white/10 text-white rounded-lg">
+                    <span>📅</span><span class="ml-3 font-medium">Agenda Colectiva</span>
+                </a>
+                <a href="{% url 'mis_evidencias_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
+                    <span>📎</span><span class="ml-3 font-medium">Mis Evidencias</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50">
+            <header class="h-16 bg-white shadow-sm flex justify-between items-center px-8">
+                <div class="w-96 relative">
+                    <input type="text" id="searchInput" placeholder="Buscar compromiso o solicitante..." class="w-full bg-gray-100 text-sm rounded-full pl-4 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+                    <span class="absolute right-3 top-2 text-gray-400">🔍</span>
+                </div>
+                <div class="flex items-center space-x-6">
+                    <a href="{% url 'nuevo_compromiso_view' %}" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition shadow-sm inline-flex items-center">+ Nuevo Compromiso</a>
+                </div>
+            </header>
+
+            <div class="page-content">
+                <div class="section-header">
+                    <div>
+                        <h1>Agenda Colectiva</h1>
+                        <p>Compromisos pendientes por cumplir y tareas aún no realizadas.</p>
+                    </div>
+                </div>
+
+                <div class="toolbar">
+                    <div class="search-box">
+                        <input id="searchInputMobile" type="text" placeholder="Buscar por nombre">
+                        <span class="icon">🔍</span>
+                    </div>
+                    <select id="statusFilter" class="filter-select" style="max-width: 220px;">
+                        <option value="all">Todos</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="proceso">En Proceso</option>
+                        <option value="venciendo">Próximo a vencer</option>
+                    </select>
+                </div>
+
+                <section class="list-panel">
+                    <div class="list-header">
+                        <h2>Compromisos pendientes</h2>
+                        <span class="badge warning" id="resultCount">0 resultados</span>
+                    </div>
+                    <div class="list-body">
+                        <div id="agendaList" class="activity-list"></div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const compromisos = [
+            { titulo: 'Reunión JJVV Sector Antena', solicitante: 'Dirigente Vecinal', vence: '12/09/2026', estado: 'pendiente' },
+            { titulo: 'Entrega insumos sede centro', solicitante: 'Depto. Social', vence: '14/09/2026', estado: 'proceso' },
+            { titulo: 'Visita a predio La Pampa', solicitante: 'Municipalidad', vence: '16/09/2026', estado: 'venciendo' },
+            { titulo: 'Coordinación con equipo de salud', solicitante: 'CESFAM', vence: '18/09/2026', estado: 'pendiente' },
+            { titulo: 'Entrega de listado de beneficiarios', solicitante: 'Departamento Social', vence: '19/09/2026', estado: 'proceso' }
+        ];
+
+        const stateLabels = {
+            pendiente: { label: 'Pendiente', className: 'warning' },
+            proceso: { label: 'En Proceso', className: 'info' },
+            venciendo: { label: 'Próximo', className: 'danger' }
+        };
+
+        const list = document.getElementById('agendaList');
+        const searchInput = document.getElementById('searchInput');
+        const searchInputMobile = document.getElementById('searchInputMobile');
+        const statusFilter = document.getElementById('statusFilter');
+        const resultCount = document.getElementById('resultCount');
+
+        function renderAgenda() {
+            const query = (searchInput.value || searchInputMobile.value || '').trim().toLowerCase();
+            const filter = statusFilter.value;
+
+            const filtered = compromisos.filter(item => {
+                const matchesQuery = item.titulo.toLowerCase().includes(query) || item.solicitante.toLowerCase().includes(query);
+                const matchesFilter = filter === 'all' || item.estado === filter;
+                return matchesQuery && matchesFilter;
+            });
+
+            resultCount.textContent = `${filtered.length} resultado${filtered.length === 1 ? '' : 's'}`;
+
+            if (!filtered.length) {
+                list.innerHTML = '<div class="empty-state">No hay compromisos con ese criterio.</div>';
+                return;
+            }
+
+            list.innerHTML = filtered.map(item => {
+                const estado = stateLabels[item.estado];
+                return `
+                    <div class="activity-item">
+                        <div class="activity-main">
+                            <p class="activity-title">${item.titulo}</p>
+                            <p class="activity-meta">Solicitante: ${item.solicitante} | Vence: ${item.vence}</p>
+                        </div>
+                        <div class="activity-actions">
+                            <span class="badge ${estado.className}">${estado.label}</span>
+                            <button class="link-btn">Actualizar</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        [searchInput, searchInputMobile].forEach(input => input.addEventListener('input', () => {
+            searchInput.value = searchInput.value || searchInputMobile.value;
+            searchInputMobile.value = searchInputMobile.value || searchInput.value;
+            renderAgenda();
+        }));
+
+        statusFilter.addEventListener('change', renderAgenda);
+        renderAgenda();
+    </script>
+</body>
+</html>

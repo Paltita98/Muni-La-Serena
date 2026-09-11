@@ -4,29 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SGR - Panel de Funcionario</title>
+    {% load static %}
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans">
+<body class="bg-gray-50 text-gray-800 font-sans page-shell">
 
     <div class="flex h-screen overflow-hidden">
         
         <!-- SIDEBAR -->
-        <aside class="w-64 bg-slate-900 text-white flex flex-col">
-            <div class="h-16 flex items-center px-6 border-b border-slate-700">
-                <span class="text-xl font-bold tracking-wider text-blue-400">SGR</span>
-                <span class="ml-2 text-sm text-slate-400">Sistema de Gestión</span>
+        <aside class="sidebar w-64 text-white flex flex-col">
+            <div class="h-16 flex items-center px-4 border-b border-white/15">
+                <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo">
             </div>
             <nav class="flex-1 px-4 py-6 space-y-2">
-                <a href="#" class="flex items-center px-4 py-3 bg-blue-600 text-white rounded-lg">
+                <a href="{% url 'funcionario_demo_view' %}" class="flex items-center px-4 py-3 bg-blue-600 text-white rounded-lg">
                     <span>📊</span><span class="ml-3 font-medium">Mi Tablero</span>
                 </a>
-                <a href="#" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
+                <a href="{% url 'actividades_view' %}" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
                     <span>📝</span><span class="ml-3 font-medium">Actividades</span>
                 </a>
-                <a href="#" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
+                <a href="{% url 'agenda_colectiva_view' %}" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
                     <span>📅</span><span class="ml-3 font-medium">Agenda Colectiva</span>
                 </a>
-                <a href="#" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
+                <a href="{% url 'mis_evidencias_view' %}" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
                     <span>📎</span><span class="ml-3 font-medium">Mis Evidencias</span>
                 </a>
             </nav>
@@ -74,7 +75,7 @@
                         <a href="{% url 'nuevo_compromiso_view' %}" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-700 transition shadow-sm inline-flex items-center">
                             📅 Nuevo Compromiso
                         </a>
-                        <a href="{% url 'registrar_actividad_view' %}" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition shadow-sm inline-flex items-center">
+                        <a href="{% url 'registrar_actividad_view' %}" class="brand-button px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm inline-flex items-center">
                             + Registrar Actividad
                         </a>
                     </div>

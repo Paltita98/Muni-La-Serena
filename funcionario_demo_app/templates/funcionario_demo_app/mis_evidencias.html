@@ -1,0 +1,121 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGR - Mis Evidencias</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body class="page-shell">
+    <div class="flex h-screen overflow-hidden">
+        <aside class="sidebar w-64 text-white flex flex-col">
+            <div class="h-16 flex items-center px-4 border-b border-white/15">
+                <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo">
+            </div>
+            <nav class="flex-1 px-4 py-6 space-y-2">
+                <a href="{% url 'funcionario_demo_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
+                    <span>📊</span><span class="ml-3 font-medium">Mi Tablero</span>
+                </a>
+                <a href="{% url 'actividades_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
+                    <span>📝</span><span class="ml-3 font-medium">Actividades</span>
+                </a>
+                <a href="{% url 'agenda_colectiva_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
+                    <span>📅</span><span class="ml-3 font-medium">Agenda Colectiva</span>
+                </a>
+                <a href="{% url 'mis_evidencias_view' %}" class="flex items-center px-4 py-3 bg-white/10 text-white rounded-lg">
+                    <span>📎</span><span class="ml-3 font-medium">Mis Evidencias</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50">
+            <header class="h-16 bg-white shadow-sm flex justify-between items-center px-8">
+                <div class="w-96 relative">
+                    <input type="text" id="searchEvidence" placeholder="Buscar evidencia o código..." class="w-full bg-gray-100 text-sm rounded-full pl-4 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+                    <span class="absolute right-3 top-2 text-gray-400">🔍</span>
+                </div>
+                <div class="flex items-center space-x-6">
+                    <button class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition shadow-sm">+ Subir Evidencia</button>
+                </div>
+            </header>
+
+            <div class="page-content">
+                <div class="section-header">
+                    <div>
+                        <h1>Mis Evidencias</h1>
+                        <p>Documentos y fotografías asociadas a cada actividad o compromiso.</p>
+                    </div>
+                </div>
+
+                <section class="list-panel">
+                    <div class="list-header">
+                        <h2>Galería de evidencias</h2>
+                        <span class="badge info" id="evidenceCount">0 evidencias</span>
+                    </div>
+                    <div class="list-body">
+                        <div id="evidenceGrid" class="evidence-grid"></div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const evidencias = [
+            {
+                codigo: 'ID-098',
+                nombre: 'Atención caso social N°45',
+                imagen: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=80'
+            },
+            {
+                codigo: 'ID-099',
+                nombre: 'Visita a terreno inspección',
+                imagen: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80'
+            },
+            {
+                codigo: 'ID-100',
+                nombre: 'Reunión coordinación barrial',
+                imagen: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=900&q=80'
+            },
+            {
+                codigo: 'ID-101',
+                nombre: 'Entrega de información vecinal',
+                imagen: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=80'
+            }
+        ];
+
+        const grid = document.getElementById('evidenceGrid');
+        const searchEvidence = document.getElementById('searchEvidence');
+        const evidenceCount = document.getElementById('evidenceCount');
+
+        function renderEvidence() {
+            const query = searchEvidence.value.trim().toLowerCase();
+            const filtered = evidencias.filter(item => {
+                return item.nombre.toLowerCase().includes(query) || item.codigo.toLowerCase().includes(query);
+            });
+
+            evidenceCount.textContent = `${filtered.length} evidencia${filtered.length === 1 ? '' : 's'}`;
+
+            if (!filtered.length) {
+                grid.innerHTML = '<div class="empty-state">No se encontraron evidencias.</div>';
+                return;
+            }
+
+            grid.innerHTML = filtered.map(item => `
+                <article class="evidence-card">
+                    <img src="${item.imagen}" alt="${item.nombre}">
+                    <div class="evidence-body">
+                        <div class="evidence-code">${item.codigo}</div>
+                        <p class="evidence-name">${item.nombre}</p>
+                    </div>
+                </article>
+            `).join('');
+        }
+
+        searchEvidence.addEventListener('input', renderEvidence);
+        renderEvidence();
+    </script>
+</body>
+</html>
