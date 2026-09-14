@@ -63,32 +63,10 @@
     </div>
 
     <script>
-        const evidencias = [
-            {
-                codigo: 'ID-098',
-                nombre: 'Atención caso social N°45',
-                imagen: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=80'
-            },
-            {
-                codigo: 'ID-099',
-                nombre: 'Visita a terreno inspección',
-                imagen: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80'
-            },
-            {
-                codigo: 'ID-100',
-                nombre: 'Reunión coordinación barrial',
-                imagen: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=900&q=80'
-            },
-            {
-                codigo: 'ID-101',
-                nombre: 'Entrega de información vecinal',
-                imagen: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=80'
-            }
-        ];
-
         const grid = document.getElementById('evidenceGrid');
         const searchEvidence = document.getElementById('searchEvidence');
         const evidenceCount = document.getElementById('evidenceCount');
+        let evidencias = [];
 
         function renderEvidence() {
             const query = searchEvidence.value.trim().toLowerCase();
@@ -114,8 +92,23 @@
             `).join('');
         }
 
+        fetch('{% url "evidencias_json_view" %}')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error al cargar las evidencias');
+                }
+                return response.json();
+            })
+            .then(data => {
+                evidencias = Array.isArray(data) ? data : (data.evidencias || []);
+                renderEvidence();
+            })
+            .catch(() => {
+                grid.innerHTML = '<div class="empty-state">No se pudieron cargar las evidencias.</div>';
+                evidenceCount.textContent = '0 evidencias';
+            });
+
         searchEvidence.addEventListener('input', renderEvidence);
-        renderEvidence();
     </script>
 </body>
 </html>

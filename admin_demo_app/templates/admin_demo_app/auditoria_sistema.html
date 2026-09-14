@@ -1,0 +1,117 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGR - Auditoría de Sistema</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body class="page-shell">
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- SIDEBAR DE ADMINISTRADOR -->
+        <aside class="sidebar w-64 bg-red-700 text-white flex flex-col">
+            <div class="h-16 flex items-center px-4 border-b border-white/15">
+                <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo h-8">
+                <span class="ml-3 font-bold text-lg tracking-widest text-white-400">ADMIN</span>
+            </div>
+            <nav class="flex-1 px-4 py-6 space-y-2">
+                <a href="{% url 'admin_dashboard_view' %}" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
+                    <span>⚙️</span><span class="ml-3 font-medium">Panel de Control</span>
+                </a>
+                <a href="{% url 'admin_usuarios_view' %}" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
+                    <span>👥</span><span class="ml-3 font-medium">Usuarios y Roles</span>
+                </a>
+                <a href="{% url 'admin_delegaciones_view' %}" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
+                    <span>🏢</span><span class="ml-3 font-medium">Delegaciones</span>
+                </a>
+                <a href="{% url 'admin_catalogos_view' %}" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
+                    <span>🗂️</span><span class="ml-3 font-medium">Catálogos y Metas</span>
+                </a>
+                <a href="{% url 'admin_auditoria_view' %}" class="flex items-center px-4 py-3 bg-blue-600 text-white rounded-lg transition shadow-md">
+                    <span>🛡️</span><span class="ml-3 font-medium">Auditoría de Sistema</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50">
+            <header class="h-16 bg-white shadow-sm flex items-center px-8 border-b border-gray-200">
+                <h2 class="text-xl font-bold text-gray-800">Registro Histórico Inmutable (Log)</h2>
+            </header>
+
+            <div class="p-8 space-y-6">
+                
+                <!-- FILTROS AVANZADOS -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 grid grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Rango de Fechas</label>
+                        <input type="date" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Usuario / RUT</label>
+                        <input type="text" placeholder="ID Autor..." class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Acción</label>
+                        <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+                            <option value="">Todas</option>
+                            <option value="INSERT">Creación (INSERT)</option>
+                            <option value="UPDATE">Modificación (UPDATE)</option>
+                            <option value="DELETE">Eliminación (DELETE)</option>
+                            <option value="ALERT">Alerta de Seguridad</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button class="w-full bg-slate-800 text-white px-4 py-2 rounded text-sm font-medium hover:bg-slate-700 transition">Aplicar Filtros</button>
+                    </div>
+                </div>
+
+                <!-- TABLA DE AUDITORÍA (Solo Lectura) -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider">
+                                <th class="p-4 font-bold border-b border-gray-200">ID Evento</th>
+                                <th class="p-4 font-bold border-b border-gray-200">Timestamp</th>
+                                <th class="p-4 font-bold border-b border-gray-200">Usuario</th>
+                                <th class="p-4 font-bold border-b border-gray-200">Acción</th>
+                                <th class="p-4 font-bold border-b border-gray-200">Entidad</th>
+                                <th class="p-4 font-bold border-b border-gray-200 w-1/3">Detalle Técnico (Cambio)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm font-mono text-gray-600 divide-y divide-gray-100">
+                            <tr class="hover:bg-yellow-50 transition">
+                                <td class="p-4">#99201</td>
+                                <td class="p-4 text-xs">2026-09-13 14:22:05</td>
+                                <td class="p-4 text-blue-600 font-bold">12.345.678-9</td>
+                                <td class="p-4"><span class="text-yellow-600 bg-yellow-100 px-2 py-1 rounded text-xs font-bold">UPDATE</span></td>
+                                <td class="p-4">COMPROMISO [ID: 45]</td>
+                                <td class="p-4 text-xs bg-gray-50">{"estado": "pendiente" -> "realizado"}</td>
+                            </tr>
+                            <tr class="hover:bg-green-50 transition">
+                                <td class="p-4">#99200</td>
+                                <td class="p-4 text-xs">2026-09-13 10:15:33</td>
+                                <td class="p-4 text-blue-600 font-bold">15.987.654-3</td>
+                                <td class="p-4"><span class="text-green-600 bg-green-100 px-2 py-1 rounded text-xs font-bold">INSERT</span></td>
+                                <td class="p-4">ACTIVIDAD [ID: 102]</td>
+                                <td class="p-4 text-xs bg-gray-50">{"indicador_id": 1, "usuario_id": 4, "estado": "pendiente"}</td>
+                            </tr>
+                            <tr class="hover:bg-red-50 transition">
+                                <td class="p-4">#99199</td>
+                                <td class="p-4 text-xs">2026-09-12 18:45:12</td>
+                                <td class="p-4 text-red-600 font-bold">SYSTEM</td>
+                                <td class="p-4"><span class="text-red-600 bg-red-100 px-2 py-1 rounded text-xs font-bold">DELETE</span></td>
+                                <td class="p-4">EVIDENCIA [ID: 88]</td>
+                                <td class="p-4 text-xs bg-gray-50">Purge cron job (Expired Retention 30 days)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

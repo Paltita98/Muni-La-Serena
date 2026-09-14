@@ -1,0 +1,22 @@
+[
+  {
+    "codigo": "ID-098",
+    "nombre": "Atención caso social N°45",
+    "imagen": "/static/images/trabajo_social.avif"
+  },
+  {
+    "codigo": "ID-099",
+    "nombre": "Visita a terreno inspección",
+    "imagen": "/static/images/visita_terreno.jpg"
+  },
+  {
+    "codigo": "ID-100",
+    "nombre": "Reunión coordinación barrial",
+    "imagen": "/static/images/reunion.jpg"
+  },
+  {
+    "codigo": "ID-101",
+    "nombre": "Entrega de información vecinal",
+    "imagen": "/static/images/entrega_informacion.avif"
+  }
+]

@@ -1,0 +1,123 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGR - Catálogos y Metas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body class="page-shell">
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- SIDEBAR DE ADMINISTRADOR -->
+        <aside class="sidebar w-64 bg-red-700 text-white flex flex-col">
+            <div class="h-16 flex items-center px-4 border-b border-white/15">
+                <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo h-8">
+                <span class="ml-3 font-bold text-lg tracking-widest text-white-400">ADMIN</span>
+            </div>
+            <nav class="flex-1 px-4 py-6 space-y-2">
+                <a href="{% url 'admin_dashboard_view' %}" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
+                    <span>⚙️</span><span class="ml-3 font-medium">Panel de Control</span>
+                </a>
+                <a href="{% url 'admin_usuarios_view' %}" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
+                    <span>👥</span><span class="ml-3 font-medium">Usuarios y Roles</span>
+                </a>
+                <a href="{% url 'admin_delegaciones_view' %}" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
+                    <span>🏢</span><span class="ml-3 font-medium">Delegaciones</span>
+                </a>
+                <a href="{% url 'admin_catalogos_view' %}" class="flex items-center px-4 py-3 bg-blue-600 text-white rounded-lg transition shadow-md">
+                    <span>🗂️</span><span class="ml-3 font-medium">Catálogos y Metas</span>
+                </a>
+                <a href="{% url 'admin_auditoria_view' %}" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
+                    <span>🛡️</span><span class="ml-3 font-medium">Auditoría de Sistema</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50">
+            <header class="h-16 bg-white shadow-sm flex items-center px-8">
+                <h2 class="text-gray-600 font-medium">Administración de Reglas de Negocio</h2>
+            </header>
+
+            <div class="p-8 space-y-6">
+                <!-- SECCIÓN PERÍODOS -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-slate-50 rounded-t-xl">
+                        <h2 class="text-lg font-bold text-gray-900">Períodos de Medición</h2>
+                        <button class="bg-white border border-gray-300 px-3 py-1.5 rounded text-sm font-medium hover:bg-gray-50">+ Abrir Período</button>
+                    </div>
+                    <div class="p-6">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="text-xs text-gray-500 uppercase border-b">
+                                    <th class="pb-3">Nombre</th>
+                                    <th class="pb-3">Fecha Inicio</th>
+                                    <th class="pb-3">Fecha Término</th>
+                                    <th class="pb-3">Estado</th>
+                                    <th class="pb-3 text-right">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-sm">
+                                <tr class="border-b border-gray-50">
+                                    <td class="py-3 font-medium text-blue-700">Trimestre 3 - 2026</td>
+                                    <td class="py-3 text-gray-600">01/07/2026</td>
+                                    <td class="py-3 text-gray-600">30/09/2026</td>
+                                    <td class="py-3"><span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">Abierto</span></td>
+                                    <td class="py-3 text-right"><button class="text-red-600 hover:underline">Cerrar</button></td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 font-medium">Trimestre 2 - 2026</td>
+                                    <td class="py-3 text-gray-600">01/04/2026</td>
+                                    <td class="py-3 text-gray-600">30/06/2026</td>
+                                    <td class="py-3"><span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">Cerrado</span></td>
+                                    <td class="py-3 text-right"><button class="text-blue-600 hover:underline">Ver Histórico</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN INDICADORES -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-slate-50 rounded-t-xl">
+                        <h2 class="text-lg font-bold text-gray-900">Catálogo de Indicadores y Metas</h2>
+                        <button class="bg-white border border-gray-300 px-3 py-1.5 rounded text-sm font-medium hover:bg-gray-50">+ Nuevo Indicador</button>
+                    </div>
+                    <div class="p-6">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="text-xs text-gray-500 uppercase border-b">
+                                    <th class="pb-3">Código</th>
+                                    <th class="pb-3">Ítem a Medir</th>
+                                    <th class="pb-3">Cargo Aplicable</th>
+                                    <th class="pb-3">Meta (Mensual)</th>
+                                    <th class="pb-3 text-right">Ponderación</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-sm">
+                                <tr class="border-b border-gray-50">
+                                    <td class="py-3 font-mono text-gray-500">IND-01</td>
+                                    <td class="py-3 font-medium">Atención de casos sociales</td>
+                                    <td class="py-3">Asistente Social</td>
+                                    <td class="py-3">45 Casos</td>
+                                    <td class="py-3 text-right font-medium">40%</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 font-mono text-gray-500">IND-02</td>
+                                    <td class="py-3 font-medium">Visitas a terreno</td>
+                                    <td class="py-3">Asistente Territorial</td>
+                                    <td class="py-3">20 Visitas</td>
+                                    <td class="py-3 text-right font-medium">60%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

@@ -1,0 +1,119 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGR - Delegaciones</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body class="page-shell">
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- SIDEBAR DE ADMINISTRADOR -->
+
+        <aside class="sidebar w-64 bg-red-700 text-white flex flex-col">
+            <div class="h-16 flex items-center px-4 border-b border-white/15">
+                <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo h-8">
+                <span class="ml-3 font-bold text-lg tracking-widest text-white-400">ADMIN</span>
+            </div>
+            <nav class="flex-1 px-4 py-6 space-y-2">
+                <a href="{% url 'admin_dashboard_view' %}" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
+                    <span>⚙️</span><span class="ml-3 font-medium">Panel de Control</span>
+                </a>
+                <a href="{% url 'admin_usuarios_view' %}" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
+                    <span>👥</span><span class="ml-3 font-medium">Usuarios y Roles</span>
+                </a>
+                <a href="{% url 'admin_delegaciones_view' %}" class="flex items-center px-4 py-3 bg-blue-600 text-white rounded-lg transition shadow-md">
+                    <span>🏢</span><span class="ml-3 font-medium">Delegaciones</span>
+                </a>
+                <a href="{% url 'admin_catalogos_view' %}" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
+                    <span>🗂️</span><span class="ml-3 font-medium">Catálogos y Metas</span>
+                </a>
+                <a href="{% url 'admin_auditoria_view' %}" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
+                    <span>🛡️</span><span class="ml-3 font-medium">Auditoría de Sistema</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50">
+            <header class="h-16 bg-white shadow-sm flex justify-between items-center px-8">
+                <div class="w-96 relative">
+                    <input type="text" placeholder="Buscar delegación o territorio..." class="w-full bg-gray-100 text-sm rounded-full pl-4 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <span class="absolute right-3 top-2 text-gray-400">🔍</span>
+                </div>
+                <div class="flex items-center space-x-6">
+                    <a href="{% url 'nueva_delegacion_view' %}" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition shadow-sm">+ Nueva Delegación</a>
+                </div>
+            </header>
+
+            <div class="p-8 space-y-6">
+                <div class="flex justify-between items-end">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">Estructura Organizacional</h1>
+                        <p class="text-sm text-gray-500 mt-1">Administración de delegaciones, sectores y líderes de territorio.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    <!-- Tarjeta 1 -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="bg-slate-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                            <h2 class="text-lg font-bold text-gray-900">La Serena Centro</h2>
+                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">Operativa</span>
+                        </div>
+                        <div class="p-6 space-y-4">
+                            <div>
+                                <p class="text-xs text-gray-500">Delegado Encargado</p>
+                                <p class="font-medium text-gray-900">Camila Tapia</p>
+                            </div>
+                            <div class="flex justify-between border-t border-gray-100 pt-4">
+                                <div class="text-center">
+                                    <p class="text-2xl font-bold text-blue-600">24</p>
+                                    <p class="text-xs text-gray-500">Funcionarios</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-2xl font-bold text-gray-800">142</p>
+                                    <p class="text-xs text-gray-500">Compromisos</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 px-6 py-3 border-t border-gray-100 text-right">
+                            <button class="text-sm text-blue-600 font-medium hover:underline">Gestionar Unidad</button>
+                        </div>
+                    </div>
+
+                    <!-- Tarjeta 2 -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="bg-slate-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                            <h2 class="text-lg font-bold text-gray-900">Sector La Antena</h2>
+                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">Operativa</span>
+                        </div>
+                        <div class="p-6 space-y-4">
+                            <div>
+                                <p class="text-xs text-gray-500">Delegado Encargado</p>
+                                <p class="font-medium text-gray-900">Roberto Muñoz</p>
+                            </div>
+                            <div class="flex justify-between border-t border-gray-100 pt-4">
+                                <div class="text-center">
+                                    <p class="text-2xl font-bold text-blue-600">18</p>
+                                    <p class="text-xs text-gray-500">Funcionarios</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-2xl font-bold text-gray-800">95</p>
+                                    <p class="text-xs text-gray-500">Compromisos</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 px-6 py-3 border-t border-gray-100 text-right">
+                            <button class="text-sm text-blue-600 font-medium hover:underline">Gestionar Unidad</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
