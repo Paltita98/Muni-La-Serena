@@ -9,7 +9,8 @@ No necesitas instalar ningún programa especial ni levantar servidores. Solo haz
 
 Descarga los archivos a tu computador.
 
-Abre la carpeta donde se guardaron.
+Abre la carpeta donde se guardaron, un ejemplo es funcionario_demo, 
+entramos y abrimos el templates, ahi encontraremos los archivos HTML. 
 
 Haz doble clic en el archivo funcionario_demo.html o en admin_demo.html.
 
