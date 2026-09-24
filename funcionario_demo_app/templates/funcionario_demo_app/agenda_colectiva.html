@@ -75,19 +75,14 @@
         </main>
     </div>
 
+    {{ compromisos_json|json_script:"compromisos-data" }}
     <script>
-        const compromisos = [
-            { titulo: 'Reunión JJVV Sector Antena', solicitante: 'Dirigente Vecinal', vence: '12/09/2026', estado: 'pendiente' },
-            { titulo: 'Entrega insumos sede centro', solicitante: 'Depto. Social', vence: '14/09/2026', estado: 'proceso' },
-            { titulo: 'Visita a predio La Pampa', solicitante: 'Municipalidad', vence: '16/09/2026', estado: 'venciendo' },
-            { titulo: 'Coordinación con equipo de salud', solicitante: 'CESFAM', vence: '18/09/2026', estado: 'pendiente' },
-            { titulo: 'Entrega de listado de beneficiarios', solicitante: 'Departamento Social', vence: '19/09/2026', estado: 'proceso' }
-        ];
+        const compromisos = JSON.parse(document.getElementById('compromisos-data').textContent);
 
         const stateLabels = {
             pendiente: { label: 'Pendiente', className: 'warning' },
-            proceso: { label: 'En Proceso', className: 'info' },
-            venciendo: { label: 'Próximo', className: 'danger' }
+            en_proceso: { label: 'En Proceso', className: 'info' },
+            realizado: { label: 'Realizado', className: 'success' }
         };
 
         const list = document.getElementById('agendaList');

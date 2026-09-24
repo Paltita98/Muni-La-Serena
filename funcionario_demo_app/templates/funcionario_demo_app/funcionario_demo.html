@@ -52,8 +52,8 @@
                             IA
                         </div>
                         <div class="ml-3">
-                            <p class="text-sm font-semibold">Iván Araus</p>
-                            <p class="text-xs text-gray-500">Funcionario</p>
+                            <p class="text-sm font-semibold">{{ funcionario|default:"Sin funcionario activo" }}</p>
+                            <p class="text-xs text-gray-500">{{ funcionario.cargo|default:"Funcionario" }}</p>
                         </div>
                     </div>
                 </div>
@@ -66,7 +66,7 @@
                 <div class="flex justify-between items-end">
                     <div>
                         <h1 class="text-2xl font-bold text-gray-900">Ficha Personal y Desempeño</h1>
-                        <p class="text-sm text-gray-500 mt-1">Delegación: La Serena Centro | Cargo: Asistente Territorial</p>
+                        <p class="text-sm text-gray-500 mt-1">Delegación: {{ funcionario.delegacion|default:"Sin delegación" }} | Cargo: {{ funcionario.cargo|default:"Sin cargo" }}</p>
                     </div>
                     <div class="flex space-x-3">
                         <button class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition shadow-sm">
@@ -87,18 +87,18 @@
                         <p class="text-sm font-medium text-gray-500">Semáforo de Cumplimiento</p>
                         <div class="mt-2 flex items-center">
                             <div class="w-4 h-4 rounded-full bg-yellow-400 mr-2 animate-pulse"></div>
-                            <h3 class="text-2xl font-bold text-gray-900">Ámbar</h3>
+                            <h3 class="text-2xl font-bold text-gray-900">{{ indicador_principal.get_semaforo_display|default:"Sin datos" }}</h3>
                         </div>
                         <p class="text-xs text-gray-400 mt-2">Requiere atención para alcanzar la meta esperada.</p>
                     </div>
                     <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                         <p class="text-sm font-medium text-gray-500">Avance Real Consolidado</p>
-                        <h3 class="text-3xl font-bold text-gray-900 mt-2">65.2%</h3>
+                        <h3 class="text-3xl font-bold text-gray-900 mt-2">{{ indicador_principal.cumplimiento_pct|default:"0" }}%</h3>
                         <p class="text-xs text-green-600 mt-2 font-medium">↑ +2.5% desde la última semana</p>
                     </div>
                     <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                         <p class="text-sm font-medium text-gray-500">Meta Esperada al Día</p>
-                        <h3 class="text-3xl font-bold text-gray-900 mt-2">70.0%</h3>
+                        <h3 class="text-3xl font-bold text-gray-900 mt-2">{{ indicador_principal.meta_esperada_dia_pct|default:"0" }}%</h3>
                         <div class="w-full bg-gray-200 rounded-full h-1.5 mt-3">
                             <div class="bg-blue-600 h-1.5 rounded-full" style="width: 70%"></div>
                         </div>
@@ -115,26 +115,15 @@
                             <span class="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded-full">Próximos a vencer</span>
                         </div>
                         <div class="p-4 space-y-3">
-                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <div>
-                                    <p class="text-sm font-bold text-gray-900">Reunión JJVV Sector Antena</p>
-                                    <p class="text-xs text-gray-500 mt-0.5">Vence: 12/09/2026 | Solicitante: Dirigente Vecinal</p>
+                            {% for compromiso in compromisos_proximos %}
+                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div>
+                                        <p class="text-sm font-bold text-gray-900">{{ compromiso.observacion|default:compromiso.solicitante }}</p>
+                                        <p class="text-xs text-gray-500 mt-0.5">Vence: {{ compromiso.fecha_comprometida|date:"d/m/Y" }} | Solicitante: {{ compromiso.solicitante }}</p>
+                                    </div>
+                                    <span class="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-1 rounded">{{ compromiso.get_estado_display }}</span>
                                 </div>
-                                <div class="flex items-center space-x-3">
-                                    <span class="text-xs font-medium text-yellow-700 bg-yellow-100 px-2 py-1 rounded">Pendiente</span>
-                                    <button class="text-blue-600 text-sm hover:underline font-medium">Actualizar</button>
-                                </div>
-                            </div>
-                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <div>
-                                    <p class="text-sm font-bold text-gray-900">Entrega insumos sede centro</p>
-                                    <p class="text-xs text-gray-500 mt-0.5">Vence: 14/09/2026 | Solicitante: Depto. Social</p>
-                                </div>
-                                <div class="flex items-center space-x-3">
-                                    <span class="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-1 rounded">En Proceso</span>
-                                    <button class="text-blue-600 text-sm hover:underline font-medium">Actualizar</button>
-                                </div>
-                            </div>
+                            {% empty %}<p class="p-3 text-sm text-gray-500">No hay compromisos registrados.</p>{% endfor %}
                         </div>
                     </div>
 
@@ -145,27 +134,15 @@
                             <a href="#" class="text-sm text-blue-600 hover:underline">Ver historial</a>
                         </div>
                         <div class="p-4 space-y-3">
-                            <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:border-blue-300 transition cursor-pointer">
-                                <div>
-                                    <p class="text-sm font-bold text-gray-900">Atención caso social N°45</p>
-                                    <p class="text-xs text-gray-500 mt-0.5">Código: ID-098 | 10/09/2026</p>
+                            {% for actividad in actividades_recientes %}
+                                <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
+                                    <div>
+                                        <p class="text-sm font-bold text-gray-900">{{ actividad.descripcion }}</p>
+                                        <p class="text-xs text-gray-500 mt-0.5">Código: {{ actividad.codigo_evidencia }} | {{ actividad.fecha_actividad|date:"d/m/Y" }}</p>
+                                    </div>
+                                    <span class="text-xs font-medium text-gray-700 bg-gray-100 px-2 py-1 rounded-full">{{ actividad.get_estado_display }}</span>
                                 </div>
-                                <span class="text-xs font-medium text-green-700 bg-green-100 px-2 py-1 rounded-full">✔ Aprobada</span>
-                            </div>
-                            <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:border-blue-300 transition cursor-pointer">
-                                <div>
-                                    <p class="text-sm font-bold text-gray-900">Visita a terreno inspección</p>
-                                    <p class="text-xs text-gray-500 mt-0.5">Código: ID-099 | 10/09/2026</p>
-                                </div>
-                                <span class="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded-full">⏳ Validando</span>
-                            </div>
-                            <div class="flex items-center justify-between p-3 bg-white border border-red-200 rounded-lg hover:border-red-300 transition cursor-pointer">
-                                <div>
-                                    <p class="text-sm font-bold text-gray-900">Registro fotográfico evento</p>
-                                    <p class="text-xs text-gray-500 mt-0.5">Código: ID-097 | 09/09/2026</p>
-                                </div>
-                                <span class="text-xs font-medium text-red-700 bg-red-100 px-2 py-1 rounded-full">✖ Rechazada</span>
-                            </div>
+                            {% empty %}<p class="p-3 text-sm text-gray-500">No hay actividades registradas.</p>{% endfor %}
                         </div>
                     </div>
                 </div>

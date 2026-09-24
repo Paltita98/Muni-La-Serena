@@ -76,19 +76,13 @@
         </main>
     </div>
 
+    {{ actividades_json|json_script:"actividades-data" }}
     <script>
-        const actividades = [
-            { titulo: 'Atención caso social N°45', codigo: 'ID-098', fecha: '10/09/2026', estado: 'aprobada' },
-            { titulo: 'Visita a terreno inspección', codigo: 'ID-099', fecha: '10/09/2026', estado: 'validando' },
-            { titulo: 'Registro fotográfico evento', codigo: 'ID-097', fecha: '09/09/2026', estado: 'rechazada' },
-            { titulo: 'Reunión coordinación barrial', codigo: 'ID-100', fecha: '08/09/2026', estado: 'pendiente' },
-            { titulo: 'Entrega de información vecinal', codigo: 'ID-101', fecha: '07/09/2026', estado: 'aprobada' },
-            { titulo: 'Seguimiento de solicitud social', codigo: 'ID-102', fecha: '05/09/2026', estado: 'validando' }
-        ];
+        const actividades = JSON.parse(document.getElementById('actividades-data').textContent);
 
         const stateLabels = {
             aprobada: { label: 'Aprobada', className: 'success' },
-            validando: { label: 'Validando', className: 'warning' },
+            en_correccion: { label: 'En corrección', className: 'warning' },
             pendiente: { label: 'Pendiente', className: 'info' },
             rechazada: { label: 'Rechazada', className: 'danger' }
         };
@@ -126,7 +120,7 @@
                         </div>
                         <div class="activity-actions">
                             <span class="badge ${estado.className}">${estado.label}</span>
-                            <button class="link-btn">Ver detalle</button>
+                            <a href="${item.url}" class="link-btn">Ver detalle</a>
                         </div>
                     </div>
                 `;

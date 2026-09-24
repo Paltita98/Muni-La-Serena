@@ -9,64 +9,26 @@
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans p-8 page-shell">
-
     <div class="form-card">
-        
-        <!-- HEADER -->
         <div class="form-header dark">
             <h1 class="text-lg font-bold text-white">Registrar Nuevo Compromiso</h1>
-            <a href="{% url 'funcionario_demo_view' %}" class="text-slate-300 hover:text-white text-sm font-medium">✕ Cerrar</a>
+            <a href="{% url 'funcionario_demo_view' %}" class="text-slate-300 hover:text-white text-sm font-medium">Cerrar</a>
         </div>
-
-        <!-- FORMULARIO -->
-        <form class="form-body space-y-5">
-            
-            <div class="grid grid-cols-2 gap-5">
-                <!-- Fecha Límite -->
+        <form method="post" class="form-body space-y-5">
+            {% csrf_token %}
+            {% for field in form %}
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Comprometida *</label>
-                    <input type="date" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-slate-500 focus:border-slate-500 outline-none">
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+                    {{ field }}
+                    {% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
                 </div>
-                <!-- Territorio / Sector -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Territorio o Sector *</label>
-                    <select required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-slate-500 outline-none">
-                        <option value="">Seleccione sector...</option>
-                        <option value="centro">La Serena Centro</option>
-                        <option value="antena">Sector La Antena</option>
-                        <option value="compania">Las Compañías</option>
-                        <option value="rural">Sector Rural</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-5">
-                <!-- Solicitante -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Solicitante (Vecino/Institución) *</label>
-                    <input type="text" required placeholder="Ej: JJVV Las Gaviotas" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-slate-500 outline-none">
-                </div>
-                <!-- Responsable -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Funcionario Responsable</label>
-                    <!-- Asignado automáticamente al funcionario en sesión -->
-                    <input type="text" readonly value="Iván Araus (Asistente Territorial)" class="w-full border border-gray-200 bg-gray-50 text-gray-500 rounded-lg px-3 py-2 text-sm cursor-not-allowed">
-                </div>
-            </div>
-
-            <!-- Descripción -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Descripción del Compromiso *</label>
-                <textarea rows="4" required placeholder="Detalle qué se acordó entregar, visitar o resolver..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-slate-500 outline-none"></textarea>
-            </div>
-
-            <!-- BOTONES -->
-            <div class="pt-4 flex justify-end space-x-3 border-t border-gray-100">
-                <a href="{% url 'funcionario_demo_view' %}" class="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</a>
-                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-slate-800 rounded-lg hover:bg-slate-700 shadow-sm">Guardar en Agenda Colectiva</button>
+            {% endfor %}
+            {% if form.non_field_errors %}<div class="text-sm text-red-600">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="pt-4 flex justify-end gap-3 border-t border-gray-100">
+                <a href="{% url 'funcionario_demo_view' %}" class="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg">Cancelar</a>
+                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-slate-800 rounded-lg shadow-sm">Guardar en agenda colectiva</button>
             </div>
         </form>
     </div>
-
 </body>
 </html>

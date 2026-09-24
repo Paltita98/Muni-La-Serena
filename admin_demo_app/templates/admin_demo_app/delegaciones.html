@@ -58,59 +58,35 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    <!-- Tarjeta 1 -->
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div class="bg-slate-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                            <h2 class="text-lg font-bold text-gray-900">La Serena Centro</h2>
-                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">Operativa</span>
-                        </div>
-                        <div class="p-6 space-y-4">
-                            <div>
-                                <p class="text-xs text-gray-500">Delegado Encargado</p>
-                                <p class="font-medium text-gray-900">Camila Tapia</p>
+                    {% for delegacion in delegaciones %}
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                            <div class="bg-slate-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                                <h2 class="text-lg font-bold text-gray-900">{{ delegacion.nombre }}</h2>
+                                <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">{{ delegacion.get_estado_display }}</span>
                             </div>
-                            <div class="flex justify-between border-t border-gray-100 pt-4">
-                                <div class="text-center">
-                                    <p class="text-2xl font-bold text-blue-600">24</p>
-                                    <p class="text-xs text-gray-500">Funcionarios</p>
+                            <div class="p-6 space-y-4">
+                                <div>
+                                    <p class="text-xs text-gray-500">Delegado Encargado</p>
+                                    <p class="font-medium text-gray-900">{{ delegacion.responsable|default:"Sin responsable" }}</p>
                                 </div>
-                                <div class="text-center">
-                                    <p class="text-2xl font-bold text-gray-800">142</p>
-                                    <p class="text-xs text-gray-500">Compromisos</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="bg-gray-50 px-6 py-3 border-t border-gray-100 text-right">
-                            <button class="text-sm text-blue-600 font-medium hover:underline">Gestionar Unidad</button>
-                        </div>
-                    </div>
-
-                    <!-- Tarjeta 2 -->
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div class="bg-slate-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                            <h2 class="text-lg font-bold text-gray-900">Sector La Antena</h2>
-                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">Operativa</span>
-                        </div>
-                        <div class="p-6 space-y-4">
-                            <div>
-                                <p class="text-xs text-gray-500">Delegado Encargado</p>
-                                <p class="font-medium text-gray-900">Roberto Muñoz</p>
-                            </div>
-                            <div class="flex justify-between border-t border-gray-100 pt-4">
-                                <div class="text-center">
-                                    <p class="text-2xl font-bold text-blue-600">18</p>
-                                    <p class="text-xs text-gray-500">Funcionarios</p>
-                                </div>
-                                <div class="text-center">
-                                    <p class="text-2xl font-bold text-gray-800">95</p>
-                                    <p class="text-xs text-gray-500">Compromisos</p>
+                                <div class="flex justify-between border-t border-gray-100 pt-4">
+                                    <div class="text-center">
+                                        <p class="text-2xl font-bold text-blue-600">{{ delegacion.funcionarios_count }}</p>
+                                        <p class="text-xs text-gray-500">Funcionarios</p>
+                                    </div>
+                                    <div class="text-center">
+                                        <p class="text-2xl font-bold text-gray-800">{{ delegacion.compromisos_count }}</p>
+                                        <p class="text-xs text-gray-500">Compromisos</p>
+                                    </div>
                                 </div>
                             </div>
+                            <div class="bg-gray-50 px-6 py-3 border-t border-gray-100 text-right">
+                                <span class="text-sm text-gray-500">{{ delegacion.ambito|default:"Sin ámbito" }}</span>
+                            </div>
                         </div>
-                        <div class="bg-gray-50 px-6 py-3 border-t border-gray-100 text-right">
-                            <button class="text-sm text-blue-600 font-medium hover:underline">Gestionar Unidad</button>
-                        </div>
-                    </div>
+                    {% empty %}
+                        <p class="text-gray-500">No hay delegaciones activas registradas.</p>
+                    {% endfor %}
                 </div>
             </div>
         </main>

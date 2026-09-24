@@ -61,20 +61,15 @@
                                 </tr>
                             </thead>
                             <tbody class="text-sm">
-                                <tr class="border-b border-gray-50">
-                                    <td class="py-3 font-medium text-blue-700">Trimestre 3 - 2026</td>
-                                    <td class="py-3 text-gray-600">01/07/2026</td>
-                                    <td class="py-3 text-gray-600">30/09/2026</td>
-                                    <td class="py-3"><span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">Abierto</span></td>
-                                    <td class="py-3 text-right"><button class="text-red-600 hover:underline">Cerrar</button></td>
-                                </tr>
-                                <tr>
-                                    <td class="py-3 font-medium">Trimestre 2 - 2026</td>
-                                    <td class="py-3 text-gray-600">01/04/2026</td>
-                                    <td class="py-3 text-gray-600">30/06/2026</td>
-                                    <td class="py-3"><span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">Cerrado</span></td>
-                                    <td class="py-3 text-right"><button class="text-blue-600 hover:underline">Ver Histórico</button></td>
-                                </tr>
+                                {% for periodo in periodos %}
+                                    <tr class="border-b border-gray-50">
+                                        <td class="py-3 font-medium text-blue-700">Período {{ periodo.id }}</td>
+                                        <td class="py-3 text-gray-600">{{ periodo.fecha_inicio|date:"d/m/Y" }}</td>
+                                        <td class="py-3 text-gray-600">{{ periodo.fecha_termino|date:"d/m/Y" }}</td>
+                                        <td class="py-3"><span class="px-2 py-1 {% if periodo.estado == 'abierto' %}bg-green-100 text-green-700{% else %}bg-gray-100 text-gray-600{% endif %} text-xs rounded">{{ periodo.get_estado_display }}</span></td>
+                                        <td class="py-3 text-right">{{ periodo.dias_computables }} días</td>
+                                    </tr>
+                                {% empty %}<tr><td colspan="5" class="py-4 text-gray-500">No hay períodos registrados.</td></tr>{% endfor %}
                             </tbody>
                         </table>
                     </div>
@@ -98,20 +93,15 @@
                                 </tr>
                             </thead>
                             <tbody class="text-sm">
-                                <tr class="border-b border-gray-50">
-                                    <td class="py-3 font-mono text-gray-500">IND-01</td>
-                                    <td class="py-3 font-medium">Atención de casos sociales</td>
-                                    <td class="py-3">Asistente Social</td>
-                                    <td class="py-3">45 Casos</td>
-                                    <td class="py-3 text-right font-medium">40%</td>
-                                </tr>
-                                <tr>
-                                    <td class="py-3 font-mono text-gray-500">IND-02</td>
-                                    <td class="py-3 font-medium">Visitas a terreno</td>
-                                    <td class="py-3">Asistente Territorial</td>
-                                    <td class="py-3">20 Visitas</td>
-                                    <td class="py-3 text-right font-medium">60%</td>
-                                </tr>
+                                {% for meta in metas %}
+                                    <tr class="border-b border-gray-50">
+                                        <td class="py-3 font-mono text-gray-500">META-{{ meta.id }}</td>
+                                        <td class="py-3 font-medium">{{ meta.item.nombre }}</td>
+                                        <td class="py-3">{{ meta.cargo|default:meta.funcionario|default:"General" }}</td>
+                                        <td class="py-3">{{ meta.valor_objetivo }} {{ meta.unidad|default:"" }}</td>
+                                        <td class="py-3 text-right font-medium">{{ meta.ponderador_pct }}%</td>
+                                    </tr>
+                                {% empty %}<tr><td colspan="5" class="py-4 text-gray-500">No hay metas registradas.</td></tr>{% endfor %}
                             </tbody>
                         </table>
                     </div>

@@ -82,23 +82,23 @@
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                         <p class="text-sm font-medium text-gray-500">Usuarios Activos</p>
-                        <h3 class="text-3xl font-bold text-gray-900 mt-2">10</h3>
-                        <p class="text-xs text-green-600 mt-2 font-medium">Conectados hoy: 45</p>
+                        <h3 class="text-3xl font-bold text-gray-900 mt-2">{{ usuarios_activos }}</h3>
+                        <p class="text-xs text-green-600 mt-2 font-medium">Usuarios registrados en estado activo</p>
                     </div>
                     <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                         <p class="text-sm font-medium text-gray-500">Delegaciones Operativas</p>
-                        <h3 class="text-3xl font-bold text-gray-900 mt-2">6</h3>
-                        <p class="text-xs text-gray-400 mt-2 font-medium">100% de cobertura</p>
+                        <h3 class="text-3xl font-bold text-gray-900 mt-2">{{ delegaciones_activas }}</h3>
+                        <p class="text-xs text-gray-400 mt-2 font-medium">Delegaciones activas</p>
                     </div>
                     <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                         <p class="text-sm font-medium text-gray-500">Período de Medición</p>
-                        <h3 class="text-xl font-bold text-red-600 mt-2">01/07/2026 - 30/09/2026</h3>
-                        <p class="text-xs text-gray-400 mt-2 font-medium">Cierra en 16 días</p>
+                        <h3 class="text-xl font-bold text-red-600 mt-2">{% if periodo_actual %}{{ periodo_actual.fecha_inicio|date:"d/m/Y" }} - {{ periodo_actual.fecha_termino|date:"d/m/Y" }}{% else %}Sin período abierto{% endif %}</h3>
+                        <p class="text-xs text-gray-400 mt-2 font-medium">Período vigente</p>
                     </div>
                     <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-red-500">
                         <p class="text-sm font-medium text-gray-500">Alertas de Seguridad</p>
-                        <h3 class="text-3xl font-bold text-red-600 mt-2">3</h3>
-                        <p class="text-xs text-gray-400 mt-2 font-medium">Intentos de acceso fallidos</p>
+                        <h3 class="text-3xl font-bold text-red-600 mt-2">{{ alertas_pendientes }}</h3>
+                        <p class="text-xs text-gray-400 mt-2 font-medium">Alertas pendientes</p>
                     </div>
                 </div>
 
@@ -123,34 +123,17 @@
                                     </tr>
                                 </thead>
                                 <tbody class="text-sm divide-y divide-gray-100">
-                                    <tr class="hover:bg-gray-50 transition">
-                                        <td class="p-3 text-gray-500">13/09/2026 09:14</td>
-                                        <td class="p-3 font-medium text-gray-900">M. González</td>
-                                        <td class="p-3"><span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded font-medium">UPDATE</span></td>
-                                        <td class="p-3">COMPROMISO (ID-402)</td>
-                                        <td class="p-3 text-gray-500 truncate max-w-xs">Estado: Pendiente -> En Proceso</td>
-                                    </tr>
-                                    <tr class="hover:bg-gray-50 transition">
-                                        <td class="p-3 text-gray-500">13/09/2026 08:45</td>
-                                        <td class="p-3 font-medium text-gray-900">Iván Araus</td>
-                                        <td class="p-3"><span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded font-medium">INSERT</span></td>
-                                        <td class="p-3">USUARIO (ID-142)</td>
-                                        <td class="p-3 text-gray-500 truncate max-w-xs">Creación de usuario rol Funcionario</td>
-                                    </tr>
-                                    <tr class="hover:bg-gray-50 transition">
-                                        <td class="p-3 text-gray-500">12/09/2026 18:30</td>
-                                        <td class="p-3 font-medium text-gray-900">C. Tapia</td>
-                                        <td class="p-3"><span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded font-medium">UPDATE</span></td>
-                                        <td class="p-3">ACTIVIDAD (ID-099)</td>
-                                        <td class="p-3 text-gray-500 truncate max-w-xs">Validación: Pendiente -> Aprobada</td>
-                                    </tr>
-                                    <tr class="hover:bg-gray-50 transition">
-                                        <td class="p-3 text-gray-500">12/09/2026 15:22</td>
-                                        <td class="p-3 font-medium text-gray-900">Sistema (Auto)</td>
-                                        <td class="p-3"><span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded font-medium">ALERT</span></td>
-                                        <td class="p-3">SEGURIDAD</td>
-                                        <td class="p-3 text-red-500 truncate max-w-xs">Intento de acceso denegado (IP Bloqueada)</td>
-                                    </tr>
+                                    {% for auditoria in auditorias_recientes %}
+                                        <tr class="hover:bg-gray-50 transition">
+                                            <td class="p-3 text-gray-500">{{ auditoria.fecha|date:"d/m/Y H:i" }}</td>
+                                            <td class="p-3 font-medium text-gray-900">{{ auditoria.usuario|default:"Sistema" }}</td>
+                                            <td class="p-3"><span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded font-medium">{{ auditoria.get_accion_display }}</span></td>
+                                            <td class="p-3">{{ auditoria.entidad }} ({{ auditoria.id_entidad|default:"-" }})</td>
+                                            <td class="p-3 text-gray-500 truncate max-w-xs">{{ auditoria.valor_nuevo|default:"Sin detalle" }}</td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr><td colspan="5" class="p-6 text-center text-gray-500">No hay registros de auditoría.</td></tr>
+                                    {% endfor %}
                                 </tbody>
                             </table>
                         </div>
