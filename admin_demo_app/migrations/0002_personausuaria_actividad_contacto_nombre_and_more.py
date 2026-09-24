@@ -239,7 +239,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='meta',
-            constraint=models.CheckConstraint(condition=models.Q(('valor_objetivo__gt', 0)), name='meta_valor_objetivo_positivo'),
+            constraint=models.CheckConstraint(check=models.Q(('valor_objetivo__gt', 0)), name='meta_valor_objetivo_positivo'),
         ),
         migrations.AddConstraint(
             model_name='indicador',
@@ -251,6 +251,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='atencionsocial',
-            constraint=models.CheckConstraint(condition=models.Q(('orden_gestion__gte', 1), ('orden_gestion__lte', 3)), name='atencion_orden_valido'),
+            constraint=models.CheckConstraint(check=models.Q(('orden_gestion__gte', 1), ('orden_gestion__lte', 3)), name='atencion_orden_valido'),
         ),
     ]

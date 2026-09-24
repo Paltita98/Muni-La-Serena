@@ -225,7 +225,7 @@ class Meta(models.Model):
         verbose_name_plural = 'Metas'
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(valor_objetivo__gt=0),
+                check=models.Q(valor_objetivo__gt=0),
                 name='meta_valor_objetivo_positivo',
             ),
         ]
@@ -287,7 +287,7 @@ class AtencionSocial(models.Model):
         verbose_name_plural = 'Atenciones Sociales'
         constraints = [
             models.UniqueConstraint(fields=('persona', 'orden_gestion'), name='atencion_persona_orden_unico'),
-            models.CheckConstraint(condition=models.Q(orden_gestion__gte=1, orden_gestion__lte=3), name='atencion_orden_valido'),
+            models.CheckConstraint(check=models.Q(orden_gestion__gte=1, orden_gestion__lte=3), name='atencion_orden_valido'),
         ]
 
     def __str__(self):

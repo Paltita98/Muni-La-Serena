@@ -37,10 +37,6 @@ class ActividadForm(forms.ModelForm):
     def __init__(self, *args, funcionario=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.funcionario = funcionario
-        if not funcionario:
-            self.add_error(None, "No existe un funcionario activo para registrar la actividad.")
-        if not Periodo.objects.filter(estado="abierto").exists():
-            self.add_error(None, "No hay un período de medición abierto. Cree o abra un período antes de registrar actividades.")
         if funcionario and funcionario.cargo_id:
             self.fields["item"].queryset = ItemMedicion.objects.filter(
                 cargo=funcionario.cargo,
@@ -48,6 +44,14 @@ class ActividadForm(forms.ModelForm):
             ).order_by("nombre")
         else:
             self.fields["item"].queryset = ItemMedicion.objects.filter(estado="activo").order_by("nombre")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if not self.funcionario:
+            self.add_error(None, "No existe un funcionario activo para registrar la actividad.")
+        if not Periodo.objects.filter(estado="abierto").exists():
+            self.add_error(None, "No hay un período de medición abierto. Cree o abra un período antes de registrar actividades.")
+        return cleaned_data
 
 
 class CompromisoForm(forms.ModelForm):
