@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth.hashers import make_password
 
 from .models import Cargo, Delegacion, Rol, Usuario
 
@@ -64,7 +65,7 @@ class UsuarioForm(forms.ModelForm):
         usuario = super().save(commit=False)
         password = self.cleaned_data.get("password")
         if password:
-            usuario.password_hash = password
+            usuario.password_hash = make_password(password)
         if commit:
             usuario.save()
             self.save_m2m()

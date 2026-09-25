@@ -1,4 +1,5 @@
 from django.contrib import admin
+from .forms import UsuarioForm
 from .models import (
     AjusteIncentivo,
     Alerta,
@@ -42,6 +43,7 @@ class DelegacionAdmin(admin.ModelAdmin):
 
 @admin.register(Usuario)
 class UsuarioAdmin(admin.ModelAdmin):
+    form = UsuarioForm
     list_display = ('identificador_inst', 'nombres', 'apellidos', 'email', 'cargo', 'delegacion', 'estado')
     list_filter = ('estado', 'cargo', 'delegacion')
     search_fields = ('identificador_inst', 'nombres', 'apellidos', 'email')
