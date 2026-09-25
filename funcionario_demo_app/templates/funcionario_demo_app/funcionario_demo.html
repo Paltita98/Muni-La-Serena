@@ -83,24 +83,24 @@
 
                 <!-- METRICS WIDGETS -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-yellow-400">
+                    <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 {% if metricas.semaforo == 'verde' %}border-green-500{% elif metricas.semaforo == 'ambar' %}border-yellow-400{% else %}border-red-500{% endif %}">
                         <p class="text-sm font-medium text-gray-500">Semáforo de Cumplimiento</p>
                         <div class="mt-2 flex items-center">
-                            <div class="w-4 h-4 rounded-full bg-yellow-400 mr-2 animate-pulse"></div>
-                            <h3 class="text-2xl font-bold text-gray-900">{{ indicador_principal.get_semaforo_display|default:"Sin datos" }}</h3>
+                            <div class="w-4 h-4 rounded-full mr-2 {% if metricas.semaforo == 'verde' %}bg-green-500{% elif metricas.semaforo == 'ambar' %}bg-yellow-400{% elif metricas.semaforo == 'rojo' %}bg-red-500{% else %}bg-gray-300{% endif %}"></div>
+                            <h3 class="text-2xl font-bold text-gray-900">{% if metricas %}{% if metricas.semaforo == 'verde' %}Verde{% elif metricas.semaforo == 'ambar' %}Ámbar{% else %}Rojo{% endif %}{% else %}Sin datos{% endif %}</h3>
                         </div>
-                        <p class="text-xs text-gray-400 mt-2">Requiere atención para alcanzar la meta esperada.</p>
+                        <p class="text-xs text-gray-400 mt-2">{% if metricas %}Comparado con la meta esperada del período.{% else %}No hay período abierto con metas vigentes.{% endif %}</p>
                     </div>
                     <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                         <p class="text-sm font-medium text-gray-500">Avance Real Consolidado</p>
-                        <h3 class="text-3xl font-bold text-gray-900 mt-2">{{ indicador_principal.cumplimiento_pct|default:"0" }}%</h3>
-                        <p class="text-xs text-green-600 mt-2 font-medium">↑ +2.5% desde la última semana</p>
+                        <h3 class="text-3xl font-bold text-gray-900 mt-2">{% if metricas %}{{ metricas.avance_real_pct }}%{% else %}0%{% endif %}</h3>
+                        <p class="text-xs text-gray-400 mt-2 font-medium">Metas ponderadas según actividades validadas.</p>
                     </div>
                     <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                         <p class="text-sm font-medium text-gray-500">Meta Esperada al Día</p>
-                        <h3 class="text-3xl font-bold text-gray-900 mt-2">{{ indicador_principal.meta_esperada_dia_pct|default:"0" }}%</h3>
+                        <h3 class="text-3xl font-bold text-gray-900 mt-2">{% if metricas %}{{ metricas.meta_esperada_pct }}%{% else %}0%{% endif %}</h3>
                         <div class="w-full bg-gray-200 rounded-full h-1.5 mt-3">
-                            <div class="bg-blue-600 h-1.5 rounded-full" style="width: 70%"></div>
+                            <div class="bg-blue-600 h-1.5 rounded-full" style="width: {% if metricas %}{{ metricas.meta_esperada_pct }}{% else %}0{% endif %}%"></div>
                         </div>
                     </div>
                 </div>

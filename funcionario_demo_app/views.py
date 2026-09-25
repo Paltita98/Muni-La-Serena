@@ -1,14 +1,17 @@
 import json
 import secrets
+from datetime import date, timedelta
+from decimal import Decimal
 from pathlib import Path
 
 from django.contrib import messages
 from django.db import transaction
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
-from admin_demo_app.models import Actividad, Compromiso, Evidencia, Indicador, Usuario
+from admin_demo_app.models import Actividad, Compromiso, Evidencia, Meta, Periodo, Usuario
 
 from .forms import ActividadForm, CompromisoForm, EvidenciaForm
 
@@ -17,13 +20,88 @@ def funcionario_demo_view(request):
     funcionario = Usuario.objects.select_related('cargo', 'delegacion').filter(estado='activo').order_by('id').first()
     actividades = Actividad.objects.filter(funcionario=funcionario).order_by('-fecha_actividad') if funcionario else Actividad.objects.none()
     compromisos = Compromiso.objects.filter(responsable=funcionario).order_by('fecha_comprometida') if funcionario else Compromiso.objects.none()
-    indicadores = Indicador.objects.filter(funcionario=funcionario).order_by('-fecha_calculo') if funcionario else Indicador.objects.none()
+    periodo = _periodo_actual()
+    metricas = _calcular_metricas_funcionario(funcionario, periodo) if funcionario and periodo else None
     return render(request, 'funcionario_demo_app/funcionario_demo.html', {
         'funcionario': funcionario,
         'actividades_recientes': actividades[:5],
         'compromisos_proximos': compromisos[:5],
-        'indicador_principal': indicadores.first(),
+        'metricas': metricas,
     })
+
+
+def _calcular_metricas_funcionario(funcionario, periodo, fecha_actual=None):
+    fecha_actual = fecha_actual or date.today()
+    metas = list(
+        Meta.objects.filter(periodo=periodo, vigente=True)
+        .filter(Q(funcionario=funcionario) | Q(cargo=funcionario.cargo))
+        .select_related('item')
+        .order_by('-funcionario_id')
+    )
+
+    metas_por_item = {}
+    for meta in metas:
+        metas_por_item.setdefault(meta.item_id, meta)
+    metas = list(metas_por_item.values())
+    if not metas:
+        return None
+
+    avances = dict(
+        Actividad.objects.filter(
+            funcionario=funcionario,
+            periodo=periodo,
+            estado='validada',
+            item_id__in=metas_por_item,
+        )
+        .values_list('item_id')
+        .annotate(total=Count('id'))
+    )
+
+    dias_esperados = _dias_habiles_transcurridos(
+        periodo.fecha_inicio,
+        periodo.fecha_termino,
+        fecha_actual,
+    )
+    dias_computables = periodo.dias_computables
+    meta_esperada = min(Decimal('100'), Decimal(dias_esperados) * 100 / dias_computables) if dias_computables else Decimal('0')
+
+    peso_total = sum((meta.ponderador_pct for meta in metas), Decimal('0'))
+    avance_ponderado = Decimal('0')
+    umbral_ponderado = Decimal('0')
+    if peso_total:
+        for meta in metas:
+            peso = meta.ponderador_pct
+            avance_pct = Decimal(avances.get(meta.item_id, 0)) * 100 / meta.valor_objetivo
+            avance_pct = min(avance_pct, meta.maximo_computable_pct)
+            avance_ponderado += avance_pct * peso
+            umbral_ponderado += meta.umbral_minimo_pct * peso
+        avance_ponderado /= peso_total
+        umbral_ponderado /= peso_total
+
+    if avance_ponderado >= meta_esperada:
+        semaforo = 'verde'
+    elif avance_ponderado >= meta_esperada * umbral_ponderado / 100:
+        semaforo = 'ambar'
+    else:
+        semaforo = 'rojo'
+
+    return {
+        'avance_real_pct': round(avance_ponderado, 2),
+        'meta_esperada_pct': round(meta_esperada, 2),
+        'semaforo': semaforo,
+        'periodo': periodo,
+    }
+
+
+def _dias_habiles_transcurridos(fecha_inicio, fecha_termino, fecha_actual):
+    fecha_final = min(fecha_actual, fecha_termino)
+    if fecha_final < fecha_inicio:
+        return 0
+    return sum(
+        1
+        for desplazamiento in range((fecha_final - fecha_inicio).days + 1)
+        if (fecha_inicio + timedelta(days=desplazamiento)).weekday() < 5
+    )
 
 
 def actividades_view(request):
@@ -134,7 +212,6 @@ def nuevo_compromiso_view(request):
 
 
 def _periodo_actual():
-    from admin_demo_app.models import Periodo
     return Periodo.objects.filter(estado='abierto').order_by('-fecha_inicio').first()
 
 
