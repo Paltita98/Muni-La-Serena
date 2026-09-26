@@ -8,13 +8,23 @@ from .models import Auditoria, Compromiso, Delegacion, Meta, Periodo, Usuario, A
 
 def admin_dashboard_view(request):
     periodo = Periodo.objects.filter(estado='abierto').order_by('-fecha_inicio').first()
+    delegaciones_dashboard = list(
+        Delegacion.objects.filter(estado='activa').order_by('nombre')[:5]
+    )
+    for delegacion in delegaciones_dashboard:
+        delegacion.funcionarios_count = Usuario.objects.filter(
+            delegacion=delegacion,
+            estado='activo',
+        ).count()
+        delegacion.compromisos_count = Compromiso.objects.filter(delegacion=delegacion).count()
+
     return render(request, 'admin_demo_app/admin_demo.html', {
         'usuarios_activos': Usuario.objects.filter(estado='activo').count(),
         'delegaciones_activas': Delegacion.objects.filter(estado='activa').count(),
         'alertas_pendientes': Alerta.objects.filter(estado='pendiente').count(),
         'periodo_actual': periodo,
         'auditorias_recientes': Auditoria.objects.select_related('usuario').order_by('-fecha')[:5],
-        'delegaciones_dashboard': Delegacion.objects.filter(estado='activa').order_by('nombre')[:5],
+        'delegaciones_dashboard': delegaciones_dashboard,
     })
 
 

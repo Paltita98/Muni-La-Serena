@@ -11,7 +11,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
-from admin_demo_app.models import Actividad, Compromiso, Evidencia, Meta, Periodo, Usuario
+from admin_demo_app.models import AtencionSocial, Actividad, Compromiso, Evidencia, Meta, Periodo, Usuario
 
 from .forms import ActividadForm, CompromisoForm, EvidenciaForm
 
@@ -51,6 +51,10 @@ def _calcular_metricas_funcionario(funcionario, periodo, fecha_actual=None):
             funcionario=funcionario,
             periodo=periodo,
             estado='validada',
+            fecha_actividad__range=(
+                periodo.fecha_inicio,
+                min(fecha_actual, periodo.fecha_termino),
+            ),
             item_id__in=metas_por_item,
         )
         .values_list('item_id')
@@ -115,6 +119,30 @@ def actividades_view(request):
         'url': reverse('actividad_detalle_view', args=[actividad.id]),
     } for actividad in actividades]
     return render(request, 'funcionario_demo_app/actividades.html', {'actividades_json': datos})
+
+
+def atenciones_sociales_view(request):
+    funcionario = Usuario.objects.filter(estado='activo').order_by('id').first()
+    atenciones = (
+        AtencionSocial.objects.filter(funcionario=funcionario)
+        .select_related('persona', 'catalogo_tipo', 'actividad')
+        .order_by('-fecha', '-id')
+        if funcionario else AtencionSocial.objects.none()
+    )
+    datos = [{
+        'persona': atencion.persona.referencia_anonima,
+        'tipo': atencion.catalogo_tipo.nombre,
+        'categoria': atencion.catalogo_tipo.categoria,
+        'categoria_display': atencion.catalogo_tipo.get_categoria_display(),
+        'orden_gestion': atencion.orden_gestion,
+        'fecha': atencion.fecha.strftime('%d/%m/%Y'),
+        'resultado': atencion.resultado or '',
+        'actividad': atencion.actividad.descripcion if atencion.actividad else '',
+        'actividad_url': reverse('actividad_detalle_view', args=[atencion.actividad_id]) if atencion.actividad_id else '',
+    } for atencion in atenciones]
+    return render(request, 'funcionario_demo_app/atenciones_sociales.html', {
+        'atenciones_json': datos,
+    })
 
 
 def agenda_colectiva_view(request):

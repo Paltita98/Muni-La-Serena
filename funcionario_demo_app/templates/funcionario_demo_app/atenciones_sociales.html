@@ -1,0 +1,146 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGR - Atención Social</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body class="page-shell">
+    <div class="flex h-screen overflow-hidden">
+        <aside class="sidebar w-64 text-white flex flex-col">
+            <div class="h-16 flex items-center px-4 border-b border-white/15">
+                <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo">
+            </div>
+            <nav class="flex-1 px-4 py-6 space-y-2">
+                <a href="{% url 'funcionario_demo_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
+                    <span>📊</span><span class="ml-3 font-medium">Mi Tablero</span>
+                </a>
+                <a href="{% url 'actividades_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
+                    <span>📝</span><span class="ml-3 font-medium">Actividades</span>
+                </a>
+                <a href="{% url 'atenciones_sociales_view' %}" class="flex items-center px-4 py-3 bg-white/10 text-white rounded-lg">
+                    <span>🤝</span><span class="ml-3 font-medium">Atención Social</span>
+                </a>
+                <a href="{% url 'agenda_colectiva_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
+                    <span>📅</span><span class="ml-3 font-medium">Agenda Colectiva</span>
+                </a>
+                <a href="{% url 'mis_evidencias_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
+                    <span>📎</span><span class="ml-3 font-medium">Mis Evidencias</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50">
+            <header class="h-16 bg-white shadow-sm flex justify-between items-center px-8">
+                <div class="w-96 relative">
+                    <input type="search" id="searchInput" placeholder="Buscar persona, tipo o resultado..." class="w-full bg-gray-100 text-sm rounded-full pl-4 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+                    <span class="absolute right-3 top-2 text-gray-400">🔍</span>
+                </div>
+            </header>
+
+            <div class="page-content">
+                <div class="section-header">
+                    <div>
+                        <h1>Atención Social</h1>
+                        <p>Historial de atenciones y gestiones registradas.</p>
+                    </div>
+                </div>
+
+                <div class="toolbar">
+                    <div class="search-box">
+                        <input id="searchInputMobile" type="search" placeholder="Buscar por persona, tipo o resultado">
+                        <span class="icon">🔍</span>
+                    </div>
+                    <select id="categoryFilter" class="filter-select" style="max-width: 220px;">
+                        <option value="all">Todas las categorías</option>
+                        <option value="atencion">Atención</option>
+                        <option value="subatencion">Subatención</option>
+                        <option value="servicio">Servicio</option>
+                        <option value="actividad">Actividad</option>
+                    </select>
+                </div>
+
+                <section class="list-panel">
+                    <div class="list-header">
+                        <h2>Atenciones registradas</h2>
+                        <span class="badge info" id="resultCount">0 resultados</span>
+                    </div>
+                    <div class="list-body">
+                        <div id="attentionList" class="activity-list"></div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    {{ atenciones_json|json_script:"atenciones-data" }}
+    <script>
+        const atenciones = JSON.parse(document.getElementById('atenciones-data').textContent);
+        const list = document.getElementById('attentionList');
+        const searchInput = document.getElementById('searchInput');
+        const searchInputMobile = document.getElementById('searchInputMobile');
+        const categoryFilter = document.getElementById('categoryFilter');
+        const resultCount = document.getElementById('resultCount');
+
+        function addText(parent, tagName, className, text) {
+            const element = document.createElement(tagName);
+            element.className = className;
+            element.textContent = text;
+            parent.appendChild(element);
+            return element;
+        }
+
+        function renderAtenciones() {
+            const query = (searchInput.value || searchInputMobile.value || '').trim().toLocaleLowerCase();
+            const category = categoryFilter.value;
+            const filtered = atenciones.filter(item => {
+                const searchable = `${item.persona} ${item.tipo} ${item.resultado} ${item.actividad}`.toLocaleLowerCase();
+                return searchable.includes(query) && (category === 'all' || item.categoria === category);
+            });
+
+            resultCount.textContent = `${filtered.length} resultado${filtered.length === 1 ? '' : 's'}`;
+            list.replaceChildren();
+
+            if (!filtered.length) {
+                addText(list, 'div', 'empty-state', atenciones.length
+                    ? 'No hay atenciones con ese criterio.'
+                    : 'Este funcionario todavía no tiene atenciones sociales registradas.');
+                return;
+            }
+
+            filtered.forEach(item => {
+                const row = document.createElement('article');
+                row.className = 'activity-item';
+                const main = document.createElement('div');
+                main.className = 'activity-main';
+                addText(main, 'p', 'activity-title', item.tipo);
+                addText(main, 'p', 'activity-meta', `${item.categoria_display} | Persona: ${item.persona} | Gestión ${item.orden_gestion} | ${item.fecha}`);
+                if (item.resultado) {
+                    addText(main, 'p', 'activity-meta mt-1', `Resultado: ${item.resultado}`);
+                }
+                if (item.actividad && item.actividad_url) {
+                    const activityLink = addText(main, 'a', 'link-btn mt-2 inline-block', `Actividad relacionada: ${item.actividad}`);
+                    activityLink.href = item.actividad_url;
+                }
+
+                const actions = document.createElement('div');
+                actions.className = 'activity-actions';
+                addText(actions, 'span', 'badge info', `Gestión ${item.orden_gestion}`);
+                row.append(main, actions);
+                list.appendChild(row);
+            });
+        }
+
+        [searchInput, searchInputMobile].forEach(input => input.addEventListener('input', () => {
+            searchInput.value = input.value;
+            searchInputMobile.value = input.value;
+            renderAtenciones();
+        }));
+        categoryFilter.addEventListener('change', renderAtenciones);
+        renderAtenciones();
+    </script>
+</body>
+</html>

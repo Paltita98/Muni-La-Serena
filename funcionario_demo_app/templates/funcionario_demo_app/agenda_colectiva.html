@@ -21,6 +21,9 @@
                 <a href="{% url 'actividades_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
                     <span>📝</span><span class="ml-3 font-medium">Actividades</span>
                 </a>
+                <a href="{% url 'atenciones_sociales_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
+                    <span>🤝</span><span class="ml-3 font-medium">Atención Social</span>
+                </a>
                 <a href="{% url 'agenda_colectiva_view' %}" class="flex items-center px-4 py-3 bg-white/10 text-white rounded-lg">
                     <span>📅</span><span class="ml-3 font-medium">Agenda Colectiva</span>
                 </a>
@@ -56,9 +59,10 @@
                     </div>
                     <select id="statusFilter" class="filter-select" style="max-width: 220px;">
                         <option value="all">Todos</option>
+                        <option value="ingresado">Ingresado</option>
                         <option value="pendiente">Pendiente</option>
-                        <option value="proceso">En Proceso</option>
-                        <option value="venciendo">Próximo a vencer</option>
+                        <option value="en_proceso">En Proceso</option>
+                        <option value="realizado">Realizado</option>
                     </select>
                 </div>
 
@@ -80,6 +84,7 @@
         const compromisos = JSON.parse(document.getElementById('compromisos-data').textContent);
 
         const stateLabels = {
+            ingresado: { label: 'Ingresado', className: 'info' },
             pendiente: { label: 'Pendiente', className: 'warning' },
             en_proceso: { label: 'En Proceso', className: 'info' },
             realizado: { label: 'Realizado', className: 'success' }
@@ -109,7 +114,7 @@
             }
 
             list.innerHTML = filtered.map(item => {
-                const estado = stateLabels[item.estado];
+                const estado = stateLabels[item.estado] || { label: item.estado, className: 'info' };
                 return `
                     <div class="activity-item">
                         <div class="activity-main">

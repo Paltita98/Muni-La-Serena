@@ -1,13 +1,14 @@
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from django.test import SimpleTestCase
+from django.test import RequestFactory, SimpleTestCase
 from django.urls import reverse
 
-from admin_demo_app.models import Actividad, Meta
-from .views import _calcular_metricas_funcionario
+from admin_demo_app.models import Actividad, AtencionSocial, Meta, Usuario
+from .views import _calcular_metricas_funcionario, atenciones_sociales_view
 
 
 class MetricasFuncionarioTests(SimpleTestCase):
@@ -33,16 +34,22 @@ class MetricasFuncionarioTests(SimpleTestCase):
         meta_query.order_by.return_value = [meta]
         actividad_query = Mock()
         actividad_query.values_list.return_value.annotate.return_value = [(item.pk, avance)]
+        actividad_manager = Mock(filter=Mock(return_value=actividad_query))
 
         with (
             patch.object(Meta, 'objects', Mock(filter=Mock(return_value=meta_query))),
-            patch.object(Actividad, 'objects', Mock(filter=Mock(return_value=actividad_query))),
+            patch.object(Actividad, 'objects', actividad_manager),
         ):
-            return _calcular_metricas_funcionario(
+            metricas = _calcular_metricas_funcionario(
                 funcionario,
                 periodo,
                 fecha_actual=date(2026, 1, 15),
             )
+        self.assertEqual(
+            actividad_manager.filter.call_args.kwargs['fecha_actividad__range'],
+            (periodo.fecha_inicio, date(2026, 1, 15)),
+        )
+        return metricas
 
     def test_calculates_expected_progress_and_red_semaphore(self):
         metricas = self.calcular_metricas(avance=2)
@@ -56,6 +63,61 @@ class MetricasFuncionarioTests(SimpleTestCase):
 
         self.assertEqual(metricas['avance_real_pct'], Decimal('60.00'))
         self.assertEqual(metricas['semaforo'], 'verde')
+
+
+class ActividadesTemplateTests(SimpleTestCase):
+    def test_history_renders_validated_activities(self):
+        template_path = Path(__file__).parent / 'templates' / 'funcionario_demo_app' / 'actividades.html'
+        template = template_path.read_text(encoding='utf-8')
+
+        self.assertIn('<option value="validada">Validada</option>', template)
+        self.assertIn("validada: { label: 'Validada', className: 'success' }", template)
+
+
+class AgendaTemplateTests(SimpleTestCase):
+    def test_history_renders_new_commitments(self):
+        template_path = Path(__file__).parent / 'templates' / 'funcionario_demo_app' / 'agenda_colectiva.html'
+        template = template_path.read_text(encoding='utf-8')
+
+        self.assertIn('<option value="ingresado">Ingresado</option>', template)
+        self.assertIn("ingresado: { label: 'Ingresado', className: 'info' }", template)
+
+
+class AtencionesSocialesViewTests(SimpleTestCase):
+    def test_view_lists_social_attention_for_active_staff_member(self):
+        funcionario = SimpleNamespace(pk=4)
+        catalogo_tipo = SimpleNamespace(
+            nombre='Orientación familiar',
+            categoria='atencion',
+            get_categoria_display=lambda: 'Atención',
+        )
+        actividad = SimpleNamespace(pk=12, descripcion='Acompañamiento social')
+        atencion = SimpleNamespace(
+            persona=SimpleNamespace(referencia_anonima='CASO-001'),
+            catalogo_tipo=catalogo_tipo,
+            orden_gestion=1,
+            fecha=date(2026, 9, 25),
+            resultado='Derivación realizada',
+            actividad=actividad,
+            actividad_id=actividad.pk,
+        )
+        usuario_query = Mock()
+        usuario_query.order_by.return_value.first.return_value = funcionario
+        atencion_query = Mock()
+        atencion_query.select_related.return_value.order_by.return_value = [atencion]
+
+        with (
+            patch.object(Usuario, 'objects', Mock(filter=Mock(return_value=usuario_query))),
+            patch.object(AtencionSocial, 'objects', Mock(filter=Mock(return_value=atencion_query))),
+            patch('funcionario_demo_app.views.render', return_value=object()) as render,
+        ):
+            response = atenciones_sociales_view(RequestFactory().get('/atencion-social/'))
+
+        self.assertIsNotNone(response)
+        self.assertEqual(render.call_args.args[1], 'funcionario_demo_app/atenciones_sociales.html')
+        self.assertEqual(render.call_args.args[2]['atenciones_json'][0]['persona'], 'CASO-001')
+        self.assertEqual(render.call_args.args[2]['atenciones_json'][0]['tipo'], 'Orientación familiar')
+        self.assertEqual(reverse('atenciones_sociales_view'), '/atencion-social/')
 
 
 class EvidenciasJsonTests(SimpleTestCase):
