@@ -13,7 +13,7 @@ from django.urls import reverse
 
 from admin_demo_app.models import AtencionSocial, Actividad, Compromiso, Evidencia, Meta, Periodo, Usuario
 
-from .forms import ActividadForm, CompromisoForm, EvidenciaForm
+from .forms import AtencionSocialForm, ActividadForm, CompromisoForm, EvidenciaForm
 
 
 def funcionario_demo_view(request):
@@ -142,6 +142,23 @@ def atenciones_sociales_view(request):
     } for atencion in atenciones]
     return render(request, 'funcionario_demo_app/atenciones_sociales.html', {
         'atenciones_json': datos,
+    })
+
+
+def nueva_atencion_social_view(request):
+    funcionario = Usuario.objects.filter(estado='activo').order_by('id').first()
+    if request.method == 'POST':
+        form = AtencionSocialForm(request.POST, funcionario=funcionario)
+        if form.is_valid():
+            with transaction.atomic():
+                atencion = form.save()
+            messages.success(request, f'Atención social de {atencion.persona.referencia_anonima} registrada correctamente.')
+            return redirect('atenciones_sociales_view')
+    else:
+        form = AtencionSocialForm(funcionario=funcionario)
+    return render(request, 'funcionario_demo_app/nueva_atencion_social.html', {
+        'form': form,
+        'funcionario': funcionario,
     })
 
 

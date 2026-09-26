@@ -7,8 +7,9 @@ from unittest.mock import Mock, patch
 from django.test import RequestFactory, SimpleTestCase
 from django.urls import reverse
 
-from admin_demo_app.models import Actividad, AtencionSocial, Meta, Usuario
-from .views import _calcular_metricas_funcionario, atenciones_sociales_view
+from admin_demo_app.models import Actividad, AtencionSocial, CatalogoTipo, Meta, PersonaUsuaria, Usuario
+from .forms import AtencionSocialForm
+from .views import _calcular_metricas_funcionario, atenciones_sociales_view, nueva_atencion_social_view
 
 
 class MetricasFuncionarioTests(SimpleTestCase):
@@ -118,6 +119,76 @@ class AtencionesSocialesViewTests(SimpleTestCase):
         self.assertEqual(render.call_args.args[2]['atenciones_json'][0]['persona'], 'CASO-001')
         self.assertEqual(render.call_args.args[2]['atenciones_json'][0]['tipo'], 'Orientación familiar')
         self.assertEqual(reverse('atenciones_sociales_view'), '/atencion-social/')
+
+    def test_new_attention_post_saves_and_redirects_to_history(self):
+        funcionario = SimpleNamespace(pk=4)
+        atencion = SimpleNamespace(persona=SimpleNamespace(referencia_anonima='CASO-001'))
+        usuario_query = Mock()
+        usuario_query.order_by.return_value.first.return_value = funcionario
+        form = Mock()
+        form.is_valid.return_value = True
+        form.save.return_value = atencion
+
+        with (
+            patch.object(Usuario, 'objects', Mock(filter=Mock(return_value=usuario_query))),
+            patch('funcionario_demo_app.views.AtencionSocialForm', return_value=form) as form_class,
+            patch('funcionario_demo_app.views.transaction.atomic'),
+            patch('funcionario_demo_app.views.messages.success'),
+            patch('funcionario_demo_app.views.redirect', return_value='redirect') as redirect,
+        ):
+            response = nueva_atencion_social_view(RequestFactory().post('/atencion-social/nueva/'))
+
+        self.assertEqual(response, 'redirect')
+        form_class.assert_called_once_with({}, funcionario=funcionario)
+        form.save.assert_called_once_with()
+        redirect.assert_called_once_with('atenciones_sociales_view')
+
+    def test_form_save_reuses_anonymous_person_and_creates_attention(self):
+        persona = SimpleNamespace(pk=9)
+        funcionario = SimpleNamespace(pk=4)
+        tipo = SimpleNamespace(pk=3)
+        actividad = SimpleNamespace(pk=12)
+        activity_query = Mock()
+        activity_query.all.return_value = activity_query
+        activity_query.order_by.return_value = activity_query
+        catalog_query = Mock()
+        catalog_query.all.return_value = catalog_query
+        catalog_query.order_by.return_value = catalog_query
+        with (
+            patch.object(Actividad, 'objects', Mock(filter=Mock(return_value=activity_query))),
+            patch.object(CatalogoTipo, 'objects', Mock(filter=Mock(return_value=catalog_query))),
+        ):
+            form = AtencionSocialForm(funcionario=funcionario)
+        form.cleaned_data = {
+            'referencia_anonima': ' CASO-001 ',
+            'catalogo_tipo': tipo,
+            'orden_gestion': 2,
+            'fecha': date(2026, 9, 25),
+            'resultado': 'Derivación realizada',
+            'actividad': actividad,
+        }
+        person_manager = Mock()
+        person_manager.get_or_create.return_value = (persona, False)
+        attention_manager = Mock()
+        attention_manager.create.return_value = 'saved-attention'
+
+        with (
+            patch.object(PersonaUsuaria, 'objects', person_manager),
+            patch.object(AtencionSocial, 'objects', attention_manager),
+        ):
+            saved = form.save()
+
+        self.assertEqual(saved, 'saved-attention')
+        person_manager.get_or_create.assert_called_once_with(referencia_anonima='CASO-001')
+        attention_manager.create.assert_called_once_with(
+            persona=persona,
+            catalogo_tipo=tipo,
+            funcionario=funcionario,
+            orden_gestion=2,
+            fecha=date(2026, 9, 25),
+            resultado='Derivación realizada',
+            actividad=actividad,
+        )
 
 
 class EvidenciasJsonTests(SimpleTestCase):

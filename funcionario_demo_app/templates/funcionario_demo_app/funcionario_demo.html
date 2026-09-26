@@ -72,9 +72,9 @@
                         <p class="text-sm text-gray-500 mt-1">Delegación: {{ funcionario.delegacion|default:"Sin delegación" }} | Cargo: {{ funcionario.cargo|default:"Sin cargo" }}</p>
                     </div>
                     <div class="flex space-x-3">
-                        <button class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition shadow-sm">
-                            📎 Subir Evidencia
-                        </button>
+                        <a href="{% url 'nueva_atencion_social_view' %}" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition shadow-sm inline-flex items-center">
+                            🤝 Registrar Atención Social
+                        </a>
                         <a href="{% url 'nuevo_compromiso_view' %}" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-700 transition shadow-sm inline-flex items-center">
                             📅 Nuevo Compromiso
                         </a>

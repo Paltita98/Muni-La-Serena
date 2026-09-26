@@ -1,0 +1,40 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGR - Registrar Atención Social</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans p-8 page-shell">
+    <div class="form-card">
+        <div class="form-header dark">
+            <div>
+                <h1 class="text-lg font-bold text-white">Registrar Atención Social</h1>
+                <p class="mt-1 text-xs text-slate-300">{% if funcionario %}Funcionario: {{ funcionario.nombres }} {{ funcionario.apellidos }}{% else %}No hay un funcionario activo asignado{% endif %}</p>
+            </div>
+            <a href="{% url 'funcionario_demo_view' %}" class="text-slate-300 hover:text-white text-sm font-medium">Cerrar</a>
+        </div>
+        <form method="post" class="form-body space-y-5">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{{ form.non_field_errors }}</div>
+            {% endif %}
+            {% for field in form %}
+                <div>
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+                    {{ field }}
+                    {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                    {% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                </div>
+            {% endfor %}
+            <div class="pt-4 flex justify-end gap-3 border-t border-gray-100">
+                <a href="{% url 'atenciones_sociales_view' %}" class="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</a>
+                <button type="submit" {% if not funcionario %}disabled{% endif %} class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg shadow-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed">Guardar Atención</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
