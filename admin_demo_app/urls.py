@@ -5,6 +5,6 @@ app_name = 'admin_demo_app'
 
 urlpatterns = [
     # Panel de control del administrador
-    path('panel/', views.admin_demo, name='admin_demo'),
+    path('panel/', views.admin_demo_view, name='admin_demo'),
 ]
 
