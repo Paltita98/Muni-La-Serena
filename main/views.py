@@ -34,9 +34,9 @@ def login_view(request):
             
             # Redirigir según el rol
             if user['role'] == 'ADMIN':
-                return redirect('admin_demo') 
+                return redirect('admin_demo_app:admin_demo')
             else:
-                return redirect('funcionario_demo')
+                return redirect('funcionario_demo_app:funcionario_demo')
         else:
             messages.error(request, 'Correo o contraseña incorrectos.')
             
