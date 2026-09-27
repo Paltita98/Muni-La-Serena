@@ -28,8 +28,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-# ... (mantén tus INSTALLED_APPS y MIDDLEWARE intactos) ...
-
 # Configuración a MySQL usando variables de entorno
 DATABASES = {
     'default': {
@@ -44,7 +42,6 @@ DATABASES = {
 
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -89,8 +86,6 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -108,20 +103,13 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 # Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
-
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
+LANGUAGE_CODE = 'es-cl' # Cambiado a español de Chile
+TIME_ZONE = 'America/Santiago' # Zona horaria local
 USE_I18N = True
-
 USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
@@ -129,15 +117,13 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Admin emails to force admin dashboard (can be adjusted)
+# Admin emails to force admin dashboard
 ADMIN_EMAILS = [
     'admin@example.com',
 ]
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 # Use signed cookie sessions so no DB is needed for sessions
 SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 
@@ -156,3 +142,16 @@ FAKE_USERS = {
         'territory': 'NORTE',
     }
 }
+
+# ==========================================
+# CONFIGURACIÓN DE CORREO ELECTRÓNICO (SMTP)
+# ==========================================
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+# Es mejor usar os.environ.get para no dejar credenciales expuestas en GitHub
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'tu_correo_del_municipio@gmail.com')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'tu_contraseña_de_aplicacion')
+DEFAULT_FROM_EMAIL = f'Sistema Municipal <{EMAIL_HOST_USER}>'
+
