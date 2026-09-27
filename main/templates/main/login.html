@@ -1,0 +1,38 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Sistema Municipal</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body>
+<div class="page-shell" style="display: flex; align-items: center; justify-content: center; height: 100vh;">
+    <div class="form-card" style="width: 100%; max-width: 400px; text-align: center; margin: 0;">
+        <div class="form-body">
+            <img src="{% static 'images/la_serena.png' %}" alt="Logo" style="margin: 0 auto 1rem; max-height: 80px;">
+            <h2 style="margin: 0; color: var(--text-primary);">Sistema Municipal</h2>
+            <p style="margin-top: 0; color: var(--text-muted); font-size: 0.85rem;">Gestión de Atención Ciudadana</p>
+            
+            <form method="POST" style="margin-top: 2rem; text-align: left;">
+                {% csrf_token %}
+                <div class="field" style="margin-bottom: 1rem;">
+                    <label>Usuario</label>
+                    <input type="text" name="username" required>
+                </div>
+                <div class="field" style="margin-bottom: 1.5rem;">
+                    <label>Contraseña</label>
+                    <input type="password" name="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Ingresar</button>
+            </form>
+            
+            <div style="margin-top: 1.5rem;">
+                <p class="help">¿Olvidaste tu contraseña? <br>
+                <a href="/recuperar-password/" style="color: var(--primary); font-weight: 700;">Recuperar contraseña</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

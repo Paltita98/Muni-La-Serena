@@ -59,7 +59,7 @@ def recuperar_password(request):
         
         try:
             send_mail(asunto, mensaje, settings.DEFAULT_FROM_EMAIL, [email])
-            return redirect('validar_codigo')
+            return redirect('main:validar_codigo')
         except Exception as e:
             messages.error(request, f'Hubo un problema al enviar el correo. Revisa tu configuración SMTP.')
             
@@ -70,7 +70,7 @@ def validar_codigo(request):
     
     # Si ingresa directo a la URL sin haber pasado por recuperar, lo devolvemos
     if not correo_destino:
-        return redirect('recuperar_password')
+        return redirect('main:recuperar_password')
         
     if request.method == 'POST':
         # Concatenar los 6 inputs del formulario
@@ -84,7 +84,7 @@ def validar_codigo(request):
         if codigo_ingresado == codigo_guardado:
             # Si el código es correcto, habilitamos el paso final
             request.session['codigo_validado'] = True
-            return redirect('nueva_password')
+            return redirect('main:nueva_password')
         else:
             messages.error(request, 'Código incorrecto. Inténtalo de nuevo.')
             
@@ -93,7 +93,7 @@ def validar_codigo(request):
 def nueva_password(request):
     # Validar que el usuario haya pasado la prueba del código
     if not request.session.get('codigo_validado'):
-        return redirect('login_view')
+        return redirect('main:login_view')
         
     if request.method == 'POST':
         nueva = request.POST.get('nueva_password')
@@ -112,7 +112,7 @@ def nueva_password(request):
             request.session.pop('reset_codigo', None)
             request.session.pop('codigo_validado', None)
             
-            return redirect('login_view')
+            return redirect('main:login_view')
         else:
             messages.error(request, 'Las contraseñas no coinciden.')
             
