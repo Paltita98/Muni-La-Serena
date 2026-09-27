@@ -4,7 +4,7 @@ from . import views
 app_name = 'admin_demo_app'
 
 urlpatterns = [
-    # La ruta base del administrador
+    # Panel de control del administrador
     path('panel/', views.admin_demo, name='admin_demo'),
 ]
 

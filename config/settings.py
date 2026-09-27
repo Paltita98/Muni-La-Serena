@@ -101,17 +101,13 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
-# Carpeta donde NGINX buscará los archivos estáticos tras ejecutar collectstatic
+
+# ESTA LÍNEA ES OBLIGATORIA PARA NGINX Y AWS
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files (user uploads)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
-
-# Admin emails to force admin dashboard
-ADMIN_EMAILS = [
-    'admin@example.com',
-]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
