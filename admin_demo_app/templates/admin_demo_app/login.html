@@ -3,17 +3,20 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Sistema Municipal</title>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
-<body>
-<div class="page-shell" style="display: flex; align-items: center; justify-content: center; height: 100vh;">
-    <div class="form-card" style="width: 100%; max-width: 400px; text-align: center; margin: 0;">
-        <div class="form-body">
-            <img src="{% static 'images/la_serena.png' %}" alt="Logo" style="margin: 0 auto 1rem; max-height: 80px;">
-            <h2 style="margin: 0; color: var(--text-primary);">Sistema Municipal</h2>
-            <p style="margin-top: 0; color: var(--text-muted); font-size: 0.85rem;">Gestión de Atención Ciudadana</p>
-            
+<body class="page-shell">
+<div class="page-shell" style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem;">
+    <div class="form-card" style="width: 100%; max-width: 440px; margin: 0; overflow: hidden;">
+        <div class="form-header primary" style="justify-content: center; padding: 1.1rem 1.5rem;">
+            <img src="{% static 'images/la_serena.png' %}" alt="Logo Municipalidad" class="brand-logo" style="max-height: 46px; width: auto; margin: 0 auto; filter: brightness(0) invert(1);">
+        </div>
+        <div class="form-body" style="padding: 1.5rem;">
+            <h2 style="margin: 0; color: var(--text-primary); text-align: center; font-size: 1.8rem; font-weight: 800; letter-spacing: -0.03em;">Sistema Municipal</h2>
+            <p style="margin: 0.35rem 0 0; color: var(--text-muted); font-size: 0.85rem; text-align: center;">Gestión de Atención Ciudadana</p>
+
             <form method="POST" style="margin-top: 2rem; text-align: left;">
                 {% csrf_token %}
                 <div class="field" style="margin-bottom: 1rem;">
@@ -26,9 +29,9 @@
                 </div>
                 <button type="submit" class="btn btn-primary" style="width: 100%;">Ingresar</button>
             </form>
-            
-            <div style="margin-top: 1.5rem;">
-                <p class="help">¿Olvidaste tu contraseña? <br>
+
+            <div style="margin-top: 1.5rem; text-align: center;">
+                <p class="help">¿Olvidaste tu contraseña?<br>
                 <a href="/recuperar-password/" style="color: var(--primary); font-weight: 700;">Recuperar contraseña</a></p>
             </div>
         </div>

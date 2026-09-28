@@ -3,25 +3,29 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Validar Código</title>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
     <style>
-        .code-inputs { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 0.5rem; }
-        .code-inputs input { width: 40px; height: 50px; text-align: center; font-size: 1.2rem; font-weight: bold; border-radius: 8px; border: 1px solid var(--border); }
-        .code-inputs input:focus { border-color: var(--primary); outline: none; }
+        .code-inputs { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 0.75rem; }
+        .code-inputs input { width: 40px; height: 50px; text-align: center; font-size: 1.2rem; font-weight: bold; border-radius: 10px; border: 1px solid var(--border); background: #fff; color: var(--text-primary); }
+        .code-inputs input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(214, 22, 0, 0.12); outline: none; }
     </style>
 </head>
-<body>
-<div class="page-shell" style="display: flex; align-items: center; justify-content: center; height: 100vh;">
-    <div class="form-card" style="width: 100%; max-width: 400px; text-align: center; margin: 0;">
-        <div class="form-body">
-            <h3 style="margin: 0 0 1.5rem 0; color: var(--text-primary);">Ingresa el código de verificación</h3>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+<body class="page-shell">
+<div class="page-shell" style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem;">
+    <div class="form-card" style="width: 100%; max-width: 440px; margin: 0; overflow: hidden;">
+        <div class="form-header primary" style="justify-content: center; padding: 1.1rem 1.5rem;">
+            <img src="{% static 'images/la_serena.png' %}" alt="Logo Municipalidad" class="brand-logo" style="max-height: 46px; width: auto; margin: 0 auto; filter: brightness(0) invert(1);">
+        </div>
+        <div class="form-body" style="padding: 1.5rem;">
+            <h3 style="margin: 0 0 1.2rem 0; color: var(--text-primary); text-align: center; font-size: 1.55rem; font-weight: 800; letter-spacing: -0.02em;">Ingresa el código de verificación</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.5rem; text-align: center; line-height: 1.6;">
                 Hemos enviado un código de 6 dígitos a:<br>
-                <strong style="color: var(--text-primary);">{{ correo_destino }}</strong>
+                <strong style="color: var(--text-primary); display: block; margin-top: 0.25rem;">{{ correo_destino }}</strong>
             </p>
-            
-            <form method="POST">
+
+            <form method="POST" style="text-align: center;">
                 {% csrf_token %}
                 <div class="code-inputs">
                     <input type="text" maxlength="1" name="d1" required autofocus>
@@ -34,8 +38,8 @@
                 <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1.5rem;">El código expira en 10 minutos.</p>
                 <button type="submit" class="btn btn-primary" style="width: 100%;">Verificar código</button>
             </form>
-            
-            <div style="margin-top: 1.5rem; font-size: 0.85rem;">
+
+            <div style="margin-top: 1.5rem; font-size: 0.85rem; text-align: center;">
                 <p class="help">¿No recibiste el código?<br>
                 <a href="#" style="color: var(--primary); font-weight: 700;">Reenviar código</a></p>
                 <br>
