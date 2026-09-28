@@ -29,6 +29,8 @@ def admin_dashboard_view(request):
 
 
 def admin_demo_view(request):
+    if request.session.get('user_role') != 'ADMIN':
+        return redirect('main:login_view')
     return admin_dashboard_view(request)
 
 
