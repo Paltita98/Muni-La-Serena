@@ -3,6 +3,10 @@ from django.shortcuts import render, redirect
 from django.core.mail import send_mail
 from django.contrib import messages
 from django.conf import settings
+from django.contrib.auth.hashers import check_password, make_password
+from django.utils.crypto import constant_time_compare
+
+from admin_demo_app.models import Usuario
 
 # --- Vistas Originales ---
 def funcionario_demo(request):
@@ -21,25 +25,41 @@ def nuevo_compromiso(request):
 # --- Vistas de Autenticación y Recuperación ---
 def login_view(request):
     if request.method == 'POST':
-        email = request.POST.get('username')
-        password = request.POST.get('password')
-        
-        # Validar contra los usuarios ficticios en settings.py
-        user = settings.FAKE_USERS.get(email)
-        
-        if user and user['password'] == password:
-            # Iniciar sesión guardando datos en las cookies firmadas
-            request.session['user_role'] = user['role']
-            request.session['user_email'] = email
-            
-            # Redirigir según el rol
-            if user['role'] == 'ADMIN':
-                return redirect('admin_demo_app:admin_demo')
+        email = (request.POST.get('email') or request.POST.get('username') or '').strip()
+        password = request.POST.get('password', '')
+        user = (
+            Usuario.objects.prefetch_related('roles')
+            .filter(email__iexact=email, estado='activo')
+            .first()
+        )
+
+        if user and password:
+            stored_password = user.password_hash or ''
+            password_valid = check_password(password, stored_password)
+            if not password_valid and constant_time_compare(stored_password, password):
+                user.password_hash = make_password(password)
+                user.save(update_fields=['password_hash'])
+                password_valid = True
+
+            role_names = [role.nombre.casefold() for role in user.roles.all()]
+            if password_valid and any('admin' in role_name for role_name in role_names):
+                role = 'ADMIN'
+            elif password_valid and any('funcion' in role_name for role_name in role_names):
+                role = 'FUNCIONARIO'
             else:
-                return redirect('funcionario_demo_app:funcionario_demo')
-        else:
-            messages.error(request, 'Correo o contraseña incorrectos.')
-            
+                role = None
+
+            if role:
+                request.session.cycle_key()
+                request.session['user_id'] = user.pk
+                request.session['user_role'] = role
+                request.session['user_email'] = user.email
+                request.session['user_name'] = f'{user.nombres} {user.apellidos}'.strip()
+                destination = 'admin_dashboard_view' if role == 'ADMIN' else 'funcionario_demo_view'
+                return redirect(destination)
+
+        messages.error(request, 'Correo o contraseña incorrectos, o usuario sin un rol de acceso válido.')
+
     return render(request, 'main/login.html')
 
 def recuperar_password(request):

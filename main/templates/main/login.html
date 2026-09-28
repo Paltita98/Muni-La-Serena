@@ -3,6 +3,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Sistema Municipal</title>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
@@ -17,13 +18,16 @@
             <form method="POST" style="margin-top: 2rem; text-align: left;">
                 {% csrf_token %}
                 <div class="field" style="margin-bottom: 1rem;">
-                    <label>Usuario</label>
-                    <input type="text" name="username" required>
+                    <label for="login-email">Correo electrónico</label>
+                    <input id="login-email" type="email" name="email" autocomplete="username" required>
                 </div>
                 <div class="field" style="margin-bottom: 1.5rem;">
-                    <label>Contraseña</label>
-                    <input type="password" name="password" required>
+                    <label for="login-password">Contraseña</label>
+                    <input id="login-password" type="password" name="password" autocomplete="current-password" required>
                 </div>
+                {% for message in messages %}
+                    <p role="alert" style="margin-bottom: 1rem; color: var(--danger);">{{ message }}</p>
+                {% endfor %}
                 <button type="submit" class="btn btn-primary" style="width: 100%;">Ingresar</button>
             </form>
             

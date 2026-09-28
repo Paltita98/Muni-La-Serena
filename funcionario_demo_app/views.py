@@ -17,7 +17,9 @@ from .forms import AtencionSocialForm, ActividadForm, CompromisoForm, EvidenciaF
 
 
 def funcionario_demo_view(request):
-    funcionario = Usuario.objects.select_related('cargo', 'delegacion').filter(estado='activo').order_by('id').first()
+    funcionario = _funcionario_actual(request)
+    if funcionario is None:
+        return redirect('main:login_view')
     actividades = Actividad.objects.filter(funcionario=funcionario).order_by('-fecha_actividad') if funcionario else Actividad.objects.none()
     compromisos = Compromiso.objects.filter(responsable=funcionario).order_by('fecha_comprometida') if funcionario else Compromiso.objects.none()
     periodo = _periodo_actual()
@@ -122,7 +124,7 @@ def actividades_view(request):
 
 
 def atenciones_sociales_view(request):
-    funcionario = Usuario.objects.filter(estado='activo').order_by('id').first()
+    funcionario = _funcionario_actual(request)
     atenciones = (
         AtencionSocial.objects.filter(funcionario=funcionario)
         .select_related('persona', 'catalogo_tipo', 'actividad')
@@ -146,7 +148,7 @@ def atenciones_sociales_view(request):
 
 
 def nueva_atencion_social_view(request):
-    funcionario = Usuario.objects.filter(estado='activo').order_by('id').first()
+    funcionario = _funcionario_actual(request)
     if request.method == 'POST':
         form = AtencionSocialForm(request.POST, funcionario=funcionario)
         if form.is_valid():
@@ -215,7 +217,7 @@ def evidencias_json_view(request):
 
 
 def registrar_actividad_view(request):
-    funcionario = Usuario.objects.filter(estado='activo').order_by('id').first()
+    funcionario = _funcionario_actual(request)
     if request.method == 'POST':
         form = ActividadForm(request.POST, request.FILES, funcionario=funcionario)
         if form.is_valid() and funcionario and _periodo_actual():
@@ -242,7 +244,7 @@ def registrar_actividad_view(request):
 
 
 def nuevo_compromiso_view(request):
-    funcionario = Usuario.objects.filter(estado='activo').order_by('id').first()
+    funcionario = _funcionario_actual(request)
     if request.method == 'POST':
         form = CompromisoForm(request.POST)
         if form.is_valid() and funcionario:
@@ -258,6 +260,15 @@ def nuevo_compromiso_view(request):
 
 def _periodo_actual():
     return Periodo.objects.filter(estado='abierto').order_by('-fecha_inicio').first()
+
+
+def _funcionario_actual(request):
+    if request.session.get('user_role') != 'FUNCIONARIO':
+        return None
+    return Usuario.objects.select_related('cargo', 'delegacion').filter(
+        pk=request.session.get('user_id'),
+        estado='activo',
+    ).first()
 
 
 def _generar_codigo():

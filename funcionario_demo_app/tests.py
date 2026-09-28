@@ -102,41 +102,45 @@ class AtencionesSocialesViewTests(SimpleTestCase):
             actividad=actividad,
             actividad_id=actividad.pk,
         )
-        usuario_query = Mock()
-        usuario_query.order_by.return_value.first.return_value = funcionario
+        request = RequestFactory().get('/atencion-social/')
+        request.session = {'user_role': 'FUNCIONARIO', 'user_id': 4}
+        usuario_manager = Mock()
+        usuario_manager.select_related.return_value.filter.return_value.first.return_value = funcionario
         atencion_query = Mock()
         atencion_query.select_related.return_value.order_by.return_value = [atencion]
 
         with (
-            patch.object(Usuario, 'objects', Mock(filter=Mock(return_value=usuario_query))),
+            patch.object(Usuario, 'objects', usuario_manager),
             patch.object(AtencionSocial, 'objects', Mock(filter=Mock(return_value=atencion_query))),
             patch('funcionario_demo_app.views.render', return_value=object()) as render,
         ):
-            response = atenciones_sociales_view(RequestFactory().get('/atencion-social/'))
+            response = atenciones_sociales_view(request)
 
         self.assertIsNotNone(response)
         self.assertEqual(render.call_args.args[1], 'funcionario_demo_app/atenciones_sociales.html')
         self.assertEqual(render.call_args.args[2]['atenciones_json'][0]['persona'], 'CASO-001')
         self.assertEqual(render.call_args.args[2]['atenciones_json'][0]['tipo'], 'Orientación familiar')
-        self.assertEqual(reverse('atenciones_sociales_view'), '/atencion-social/')
+        self.assertEqual(reverse('atenciones_sociales_view'), '/funcionario/atencion-social/')
 
     def test_new_attention_post_saves_and_redirects_to_history(self):
         funcionario = SimpleNamespace(pk=4)
         atencion = SimpleNamespace(persona=SimpleNamespace(referencia_anonima='CASO-001'))
-        usuario_query = Mock()
-        usuario_query.order_by.return_value.first.return_value = funcionario
+        request = RequestFactory().post('/atencion-social/nueva/')
+        request.session = {'user_role': 'FUNCIONARIO', 'user_id': 4}
+        usuario_manager = Mock()
+        usuario_manager.select_related.return_value.filter.return_value.first.return_value = funcionario
         form = Mock()
         form.is_valid.return_value = True
         form.save.return_value = atencion
 
         with (
-            patch.object(Usuario, 'objects', Mock(filter=Mock(return_value=usuario_query))),
+            patch.object(Usuario, 'objects', usuario_manager),
             patch('funcionario_demo_app.views.AtencionSocialForm', return_value=form) as form_class,
             patch('funcionario_demo_app.views.transaction.atomic'),
             patch('funcionario_demo_app.views.messages.success'),
             patch('funcionario_demo_app.views.redirect', return_value='redirect') as redirect,
         ):
-            response = nueva_atencion_social_view(RequestFactory().post('/atencion-social/nueva/'))
+            response = nueva_atencion_social_view(request)
 
         self.assertEqual(response, 'redirect')
         form_class.assert_called_once_with({}, funcionario=funcionario)
