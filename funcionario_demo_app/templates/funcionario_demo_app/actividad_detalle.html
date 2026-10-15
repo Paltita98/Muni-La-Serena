@@ -15,7 +15,10 @@
                 <p class="text-sm text-gray-500">Actividad {{ actividad.codigo_evidencia }}</p>
                 <h1 class="text-2xl font-bold text-gray-900">{{ actividad.descripcion }}</h1>
             </div>
-            <a href="{% url 'actividades_view' %}" class="text-blue-600 hover:underline">Volver a actividades</a>
+            <div class="flex items-center gap-4">
+                {% include 'main/_notification_bell.html' %}
+                <a href="{% url 'actividades_view' %}" class="text-blue-600 hover:underline">Volver a actividades</a>
+            </div>
         </div>
 
         {% if messages %}
@@ -35,7 +38,8 @@
         </section>
 
         <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h2 class="text-lg font-bold text-gray-900 mb-4">Agregar evidencia</h2>
+            <h2 class="text-lg font-bold text-gray-900 mb-4">{% if puede_subir_evidencia %}Enviar o reenviar evidencia{% else %}Evidencia en revisión{% endif %}</h2>
+            {% if puede_subir_evidencia %}
             <form method="post" enctype="multipart/form-data" class="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
                 {% csrf_token %}
                 <div class="flex-1 w-full">
@@ -43,8 +47,9 @@
                     {{ form.archivo }}
                     {% for error in form.archivo.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
                 </div>
-                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg">Incorporar evidencia</button>
+                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg">Enviar evidencia</button>
             </form>
+            {% else %}<p class="text-sm text-gray-600">Espera la decisión del verificador. Si solicita correcciones, aquí podrás enviar una nueva versión.</p>{% endif %}
         </section>
 
         <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
@@ -53,10 +58,15 @@
                 {% for evidencia in evidencias %}
                     <div class="flex items-center justify-between border-b border-gray-100 pb-3">
                         <div>
-                            <a href="{{ evidencia.archivo.url }}" target="_blank" class="text-blue-600 hover:underline">{{ evidencia.archivo.name }}</a>
+                            <a href="{% url 'evidencia_archivo_view' evidencia.id %}" class="text-blue-600 hover:underline">Descargar {{ evidencia.archivo.name }}</a>
                             <p class="text-xs text-gray-500">{{ evidencia.formato|upper }} · {{ evidencia.tamanio_bytes }} bytes · {{ evidencia.fecha_carga|date:"d/m/Y H:i" }}</p>
                         </div>
-                        <span class="text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-700">{{ evidencia.get_estado_display }}</span>
+                        <div class="text-right">
+                            <span class="text-xs px-2 py-1 rounded {% if evidencia.estado == 'aprobada' %}bg-green-100 text-green-800{% elif evidencia.estado == 'en_correccion' or evidencia.estado == 'rechazada' %}bg-red-100 text-red-800{% else %}bg-yellow-100 text-yellow-800{% endif %}">{{ evidencia.get_estado_display }}</span>
+                            {% with ultima_validacion=evidencia.validaciones.all.0 %}
+                                {% if ultima_validacion and ultima_validacion.observacion %}<p class="mt-2 max-w-md text-left text-sm text-red-800">{{ ultima_validacion.observacion }}</p>{% endif %}
+                            {% endwith %}
+                        </div>
                     </div>
                 {% empty %}
                     <p class="text-sm text-gray-500">Esta actividad todavía no tiene evidencias.</p>

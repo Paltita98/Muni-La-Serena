@@ -12,29 +12,7 @@
     <div class="flex h-screen overflow-hidden">
         
         <!-- SIDEBAR DE ADMINISTRADOR -->
-        <aside class="sidebar w-64 bg-red-700 text-white flex flex-col">
-            <div class="h-16 flex items-center px-4 border-b border-white/15">
-                <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo h-8">
-                <span class="ml-3 font-bold text-lg tracking-widest text-white">Admin</span>
-            </div>
-            <nav class="flex-1 px-4 py-6 space-y-2">
-                <a href="#" class="flex items-center px-4 py-3 bg-red-900 text-white rounded-lg transition shadow-md">
-                    <span>⚙️</span><span class="ml-3 font-medium">Panel de Control</span>
-                </a>
-                <a href="{% url 'admin_usuarios_view' %}" class="flex items-center px-4 py-3 text-red-100 hover:bg-red-800 rounded-lg transition">
-                    <span>👥</span><span class="ml-3 font-medium">Usuarios y Roles</span>
-                </a>
-                <a href="{% url 'admin_delegaciones_view' %}" class="flex items-center px-4 py-3 text-red-100 hover:bg-red-800 rounded-lg transition">
-                    <span>🏢</span><span class="ml-3 font-medium">Delegaciones</span>
-                </a>
-                <a href="{% url 'admin_catalogos_view' %}" class="flex items-center px-4 py-3 text-red-100 hover:bg-red-800 rounded-lg transition">
-                    <span>🗂️</span><span class="ml-3 font-medium">Catálogos y Metas</span>
-                </a>
-                <a href="{% url 'admin_auditoria_view' %}" class="flex items-center px-4 py-3 text-red-100 hover:bg-red-800 rounded-lg transition">
-                    <span>🛡️</span><span class="ml-3 font-medium">Auditoría de Sistema</span>
-                </a>
-            </nav>
-        </aside>
+        {% include 'admin_demo_app/_admin_sidebar.html' with seccion_activa='panel' %}
 
         <!-- MAIN CONTENT -->
         <main class="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50">
@@ -46,10 +24,7 @@
                     <span class="absolute right-3 top-2 text-gray-400">🔍</span>
                 </div>
                 <div class="flex items-center space-x-6">
-                    <button class="relative text-gray-500 hover:text-red-600">
-                        ⚠️
-                        <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">3</span>
-                    </button>
+                    {% include 'main/_notification_bell.html' %}
                     <div class="flex items-center border-l pl-6 border-red-100">
                         <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-700 font-bold shadow-sm">
                             IA

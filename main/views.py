@@ -1,6 +1,6 @@
 import secrets
 from datetime import timedelta
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
 from django.core.mail import send_mail
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
@@ -11,8 +11,10 @@ from django.core.validators import validate_email
 from django.db.models import Q
 from django.utils.crypto import constant_time_compare
 from django.utils import timezone
+from django.views.decorators.http import require_POST
+from django.utils.http import url_has_allowed_host_and_scheme
 
-from admin_demo_app.models import CodigoRecuperacion, Usuario
+from admin_demo_app.models import CodigoRecuperacion, Notificacion, Usuario
 
 # --- Vistas Originales ---
 def funcionario_demo(request):
@@ -50,8 +52,16 @@ def login_view(request):
             role_names = [role.nombre.casefold() for role in user.roles.all()]
             if password_valid and any('admin' in role_name for role_name in role_names):
                 role = 'ADMIN'
+            elif password_valid and any('verificador' in role_name for role_name in role_names):
+                role = 'VERIFICADOR'
             elif password_valid and any('funcion' in role_name for role_name in role_names):
                 role = 'FUNCIONARIO'
+            elif password_valid and any('coordinador' in role_name for role_name in role_names):
+                role = 'COORDINADOR'
+            elif password_valid and any('delegado' in role_name or 'jefatura' in role_name for role_name in role_names):
+                role = 'DELEGADO'
+            elif password_valid and any('consulta' in role_name for role_name in role_names):
+                role = 'CONSULTA'
             else:
                 role = None
 
@@ -61,12 +71,69 @@ def login_view(request):
                 request.session['user_role'] = role
                 request.session['user_email'] = user.email
                 request.session['user_name'] = f'{user.nombres} {user.apellidos}'.strip()
-                destination = 'admin_dashboard_view' if role == 'ADMIN' else 'funcionario_demo_view'
+                destinations = {
+                    'ADMIN': 'admin_dashboard_view',
+                    'FUNCIONARIO': 'funcionario_demo_view',
+                    'VERIFICADOR': 'verificador_evidencias_view',
+                    'COORDINADOR': 'role_dashboard_view',
+                    'DELEGADO': 'role_dashboard_view',
+                    'CONSULTA': 'role_dashboard_view',
+                }
+                destination = destinations[role]
                 return redirect(destination)
 
         messages.error(request, 'Correo o contraseña incorrectos, o usuario sin un rol de acceso válido.')
 
     return render(request, 'main/login.html')
+
+
+def role_dashboard_view(request):
+    role = request.session.get('user_role')
+    if role not in {'COORDINADOR', 'DELEGADO', 'CONSULTA'}:
+        return redirect('main:login_view')
+    return render(request, 'main/role_dashboard.html', {'role': role})
+
+
+@require_POST
+def logout_view(request):
+    request.session.flush()
+    return redirect('main:login_view')
+
+
+@require_POST
+def marcar_notificacion_leida(request, notification_id):
+    usuario = _usuario_sesion_activo(request)
+    if not usuario:
+        return redirect('main:login_view')
+    notificacion = get_object_or_404(
+        Notificacion,
+        pk=notification_id,
+        destinatario=usuario,
+    )
+    if not notificacion.leida:
+        notificacion.leida = timezone.now()
+        notificacion.save(update_fields=['leida'])
+    destino = notificacion.url or request.META.get('HTTP_REFERER', '')
+    if url_has_allowed_host_and_scheme(destino, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        return redirect(destino)
+    return redirect('main:login_view')
+
+
+@require_POST
+def marcar_todas_notificaciones_leidas(request):
+    usuario = _usuario_sesion_activo(request)
+    if not usuario:
+        return redirect('main:login_view')
+    Notificacion.objects.filter(destinatario=usuario, leida__isnull=True).update(leida=timezone.now())
+    destino = request.META.get('HTTP_REFERER', '')
+    if url_has_allowed_host_and_scheme(destino, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        return redirect(destino)
+    return redirect('main:login_view')
+
+
+def _usuario_sesion_activo(request):
+    user_id = request.session.get('user_id')
+    return Usuario.objects.filter(pk=user_id, estado='activo').first() if user_id else None
 
 def recuperar_password(request):
     if request.method == 'POST':

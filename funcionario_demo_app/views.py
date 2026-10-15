@@ -1,19 +1,21 @@
 import json
 import secrets
 from datetime import date, timedelta
+from pathlib import PurePosixPath
 from decimal import Decimal
 from pathlib import Path
 
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Count, Q
-from django.http import JsonResponse
+from django.db.models import Count, Prefetch, Q
+from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
-from admin_demo_app.models import AtencionSocial, Actividad, Compromiso, Evidencia, Meta, Periodo, Usuario
+from admin_demo_app.models import AtencionSocial, Actividad, Compromiso, Evidencia, Meta, Periodo, Usuario, Validacion
+from main.notifications import notificar, notificar_accion_funcionario, notificar_administradores
 
-from .forms import AtencionSocialForm, ActividadForm, CompromisoForm, EvidenciaForm
+from .forms import AtencionSocialForm, ActividadForm, CompromisoForm, EvidenciaForm, VerificacionEvidenciaForm
 
 
 def funcionario_demo_view(request):
@@ -158,6 +160,12 @@ def nueva_atencion_social_view(request):
         if form.is_valid():
             with transaction.atomic():
                 atencion = form.save()
+            notificar_accion_funcionario(
+                funcionario.pk,
+                f'Registraste una atención social para {atencion.persona.referencia_anonima}.',
+                reverse('atenciones_sociales_view'),
+                tipo='actividad',
+            )
             messages.success(request, f'Atención social de {atencion.persona.referencia_anonima} registrada correctamente.')
             return redirect('atenciones_sociales_view')
     else:
@@ -180,7 +188,19 @@ def agenda_colectiva_view(request):
 
 
 def mis_evidencias_view(request):
-    return render(request, 'funcionario_demo_app/mis_evidencias.html')
+    funcionario = _funcionario_actual(request)
+    if not funcionario:
+        return redirect('main:login_view')
+    evidencias = Evidencia.objects.filter(autor=funcionario).select_related(
+        'actividad', 'actividad__item',
+    ).prefetch_related(Prefetch(
+        'validaciones',
+        queryset=Validacion.objects.select_related('verificador').order_by('-fecha'),
+    )).order_by('-fecha_carga')
+    return render(request, 'funcionario_demo_app/mis_evidencias.html', {
+        'evidencias': evidencias,
+        'funcionario': funcionario,
+    })
 
 
 def actividad_detalle_view(request, actividad_id):
@@ -189,7 +209,16 @@ def actividad_detalle_view(request, actividad_id):
         pk=actividad_id,
     )
     funcionario = actividad.funcionario
+    if request.session.get('user_role') != 'FUNCIONARIO' or funcionario.pk != request.session.get('user_id'):
+        return redirect('main:login_view')
+    tiene_pendiente = actividad.evidencias.filter(estado='pendiente').exists()
+    tiene_aprobada = actividad.evidencias.filter(estado='aprobada').exists()
+    tiene_correccion = actividad.evidencias.filter(estado__in=('en_correccion', 'rechazada')).exists()
+    puede_subir_evidencia = not tiene_pendiente and (not tiene_aprobada or tiene_correccion)
     if request.method == 'POST':
+        if not puede_subir_evidencia:
+            messages.error(request, 'No puedes enviar otra evidencia mientras exista una pendiente de revisión o aprobada.')
+            return redirect('actividad_detalle_view', actividad_id=actividad.id)
         form = EvidenciaForm(request.POST, request.FILES)
         if form.is_valid():
             archivo = form.cleaned_data['archivo']
@@ -199,6 +228,15 @@ def actividad_detalle_view(request, actividad_id):
                 formato=archivo.name.rsplit('.', 1)[-1].lower()[:10],
                 tamanio_bytes=archivo.size,
                 autor=funcionario,
+                estado='pendiente',
+            )
+            actividad.estado = 'pendiente'
+            actividad.save(update_fields=['estado'])
+            notificar_accion_funcionario(
+                funcionario.pk,
+                f'Enviaste una evidencia para la actividad {actividad.codigo_evidencia}.',
+                reverse('mis_evidencias_view'),
+                tipo='evidencia',
             )
             messages.success(request, 'La evidencia fue incorporada correctamente.')
             return redirect('actividad_detalle_view', actividad_id=actividad.id)
@@ -206,17 +244,117 @@ def actividad_detalle_view(request, actividad_id):
         form = EvidenciaForm()
     return render(request, 'funcionario_demo_app/actividad_detalle.html', {
         'actividad': actividad,
-        'evidencias': actividad.evidencias.select_related('autor').order_by('-fecha_carga'),
+        'evidencias': actividad.evidencias.select_related('autor').prefetch_related(Prefetch(
+            'validaciones',
+            queryset=Validacion.objects.select_related('verificador').order_by('-fecha'),
+        )).order_by('-fecha_carga'),
         'form': form,
+        'puede_subir_evidencia': puede_subir_evidencia,
     })
 
 
+def verificador_evidencias_view(request):
+    verificador = _verificador_actual(request)
+    if not verificador:
+        return redirect('main:login_view')
+    evidencias = Evidencia.objects.filter(estado='pendiente').select_related(
+        'actividad', 'actividad__funcionario', 'actividad__item', 'autor',
+    ).order_by('fecha_carga')
+    return render(request, 'funcionario_demo_app/verificador_evidencias.html', {
+        'evidencias': evidencias,
+        'verificador': verificador,
+    })
+
+
+def validar_evidencia_view(request, evidencia_id):
+    verificador = _verificador_actual(request)
+    if not verificador:
+        return redirect('main:login_view')
+    if request.method != 'POST':
+        return redirect('verificador_evidencias_view')
+    form = VerificacionEvidenciaForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, 'Para rechazar la evidencia debes escribir una descripción de lo que se debe corregir.')
+        return redirect('verificador_evidencias_view')
+    with transaction.atomic():
+        evidencia = get_object_or_404(
+            Evidencia.objects.select_for_update().select_related('actividad'),
+            pk=evidencia_id,
+            estado='pendiente',
+        )
+        decision = form.cleaned_data['decision']
+        observacion = form.cleaned_data['observacion'].strip()
+        Validacion.objects.create(
+            evidencia=evidencia,
+            verificador=verificador,
+            decision=decision,
+            observacion=observacion or None,
+        )
+        evidencia.estado = 'aprobada' if decision == 'aprobada' else 'en_correccion'
+        evidencia.save(update_fields=['estado'])
+        actividad = evidencia.actividad
+        if decision == 'rechazada':
+            actividad.estado = 'en_correccion'
+            mensaje = 'Evidencia devuelta al funcionario con instrucciones de corrección.'
+        else:
+            otras_evidencias = actividad.evidencias.exclude(pk=evidencia.pk)
+            if otras_evidencias.filter(estado='pendiente').exists():
+                actividad.estado = 'pendiente'
+            elif otras_evidencias.filter(estado__in=('en_correccion', 'rechazada')).exists():
+                actividad.estado = 'en_correccion'
+            else:
+                actividad.estado = 'validada'
+            mensaje = 'Evidencia aprobada correctamente.'
+        actividad.save(update_fields=['estado'])
+        verificador_nombre = f'{verificador.nombres} {verificador.apellidos}'.strip()
+        if decision == 'aprobada':
+            aviso_funcionario = f'Tu evidencia {evidencia.actividad.codigo_evidencia} fue revisada y aprobada por {verificador_nombre}.'
+        else:
+            aviso_funcionario = (
+                f'Tu evidencia {evidencia.actividad.codigo_evidencia} fue revisada por {verificador_nombre} '
+                f'y requiere corrección: {observacion}'
+            )
+        notificar(
+            evidencia.actividad.funcionario_id,
+            aviso_funcionario,
+            tipo='evidencia',
+            url=reverse('mis_evidencias_view'),
+            actor_id=verificador.pk,
+        )
+        notificar_administradores(
+            verificador.pk,
+            f'{verificador_nombre} revisó la evidencia de {evidencia.actividad.codigo_evidencia}: {"aprobada" if decision == "aprobada" else "requiere corrección"}.',
+            tipo='evidencia',
+            url='/administrador/panel/',
+        )
+    messages.success(request, mensaje)
+    return redirect('verificador_evidencias_view')
+
+
+def evidencia_archivo_view(request, evidencia_id):
+    evidencia = get_object_or_404(
+        Evidencia.objects.select_related('actividad__funcionario'),
+        pk=evidencia_id,
+    )
+    role = request.session.get('user_role')
+    user_id = request.session.get('user_id')
+    is_owner = role == 'FUNCIONARIO' and evidencia.actividad.funcionario_id == user_id
+    is_verifier = role == 'VERIFICADOR' and _verificador_actual(request) is not None
+    if not (is_owner or is_verifier):
+        raise Http404
+    filename = PurePosixPath(evidencia.archivo.name).name
+    return FileResponse(evidencia.archivo.open('rb'), as_attachment=True, filename=filename)
+
+
 def evidencias_json_view(request):
+    funcionario = _funcionario_actual(request)
+    if not funcionario:
+        return JsonResponse({'error': 'No autorizado'}, status=403)
     evidencias = [{
         'nombre': evidencia.actividad.descripcion,
         'codigo': evidencia.actividad.codigo_evidencia,
         'imagen': evidencia.archivo.url if evidencia.archivo else '',
-    } for evidencia in Evidencia.objects.select_related('actividad').order_by('-fecha_carga')]
+    } for evidencia in Evidencia.objects.filter(autor=funcionario).select_related('actividad').order_by('-fecha_carga')]
     return JsonResponse(evidencias, safe=False)
 
 
@@ -241,6 +379,13 @@ def registrar_actividad_view(request):
                         autor=funcionario,
                     )
             messages.success(request, f'Actividad {actividad.codigo_evidencia} registrada correctamente.')
+            notificar_accion_funcionario(
+                funcionario.pk,
+                f'Registraste la actividad {actividad.codigo_evidencia}'
+                f'{" con evidencia adjunta" if archivo else ""}.',
+                reverse('actividad_detalle_view', args=[actividad.pk]),
+                tipo='evidencia' if archivo else 'actividad',
+            )
             return redirect('actividades_view')
     else:
         form = ActividadForm(funcionario=funcionario)
@@ -255,6 +400,12 @@ def nuevo_compromiso_view(request):
             compromiso = form.save(commit=False)
             compromiso.responsable = funcionario
             compromiso.save()
+            notificar_accion_funcionario(
+                funcionario.pk,
+                f'Registraste un compromiso para {compromiso.solicitante}.',
+                reverse('agenda_colectiva_view'),
+                tipo='compromiso',
+            )
             messages.success(request, 'Compromiso guardado en la agenda colectiva.')
             return redirect('agenda_colectiva_view')
     else:
@@ -272,6 +423,16 @@ def _funcionario_actual(request):
     return Usuario.objects.select_related('cargo', 'delegacion').filter(
         pk=request.session.get('user_id'),
         estado='activo',
+    ).first()
+
+
+def _verificador_actual(request):
+    if request.session.get('user_role') != 'VERIFICADOR':
+        return None
+    return Usuario.objects.prefetch_related('roles').filter(
+        pk=request.session.get('user_id'),
+        estado='activo',
+        roles__nombre__icontains='verificador',
     ).first()
 
 

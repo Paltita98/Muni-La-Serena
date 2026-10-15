@@ -7,9 +7,9 @@ from unittest.mock import Mock, patch
 from django.test import RequestFactory, SimpleTestCase
 from django.urls import reverse
 
-from admin_demo_app.models import Actividad, AtencionSocial, CatalogoTipo, Meta, PersonaUsuaria, Usuario
-from .forms import AtencionSocialForm
-from .views import _calcular_metricas_funcionario, atenciones_sociales_view, nueva_atencion_social_view
+from admin_demo_app.models import Actividad, AtencionSocial, CatalogoTipo, Evidencia, Meta, PersonaUsuaria, Usuario, Validacion
+from .forms import AtencionSocialForm, VerificacionEvidenciaForm
+from .views import _calcular_metricas_funcionario, atenciones_sociales_view, nueva_atencion_social_view, validar_evidencia_view, verificador_evidencias_view
 
 
 class MetricasFuncionarioTests(SimpleTestCase):
@@ -147,6 +147,7 @@ class AtencionesSocialesViewTests(SimpleTestCase):
             patch('funcionario_demo_app.views.AtencionSocialForm', return_value=form) as form_class,
             patch('funcionario_demo_app.views.transaction.atomic'),
             patch('funcionario_demo_app.views.messages.success'),
+            patch('funcionario_demo_app.views.notificar_accion_funcionario') as notify,
             patch('funcionario_demo_app.views.redirect', return_value='redirect') as redirect,
         ):
             response = nueva_atencion_social_view(request)
@@ -154,6 +155,7 @@ class AtencionesSocialesViewTests(SimpleTestCase):
         self.assertEqual(response, 'redirect')
         form_class.assert_called_once_with({}, funcionario=funcionario)
         form.save.assert_called_once_with()
+        notify.assert_called_once()
         redirect.assert_called_once_with('atenciones_sociales_view')
 
     def test_form_save_reuses_anonymous_person_and_creates_attention(self):
@@ -233,3 +235,104 @@ class AdminDemoTests(SimpleTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Registrar Nuevo Usuario')
+
+
+class VerificacionEvidenciaTests(SimpleTestCase):
+    def test_rejection_requires_a_correction_description(self):
+        form = VerificacionEvidenciaForm({'decision': 'rechazada', 'observacion': '   '})
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('observacion', form.errors)
+
+    def test_approval_records_validation_and_updates_evidence_and_activity(self):
+        verifier = SimpleNamespace(pk=9, nombres='Víctor', apellidos='Validador')
+        activity = SimpleNamespace(
+            codigo_evidencia='ACT-TEST',
+            funcionario_id=21,
+            estado='pendiente',
+            evidencias=Mock(),
+            save=Mock(),
+        )
+        activity.evidencias.exclude.return_value.filter.return_value.exists.return_value = False
+        evidence = SimpleNamespace(pk=4, estado='pendiente', actividad=activity, save=Mock())
+        user_manager = Mock()
+        user_manager.prefetch_related.return_value.filter.return_value.first.return_value = verifier
+        request = RequestFactory().post('/verificador/evidencias/4/validar/', {
+            'decision': 'aprobada',
+            'observacion': '',
+        })
+        request.session = {'user_role': 'VERIFICADOR', 'user_id': 9}
+
+        with (
+            patch.object(Usuario, 'objects', user_manager),
+            patch.object(Evidencia, 'objects') as evidence_manager,
+            patch.object(Validacion, 'objects') as validation_manager,
+            patch('funcionario_demo_app.views.transaction.atomic'),
+            patch('funcionario_demo_app.views.get_object_or_404', return_value=evidence),
+            patch('funcionario_demo_app.views.messages.success'),
+            patch('funcionario_demo_app.views.notificar') as notify_user,
+            patch('funcionario_demo_app.views.notificar_administradores'),
+        ):
+            response = validar_evidencia_view(request, 4)
+
+        self.assertEqual(response.url, reverse('verificador_evidencias_view'))
+        self.assertEqual(evidence.estado, 'aprobada')
+        self.assertEqual(activity.estado, 'validada')
+        evidence_manager.select_for_update.assert_called_once()
+        validation_manager.create.assert_called_once_with(
+            evidencia=evidence,
+            verificador=verifier,
+            decision='aprobada',
+            observacion=None,
+        )
+        self.assertIn('aprobada por', notify_user.call_args.args[1])
+
+    def test_non_verifier_cannot_open_review_queue(self):
+        request = RequestFactory().get('/verificador/evidencias/')
+        request.session = {'user_role': 'FUNCIONARIO', 'user_id': 9}
+
+        response = verificador_evidencias_view(request)
+
+        self.assertEqual(response.url, '/login/')
+
+    def test_rejection_records_feedback_and_returns_activity_for_correction(self):
+        verifier = SimpleNamespace(pk=9, nombres='Víctor', apellidos='Validador')
+        activity = SimpleNamespace(
+            codigo_evidencia='ACT-TEST',
+            funcionario_id=21,
+            estado='pendiente',
+            evidencias=Mock(),
+            save=Mock(),
+        )
+        evidence = SimpleNamespace(pk=4, estado='pendiente', actividad=activity, save=Mock())
+        user_manager = Mock()
+        user_manager.prefetch_related.return_value.filter.return_value.first.return_value = verifier
+        request = RequestFactory().post('/verificador/evidencias/4/validar/', {
+            'decision': 'rechazada',
+            'observacion': 'Adjunta el respaldo firmado.',
+        })
+        request.session = {'user_role': 'VERIFICADOR', 'user_id': 9}
+
+        with (
+            patch.object(Usuario, 'objects', user_manager),
+            patch.object(Evidencia, 'objects'),
+            patch.object(Validacion, 'objects') as validation_manager,
+            patch('funcionario_demo_app.views.transaction.atomic'),
+            patch('funcionario_demo_app.views.get_object_or_404', return_value=evidence),
+            patch('funcionario_demo_app.views.messages.success'),
+            patch('funcionario_demo_app.views.notificar') as notify_user,
+            patch('funcionario_demo_app.views.notificar_administradores'),
+        ):
+            response = validar_evidencia_view(request, 4)
+
+        self.assertEqual(response.url, reverse('verificador_evidencias_view'))
+        self.assertEqual(evidence.estado, 'en_correccion')
+        self.assertEqual(activity.estado, 'en_correccion')
+        validation_manager.create.assert_called_once_with(
+            evidencia=evidence,
+            verificador=verifier,
+            decision='rechazada',
+            observacion='Adjunta el respaldo firmado.',
+        )
+        self.assertIn('Víctor Validador', notify_user.call_args.args[1])
+        self.assertIn('Adjunta el respaldo firmado.', notify_user.call_args.args[1])

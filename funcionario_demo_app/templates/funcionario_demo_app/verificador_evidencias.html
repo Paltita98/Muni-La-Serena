@@ -1,0 +1,103 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGR - Verificación de evidencias</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body class="page-shell">
+    <div class="flex h-screen overflow-hidden">
+        {% include 'funcionario_demo_app/_sidebar_rol.html' %}
+        <main class="min-w-0 flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50">
+            <header class="min-h-16 bg-white shadow-sm flex items-center justify-between gap-4 px-5 md:px-8 py-3">
+                <div>
+                    <h1 class="text-lg font-bold text-gray-900">Bandeja de verificación</h1>
+                    <p class="text-xs text-gray-500">Revisa el archivo y registra una decisión para el funcionario.</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    {% include 'main/_notification_bell.html' %}
+                    <span class="text-sm text-gray-600">{{ verificador.nombres }} {{ verificador.apellidos }}</span>
+                </div>
+            </header>
+            <div class="p-5 md:p-8 space-y-5">
+                {% for message in messages %}
+                    <div role="status" class="rounded border px-4 py-3 text-sm {% if message.tags == 'error' %}bg-red-50 border-red-200 text-red-700{% else %}bg-green-50 border-green-200 text-green-700{% endif %}">{{ message }}</div>
+                {% endfor %}
+                <div class="flex flex-wrap gap-3 items-center">
+                    <label class="sr-only" for="evidence-search">Buscar evidencias</label>
+                    <input id="evidence-search" type="search" placeholder="Buscar por funcionario, actividad o ítem..." class="w-full sm:w-96 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                    <span id="evidence-count" class="text-sm text-gray-600">{{ evidencias|length }} pendientes</span>
+                </div>
+                <div id="evidence-list" class="space-y-4">
+                    {% for evidencia in evidencias %}
+                        <article data-evidence-row data-search="{{ evidencia.actividad.funcionario.nombres }} {{ evidencia.actividad.funcionario.apellidos }} {{ evidencia.actividad.codigo_evidencia }} {{ evidencia.actividad.descripcion }} {{ evidencia.actividad.item.nombre }} {{ evidencia.archivo.name }}" class="bg-white border border-gray-200 rounded-lg p-5">
+                            <div class="flex flex-wrap items-start justify-between gap-4">
+                                <div>
+                                    <p class="text-xs text-gray-500">{{ evidencia.actividad.codigo_evidencia }} · {{ evidencia.fecha_carga|date:'d/m/Y H:i' }}</p>
+                                    <h2 class="mt-1 font-semibold text-gray-900">{{ evidencia.actividad.descripcion }}</h2>
+                                    <p class="mt-1 text-sm text-gray-600">Funcionario: {{ evidencia.actividad.funcionario.nombres }} {{ evidencia.actividad.funcionario.apellidos }} · Ítem: {{ evidencia.actividad.item.nombre }}</p>
+                                </div>
+                                    <a href="{% url 'evidencia_archivo_view' evidencia.id %}" class="inline-flex items-center px-3 py-2 border border-gray-300 rounded text-sm text-blue-700 hover:bg-gray-50">Descargar evidencia</a>
+                            </div>
+                            <form method="post" action="{% url 'validar_evidencia_view' evidencia.id %}" class="mt-5 border-t border-gray-100 pt-4 space-y-3" data-review-form>
+                                {% csrf_token %}
+                                <div class="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-3">
+                                    <label class="text-sm font-medium text-gray-700">Decisión
+                                        <select name="decision" class="mt-1 block w-full border border-gray-300 rounded px-3 py-2 text-sm" data-decision>
+                                            <option value="aprobada">Aprobar</option>
+                                            <option value="rechazada">Rechazar y pedir corrección</option>
+                                        </select>
+                                    </label>
+                                    <label class="text-sm font-medium text-gray-700">Descripción de corrección <span class="text-gray-400">(obligatoria al rechazar)</span>
+                                        <textarea name="observacion" maxlength="500" rows="2" data-observation class="mt-1 block w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Indica qué falta o qué debe corregirse"></textarea>
+                                    </label>
+                                </div>
+                                <div class="flex justify-end">
+                                    <button type="submit" class="px-4 py-2 bg-red-700 text-white text-sm font-medium rounded hover:bg-red-800">Guardar decisión</button>
+                                </div>
+                            </form>
+                        </article>
+                    {% empty %}
+                        <div class="bg-white border border-gray-200 rounded-lg px-5 py-12 text-center text-gray-500">No hay evidencias pendientes de revisión.</div>
+                    {% endfor %}
+                    <p id="no-evidence-results" hidden class="bg-white border border-gray-200 rounded-lg px-5 py-12 text-center text-gray-500">No hay coincidencias con esa búsqueda.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script>
+        const searchInput = document.getElementById('evidence-search');
+        const evidenceRows = [...document.querySelectorAll('[data-evidence-row]')];
+        const count = document.getElementById('evidence-count');
+        const emptySearch = document.getElementById('no-evidence-results');
+        const normalize = (text) => text.toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const filterRows = () => {
+            const query = normalize(searchInput.value.trim());
+            let visible = 0;
+            evidenceRows.forEach((row) => {
+                row.hidden = !normalize(row.dataset.search).includes(query);
+                if (!row.hidden) visible += 1;
+            });
+            count.textContent = `${visible} pendiente${visible === 1 ? '' : 's'}`;
+            emptySearch.hidden = visible > 0 || evidenceRows.length === 0;
+        };
+        searchInput.addEventListener('input', filterRows);
+        document.querySelectorAll('[data-review-form]').forEach((form) => {
+            const decision = form.querySelector('[data-decision]');
+            const observation = form.querySelector('[data-observation]');
+            const updateRequired = () => {
+                observation.required = decision.value === 'rechazada';
+            };
+            decision.addEventListener('change', updateRequired);
+            form.addEventListener('submit', (event) => {
+                updateRequired();
+                if (!form.reportValidity()) event.preventDefault();
+            });
+            updateRequired();
+        });
+    </script>
+</body>
+</html>

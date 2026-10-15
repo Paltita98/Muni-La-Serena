@@ -14,7 +14,11 @@
             <h1 class="text-lg font-bold text-white">
                 {% if modo_edicion %}Editar usuario funcionario{% else %}Registrar nuevo usuario funcionario{% endif %}
             </h1>
-            <a href="{% url 'admin_usuarios_view' %}" class="text-slate-300 hover:text-white text-sm font-medium">Cerrar</a>
+            <div class="flex items-center gap-4">
+                <a href="{% url 'admin_usuarios_view' %}" class="text-slate-300 hover:text-white text-sm font-medium">Volver</a>
+                {% include 'main/_notification_bell.html' %}
+                {% include 'main/_logout_button.html' %}
+            </div>
         </div>
 
         <form method="post" class="p-6 space-y-5">

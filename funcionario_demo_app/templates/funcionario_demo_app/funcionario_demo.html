@@ -18,6 +18,7 @@
                 <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo">
             </div>
             <nav class="flex-1 px-4 py-6 space-y-2">
+                {% if request.session.user_role == 'FUNCIONARIO' %}
                 <a href="{% url 'funcionario_demo_view' %}" class="flex items-center px-4 py-3 bg-blue-600 text-white rounded-lg">
                     <span>📊</span><span class="ml-3 font-medium">Mi Tablero</span>
                 </a>
@@ -33,7 +34,11 @@
                 <a href="{% url 'mis_evidencias_view' %}" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
                     <span>📎</span><span class="ml-3 font-medium">Mis Evidencias</span>
                 </a>
+                {% elif request.session.user_role == 'VERIFICADOR' %}
+                    <a href="{% url 'verificador_evidencias_view' %}" class="flex items-center px-4 py-3 text-white hover:bg-white/10 rounded-lg">Bandeja de evidencias</a>
+                {% endif %}
             </nav>
+            {% include 'main/_logout_button.html' %}
         </aside>
 
         <!-- MAIN CONTENT -->
@@ -46,10 +51,7 @@
                     <span class="absolute right-3 top-2 text-gray-400">🔍</span>
                 </div>
                 <div class="flex items-center space-x-6">
-                    <button class="relative text-gray-500 hover:text-blue-600">
-                        🔔
-                        <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">2</span>
-                    </button>
+                    {% include 'main/_notification_bell.html' %}
                     <div class="flex items-center border-l pl-6">
                         <div class="w-8 h-8 rounded-full bg-blue-200 flex items-center justify-center text-blue-700 font-bold">
                             IA
@@ -103,7 +105,7 @@
                         <p class="text-sm font-medium text-gray-500">Meta Esperada al Día</p>
                         <h3 class="text-3xl font-bold text-gray-900 mt-2">{% if metricas %}{{ metricas.meta_esperada_pct }}%{% else %}0%{% endif %}</h3>
                         <div class="w-full bg-gray-200 rounded-full h-1.5 mt-3">
-                            <div class="bg-blue-600 h-1.5 rounded-full" style="width: {% if metricas %}{{ metricas.meta_esperada_pct }}{% else %}0{% endif %}%"></div>
+                            <div id="meta-progress-bar" class="bg-blue-600 h-1.5 rounded-full" data-progress="{% if metricas %}{{ metricas.meta_esperada_pct }}{% else %}0{% endif %}" style="width: 0%"></div>
                         </div>
                     </div>
                 </div>
@@ -152,6 +154,11 @@
             </div>
         </main>
     </div>
+    <script>
+        const progressBar = document.getElementById('meta-progress-bar');
+        const progressValue = Number(progressBar.dataset.progress);
+        progressBar.style.width = `${Math.min(100, Math.max(0, progressValue))}%`;
+    </script>
 
 </body>
 </html>

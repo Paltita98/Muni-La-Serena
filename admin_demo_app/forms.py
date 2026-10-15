@@ -87,24 +87,6 @@ class MetaForm(forms.ModelForm):
         return cleaned_data
 
 
-class DelegacionForm(forms.ModelForm):
-    class Meta:
-        model = Delegacion
-        fields = ('codigo', 'nombre', 'direccion', 'comuna', 'ambito', 'responsable', 'estado')
-
-
-class RolForm(forms.ModelForm):
-    class Meta:
-        model = Rol
-        fields = ('nombre', 'descripcion', 'permisos', 'alcance_autorizado')
-
-
-class ItemMedicionForm(forms.ModelForm):
-    class Meta:
-        model = ItemMedicion
-        fields = ('codigo', 'nombre', 'descripcion', 'cargo', 'tipo', 'unidad', 'formula_desc', 'estado')
-
-
 class UsuarioForm(forms.ModelForm):
     password = forms.CharField(
         label="Contraseña",
@@ -124,7 +106,6 @@ class UsuarioForm(forms.ModelForm):
             "cargo",
             "delegacion",
             "delegaciones_autorizadas",
-            "delegaciones_autorizadas",
             "roles",
             "estado",
         )
@@ -135,7 +116,6 @@ class UsuarioForm(forms.ModelForm):
             "email": "Correo institucional",
             "cargo": "Cargo",
             "delegacion": "Delegación",
-            "delegaciones_autorizadas": "Delegaciones autorizadas",
             "delegaciones_autorizadas": "Delegaciones autorizadas",
             "roles": "Roles",
             "estado": "Estado",
@@ -148,7 +128,6 @@ class UsuarioForm(forms.ModelForm):
             "cargo": forms.Select(attrs={"class": "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"}),
             "delegacion": forms.Select(attrs={"class": "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"}),
             "delegaciones_autorizadas": forms.CheckboxSelectMultiple,
-            "delegaciones_autorizadas": forms.CheckboxSelectMultiple,
             "estado": forms.Select(attrs={"class": "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"}),
             "roles": forms.CheckboxSelectMultiple,
         }
@@ -157,7 +136,6 @@ class UsuarioForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["cargo"].queryset = Cargo.objects.filter(estado="activo").order_by("nombre")
         self.fields["delegacion"].queryset = Delegacion.objects.filter(estado="activa").order_by("nombre")
-        self.fields["delegaciones_autorizadas"].queryset = Delegacion.objects.filter(estado="activa").order_by("nombre")
         self.fields["delegaciones_autorizadas"].queryset = Delegacion.objects.filter(estado="activa").order_by("nombre")
         self.fields["roles"].queryset = Rol.objects.order_by("nombre")
         self.fields["cargo"].required = True

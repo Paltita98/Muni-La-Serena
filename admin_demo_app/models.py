@@ -438,6 +438,33 @@ class Alerta(models.Model):
         verbose_name_plural = 'Alertas'
 
 
+class Notificacion(models.Model):
+    TIPO_CHOICES = [
+        ('sistema', 'Sistema'),
+        ('evidencia', 'Evidencia'),
+        ('actividad', 'Actividad'),
+        ('compromiso', 'Compromiso'),
+        ('administracion', 'Administración'),
+    ]
+
+    destinatario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='notificaciones')
+    actor = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='notificaciones_generadas',
+    )
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='sistema')
+    mensaje = models.CharField(max_length=500)
+    url = models.CharField(max_length=255, blank=True)
+    creada = models.DateTimeField(auto_now_add=True)
+    leida = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Notificación'
+        verbose_name_plural = 'Notificaciones'
+        ordering = ('-creada',)
+        indexes = [models.Index(fields=('destinatario', 'leida', 'creada'))]
+
+
 class Auditoria(models.Model):
     ACCION_CHOICES = [
         ('crear', 'Crear'), ('modificar', 'Modificar'), ('eliminar', 'Eliminar'),

@@ -7,14 +7,19 @@ from django.test import RequestFactory, SimpleTestCase
 from django.utils import timezone
 
 from admin_demo_app import views as admin_views
-from admin_demo_app.models import CodigoRecuperacion, Usuario
+from admin_demo_app.models import CodigoRecuperacion, Notificacion, Usuario
 from funcionario_demo_app import views as funcionario_views
-from .views import login_view, nueva_password, recuperar_password
+from .context_processors import user_notifications
+from .views import login_view, marcar_notificacion_leida, nueva_password, recuperar_password
 
 
 class LoginSession(dict):
     def cycle_key(self):
         pass
+
+    def flush(self):
+        self.clear()
+from .views import login_view, logout_view, nueva_password, recuperar_password
 
 
 class LoginViewTests(SimpleTestCase):
@@ -58,6 +63,12 @@ class LoginViewTests(SimpleTestCase):
         self.assertEqual(response.url, '/funcionario/panel/')
         self.assertEqual(session['user_role'], 'FUNCIONARIO')
 
+    def test_verifier_login_redirects_to_evidence_review(self):
+        response, session = self._login('Verificador')
+
+        self.assertEqual(response.url, '/funcionario/verificador/evidencias/')
+        self.assertEqual(session['user_role'], 'VERIFICADOR')
+
     def test_login_accepts_institutional_identifier(self):
         user = SimpleNamespace(
             pk=29,
@@ -99,6 +110,20 @@ class LoginViewTests(SimpleTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertNotIn('user_role', request.session)
+
+    def test_logout_flushes_session_and_redirects_to_login(self):
+        request = self.factory.post('/cerrar-sesion/')
+        request.session = LoginSession(user_id=4, user_role='ADMIN')
+
+        response = logout_view(request)
+
+        self.assertEqual(response.url, '/login/')
+        self.assertEqual(request.session, {})
+
+    def test_logout_rejects_get_requests(self):
+        response = self.client.get('/cerrar-sesion/')
+
+        self.assertEqual(response.status_code, 405)
 
 
 class FuncionarioPanelTests(SimpleTestCase):
@@ -209,3 +234,33 @@ class PasswordResetTests(SimpleTestCase):
         user.save.assert_called_once_with(update_fields=['password_hash'])
         challenge.delete.assert_called_once_with()
         self.assertNotIn('reset_user_id', request.session)
+
+
+class NotificationTests(SimpleTestCase):
+    def test_marking_notification_read_only_loads_the_current_recipients_record(self):
+        user = SimpleNamespace(pk=17)
+        notification = SimpleNamespace(leida=None, url='/funcionario/evidencias/', save=Mock())
+        user_manager = Mock()
+        user_manager.filter.return_value.first.return_value = user
+        request = RequestFactory().post('/notificaciones/5/leer/', HTTP_HOST='testserver')
+        request.session = LoginSession(user_id=17)
+
+        with (
+            patch.object(Usuario, 'objects', user_manager),
+            patch('main.views.get_object_or_404', return_value=notification) as get_notification,
+        ):
+            response = marcar_notificacion_leida(request, 5)
+
+        self.assertEqual(response.url, notification.url)
+        self.assertIsNotNone(notification.leida)
+        notification.save.assert_called_once_with(update_fields=['leida'])
+        get_notification.assert_called_once_with(Notificacion, pk=5, destinatario=user)
+
+    def test_anonymous_request_gets_empty_notification_context(self):
+        request = RequestFactory().get('/')
+        request.session = {}
+
+        self.assertEqual(
+            user_notifications(request),
+            {'user_notifications': [], 'unread_notifications_count': 0},
+        )

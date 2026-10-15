@@ -1,0 +1,19 @@
+{% load static %}
+<aside class="sidebar w-64 shrink-0 text-white flex flex-col">
+    <div class="h-16 flex items-center px-4 border-b border-white/15">
+        <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo">
+        <span class="ml-3 font-bold">{% if request.session.user_role == 'VERIFICADOR' %}VERIFICADOR{% else %}FUNCIONARIO{% endif %}</span>
+    </div>
+    <nav class="flex-1 px-4 py-6 space-y-2">
+        {% if request.session.user_role == 'FUNCIONARIO' %}
+            <a href="{% url 'funcionario_demo_view' %}" class="block px-4 py-3 text-white hover:bg-white/10 rounded-lg">Mi tablero</a>
+            <a href="{% url 'actividades_view' %}" class="block px-4 py-3 text-white hover:bg-white/10 rounded-lg">Actividades</a>
+            <a href="{% url 'atenciones_sociales_view' %}" class="block px-4 py-3 text-white hover:bg-white/10 rounded-lg">Atención Social</a>
+            <a href="{% url 'agenda_colectiva_view' %}" class="block px-4 py-3 text-white hover:bg-white/10 rounded-lg">Agenda Colectiva</a>
+            <a href="{% url 'mis_evidencias_view' %}" class="block px-4 py-3 text-white hover:bg-white/10 rounded-lg">Mis Evidencias</a>
+        {% elif request.session.user_role == 'VERIFICADOR' %}
+            <a href="{% url 'verificador_evidencias_view' %}" class="block px-4 py-3 bg-white/15 text-white rounded-lg">Bandeja de evidencias</a>
+        {% endif %}
+    </nav>
+    {% include 'main/_logout_button.html' %}
+</aside>

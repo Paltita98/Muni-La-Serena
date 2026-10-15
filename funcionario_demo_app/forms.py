@@ -11,11 +11,31 @@ from admin_demo_app.models import (
     ItemMedicion,
     Periodo,
     PersonaUsuaria,
+    Validacion,
 )
 
 
 class EvidenciaForm(forms.Form):
     archivo = forms.FileField(label="Archivo de evidencia")
+
+
+class VerificacionEvidenciaForm(forms.Form):
+    decision = forms.ChoiceField(
+        label='Decisión',
+        choices=(('aprobada', 'Aprobar evidencia'), ('rechazada', 'Rechazar y solicitar corrección')),
+    )
+    observacion = forms.CharField(
+        label='Observación para el funcionario',
+        max_length=500,
+        required=False,
+        widget=forms.Textarea(attrs={'rows': 3}),
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get('decision') == 'rechazada' and not cleaned_data.get('observacion', '').strip():
+            self.add_error('observacion', 'Describe qué debe corregir el funcionario antes de devolver la evidencia.')
+        return cleaned_data
 
 
 class ActividadForm(forms.ModelForm):

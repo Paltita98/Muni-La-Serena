@@ -15,6 +15,7 @@
                 <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo">
             </div>
             <nav class="flex-1 px-4 py-6 space-y-2">
+                {% if request.session.user_role == 'FUNCIONARIO' %}
                 <a href="{% url 'funcionario_demo_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
                     <span>📊</span><span class="ml-3 font-medium">Mi Tablero</span>
                 </a>
@@ -30,7 +31,11 @@
                 <a href="{% url 'mis_evidencias_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
                     <span>📎</span><span class="ml-3 font-medium">Mis Evidencias</span>
                 </a>
+                {% elif request.session.user_role == 'VERIFICADOR' %}
+                    <a href="{% url 'verificador_evidencias_view' %}" class="flex items-center px-4 py-3 text-white hover:bg-white/10 rounded-lg">Bandeja de evidencias</a>
+                {% endif %}
             </nav>
+            {% include 'main/_logout_button.html' %}
         </aside>
 
         <main class="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50">
@@ -40,6 +45,7 @@
                     <span class="absolute right-3 top-2 text-gray-400">🔍</span>
                 </div>
                 <div class="flex items-center space-x-6">
+                    {% include 'main/_notification_bell.html' %}
                     <a href="{% url 'nuevo_compromiso_view' %}" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition shadow-sm inline-flex items-center">+ Nuevo Compromiso</a>
                 </div>
             </header>

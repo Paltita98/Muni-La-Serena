@@ -1,0 +1,56 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGR - Panel de acceso</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body class="page-shell">
+    <div class="flex h-screen overflow-hidden">
+        <aside class="sidebar w-64 shrink-0 text-white flex flex-col">
+            <div class="h-16 flex items-center px-4 border-b border-white/15">
+                <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo">
+                <span class="ml-3 font-bold">{{ request.session.user_name }}</span>
+            </div>
+            <nav class="flex-1 px-4 py-6 space-y-2">
+                {% if role == 'COORDINADOR' %}
+                    <a href="#operacion" class="block px-4 py-3 rounded-lg hover:bg-white/10">Supervisión transversal</a>
+                    <a href="#indicadores" class="block px-4 py-3 rounded-lg hover:bg-white/10">Indicadores</a>
+                    <a href="#criterios" class="block px-4 py-3 rounded-lg hover:bg-white/10">Criterios y mejoras</a>
+                {% elif role == 'DELEGADO' %}
+                    <a href="#delegacion" class="block px-4 py-3 rounded-lg hover:bg-white/10">Mi delegación</a>
+                    <a href="#compromisos" class="block px-4 py-3 rounded-lg hover:bg-white/10">Compromisos</a>
+                    <a href="#cumplimiento" class="block px-4 py-3 rounded-lg hover:bg-white/10">Cumplimiento</a>
+                {% elif role == 'CONSULTA' %}
+                    <a href="#tableros" class="block px-4 py-3 rounded-lg hover:bg-white/10">Tableros</a>
+                    <a href="#informes" class="block px-4 py-3 rounded-lg hover:bg-white/10">Informes autorizados</a>
+                {% endif %}
+            </nav>
+            {% include 'main/_logout_button.html' %}
+        </aside>
+        <main class="min-w-0 flex-1 overflow-y-auto bg-gray-50">
+            <header class="h-16 bg-white shadow-sm flex items-center px-6 md:px-8">
+                <h1 class="font-bold text-gray-900">{% if role == 'COORDINADOR' %}Coordinación del sistema{% elif role == 'DELEGADO' %}Gestión de delegación{% else %}Consulta de información{% endif %}</h1>
+                <div class="ml-auto">{% include 'main/_notification_bell.html' %}</div>
+            </header>
+            <div class="max-w-4xl p-5 md:p-8 space-y-4">
+                {% if role == 'COORDINADOR' %}
+                    <section id="operacion" class="bg-white border border-gray-200 rounded-lg p-5"><h2 class="font-semibold">Supervisión transversal</h2><p class="mt-2 text-sm text-gray-600">Este perfil está separado del administrador. El acceso a indicadores, criterios y coordinación de mejoras se habilitará en sus módulos correspondientes.</p></section>
+                    <section id="indicadores" class="bg-white border border-gray-200 rounded-lg p-5"><h2 class="font-semibold">Indicadores del sistema</h2><p class="mt-2 text-sm text-gray-600">Vista de seguimiento pendiente de conectar con los indicadores consolidados.</p></section>
+                    <section id="criterios" class="bg-white border border-gray-200 rounded-lg p-5"><h2 class="font-semibold">Criterios y mejoras</h2><p class="mt-2 text-sm text-gray-600">Espacio de coordinación pendiente de implementar.</p></section>
+                {% elif role == 'DELEGADO' %}
+                    <section id="delegacion" class="bg-white border border-gray-200 rounded-lg p-5"><h2 class="font-semibold">Mi delegación</h2><p class="mt-2 text-sm text-gray-600">La consulta de gestión y acompañamiento se limitará a las delegaciones autorizadas de este perfil.</p></section>
+                    <section id="compromisos" class="bg-white border border-gray-200 rounded-lg p-5"><h2 class="font-semibold">Compromisos</h2><p class="mt-2 text-sm text-gray-600">La revisión y asignación de compromisos requiere conectar el alcance autorizado del delegado.</p></section>
+                    <section id="cumplimiento" class="bg-white border border-gray-200 rounded-lg p-5"><h2 class="font-semibold">Cumplimiento</h2><p class="mt-2 text-sm text-gray-600">El seguimiento de cumplimiento se habilitará para las delegaciones asignadas.</p></section>
+                {% else %}
+                    <section id="tableros" class="bg-white border border-gray-200 rounded-lg p-5"><h2 class="font-semibold">Tableros autorizados</h2><p class="mt-2 text-sm text-gray-600">El acceso a tableros se restringirá al ámbito autorizado para esta cuenta.</p></section>
+                    <section id="informes" class="bg-white border border-gray-200 rounded-lg p-5"><h2 class="font-semibold">Informes</h2><p class="mt-2 text-sm text-gray-600">Los informes se habilitarán en modo de solo lectura según el alcance autorizado.</p></section>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+</body>
+</html>
