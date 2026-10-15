@@ -8,6 +8,7 @@ urlpatterns = [
     path('login/', views.login_view, name='login_view'),
     path('recuperar-password/', views.recuperar_password, name='recuperar_password'),
     path('validar-codigo/', views.validar_codigo, name='validar_codigo'),
+    path('reenviar-codigo/', views.reenviar_codigo, name='reenviar_codigo'),
     path('nueva-password/', views.nueva_password, name='nueva_password'),
 ]
 

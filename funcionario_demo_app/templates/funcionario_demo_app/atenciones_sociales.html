@@ -98,7 +98,7 @@
             const query = (searchInput.value || searchInputMobile.value || '').trim().toLocaleLowerCase();
             const category = categoryFilter.value;
             const filtered = atenciones.filter(item => {
-                const searchable = `${item.persona} ${item.tipo} ${item.resultado} ${item.actividad}`.toLocaleLowerCase();
+                const searchable = `${item.persona} ${item.solicitante} ${item.tipo} ${item.subatencion} ${item.delegacion} ${item.descripcion} ${item.resultado} ${item.actividad}`.toLocaleLowerCase();
                 return searchable.includes(query) && (category === 'all' || item.categoria === category);
             });
 
@@ -117,8 +117,9 @@
                 row.className = 'activity-item';
                 const main = document.createElement('div');
                 main.className = 'activity-main';
-                addText(main, 'p', 'activity-title', item.tipo);
-                addText(main, 'p', 'activity-meta', `${item.categoria_display} | Persona: ${item.persona} | Gestión ${item.orden_gestion} | ${item.fecha}`);
+                addText(main, 'p', 'activity-title', item.subatencion ? `${item.tipo} / ${item.subatencion}` : item.tipo);
+                addText(main, 'p', 'activity-meta', `${item.categoria_display} | Solicitante: ${item.solicitante || item.persona} | Delegación: ${item.delegacion || 'No indicada'} | Gestión ${item.orden_gestion} | ${item.fecha}`);
+                if (item.descripcion) addText(main, 'p', 'activity-meta mt-1', `Descripción: ${item.descripcion}`);
                 if (item.resultado) {
                     addText(main, 'p', 'activity-meta mt-1', `Resultado: ${item.resultado}`);
                 }

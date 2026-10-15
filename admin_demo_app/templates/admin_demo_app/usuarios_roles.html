@@ -86,10 +86,10 @@
                                 <tr class="hover:bg-gray-50 transition">
                                     <td class="p-4 font-medium text-gray-900">{{ usuario.nombres }} {{ usuario.apellidos }}</td>
                                     <td class="p-4 text-gray-500">{{ usuario.identificador_inst }}<br><span class="text-xs">{{ usuario.email }}</span></td>
-                                    <td class="p-4 text-gray-500">{{ usuario.cargo|default:"Sin cargo" }}</td>
+                                    <td class="p-4 text-gray-500">{% for rol in usuario.roles.all %}{{ rol.nombre }}{% if not forloop.last %}, {% endif %}{% empty %}Sin rol{% endfor %}</td>
                                     <td class="p-4 text-gray-500">{{ usuario.delegacion|default:"Sin delegación" }}</td>
                                     <td class="p-4"><span class="px-2 py-1 {% if usuario.estado == 'activo' %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %} text-xs rounded-full font-medium">{{ usuario.get_estado_display }}</span></td>
-                                    <td class="p-4 text-right"><a href="{% url 'editar_usuario_view' usuario.id %}" class="text-blue-600 hover:underline">Editar</a></td>
+                                    <td class="p-4 text-right"><div class="inline-flex gap-3"><a href="{% url 'editar_usuario_view' usuario.id %}" class="text-blue-600 hover:underline">Editar</a>{% if usuario.estado == 'activo' %}<form method="post" action="{% url 'eliminar_usuario_view' %}" onsubmit="return confirm('¿Desactivar este usuario?')">{% csrf_token %}<input type="hidden" name="record_id" value="{{ usuario.id }}"><button class="text-red-700 hover:underline">Desactivar</button></form>{% endif %}</div></td>
                                 </tr>
                             {% empty %}
                                 <tr><td colspan="6" class="p-8 text-center text-gray-500">No hay usuarios registrados.</td></tr>

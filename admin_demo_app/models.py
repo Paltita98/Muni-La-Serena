@@ -8,6 +8,8 @@ from django.utils import timezone
 class Rol(models.Model):
     nombre = models.CharField(max_length=60, unique=True, verbose_name="Nombre del Rol")
     descripcion = models.CharField(max_length=255, blank=True, null=True)
+    permisos = models.JSONField(default=list, blank=True)
+    alcance_autorizado = models.CharField(max_length=255, blank=True)
 
     class Meta:
         verbose_name = "Rol"
@@ -37,6 +39,9 @@ class Delegacion(models.Model):
     ESTADO_CHOICES = [('activa', 'Activa'), ('inactiva', 'Inactiva')]
     
     nombre = models.CharField(max_length=120, unique=True)
+    codigo = models.CharField(max_length=30, unique=True, null=True, blank=True)
+    direccion = models.CharField(max_length=255, blank=True)
+    comuna = models.CharField(max_length=100, blank=True)
     ambito = models.CharField(max_length=120, blank=True, null=True)
     estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='activa')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -61,6 +66,9 @@ class Usuario(models.Model):
     password_hash = models.CharField(max_length=255) # En un entorno real se usa la auth nativa de Django
     cargo = models.ForeignKey(Cargo, on_delete=models.SET_NULL, null=True, blank=True)
     delegacion = models.ForeignKey(Delegacion, on_delete=models.SET_NULL, null=True, blank=True)
+    delegaciones_autorizadas = models.ManyToManyField(
+        Delegacion, related_name='usuarios_autorizados', blank=True,
+    )
     roles = models.ManyToManyField(Rol, related_name='usuarios') # Reemplaza la tabla intermedia usuario_rol
     estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='activo')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -71,6 +79,19 @@ class Usuario(models.Model):
 
     def __str__(self):
         return f"{self.nombres} {self.apellidos} ({self.identificador_inst})"
+
+
+class CodigoRecuperacion(models.Model):
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='codigos_recuperacion')
+    codigo_hash = models.CharField(max_length=128)
+    creado = models.DateTimeField(auto_now_add=True)
+    expira = models.DateTimeField()
+    intentos = models.PositiveSmallIntegerField(default=0)
+    reenvios = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Código de recuperación'
+        verbose_name_plural = 'Códigos de recuperación'
 
 
 # =============================================================================
@@ -100,7 +121,9 @@ class ItemMedicion(models.Model):
     ESTADO_CHOICES = [('activo', 'Activo'), ('inactivo', 'Inactivo')]
 
     cargo = models.ForeignKey(Cargo, on_delete=models.RESTRICT)
+    codigo = models.CharField(max_length=30, unique=True, null=True, blank=True)
     nombre = models.CharField(max_length=120)
+    descripcion = models.TextField(blank=True)
     tipo = models.CharField(max_length=15, choices=TIPO_CHOICES, default='cuantitativo')
     unidad = models.CharField(max_length=30, blank=True, null=True)
     formula_desc = models.CharField(max_length=255, blank=True, null=True)
@@ -186,6 +209,7 @@ class CatalogoTipo(models.Model):
     categoria = models.CharField(max_length=15, choices=CATEGORIA_CHOICES)
     nombre = models.CharField(max_length=120)
     codigo = models.CharField(max_length=30, unique=True)
+    descripcion = models.TextField(blank=True)
     area = models.CharField(max_length=80, blank=True, null=True)
     padre = models.ForeignKey(
         'self', on_delete=models.SET_NULL, null=True, blank=True,
@@ -274,8 +298,18 @@ class PersonaUsuaria(models.Model):
 
 class AtencionSocial(models.Model):
     persona = models.ForeignKey(PersonaUsuaria, on_delete=models.RESTRICT, related_name='atenciones')
+    solicitante = models.CharField(max_length=150, blank=True)
+    descripcion = models.TextField(blank=True)
+    delegacion = models.ForeignKey(
+        Delegacion, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='atenciones_sociales',
+    )
     actividad = models.ForeignKey(Actividad, on_delete=models.SET_NULL, null=True, blank=True)
     catalogo_tipo = models.ForeignKey(CatalogoTipo, on_delete=models.RESTRICT)
+    catalogo_subtipo = models.ForeignKey(
+        CatalogoTipo, on_delete=models.RESTRICT, null=True, blank=True,
+        related_name='atenciones_subtipo',
+    )
     funcionario = models.ForeignKey(Usuario, on_delete=models.RESTRICT, related_name='atenciones_sociales')
     orden_gestion = models.PositiveSmallIntegerField()
     fecha = models.DateField()

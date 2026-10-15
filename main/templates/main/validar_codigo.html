@@ -20,7 +20,7 @@
             <div class="text-center">
                 <h1 class="text-2xl font-bold text-gray-900">Código de verificación</h1>
                 <p class="text-sm text-gray-500 mt-1">
-                    Hemos enviado un código de 6 dígitos a:
+                    Si el correo corresponde a una cuenta activa, enviamos un código a:
                     <strong class="block mt-1 font-semibold text-gray-900 break-all">{{ correo_destino }}</strong>
                 </p>
             </div>
@@ -37,14 +37,16 @@
                            class="flex-1 min-w-0 max-w-12 h-12 text-center text-lg font-bold text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500">
                     {% endfor %}
                 </div>
-                <p class="text-xs text-gray-500 text-center">El código expira en 10 minutos.</p>
+                <p class="text-xs text-gray-500 text-center">El código expira en 10 minutos. Intentos restantes: {{ intentos_restantes }}.</p>
                 <button type="submit" class="w-full bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition shadow-sm">Verificar código</button>
             </form>
 
             <div class="pt-4 border-t border-gray-100 text-center text-sm text-gray-500 space-y-3">
-                <p>¿No recibiste el código?<br>
-                    <a href="#" class="text-red-600 font-medium hover:underline">Reenviar código</a>
-                </p>
+                <form method="post" action="{% url 'main:reenviar_codigo' %}">
+                    {% csrf_token %}
+                    <button id="resend-button" type="submit" data-seconds="{{ segundos_reenvio }}" data-can-resend="{{ puede_reenviar|yesno:'true,false' }}" {% if not puede_reenviar or segundos_reenvio %}disabled{% endif %} class="text-red-600 font-medium hover:underline disabled:text-gray-400 disabled:no-underline">Reenviar código <span id="resend-countdown"></span></button>
+                    {% if not puede_reenviar %}<p class="mt-1 text-xs">Se alcanzó el máximo de tres reenvíos.</p>{% endif %}
+                </form>
                 <p><a href="/login/" class="text-red-600 font-medium hover:underline">Volver al login</a></p>
             </div>
         </div>
@@ -64,6 +66,8 @@
                 if (e.key === 'Backspace' && !input.value && index > 0) {
                     inputs[index - 1].focus();
                 }
+                if (e.key === 'ArrowLeft' && index > 0) inputs[index - 1].focus();
+                if (e.key === 'ArrowRight' && index < inputs.length - 1) inputs[index + 1].focus();
             });
             input.addEventListener('paste', (e) => {
                 const digits = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, inputs.length);
@@ -73,6 +77,22 @@
                 inputs[Math.min(digits.length, inputs.length - 1)].focus();
             });
         });
+        const resendButton = document.getElementById('resend-button');
+        const countdown = document.getElementById('resend-countdown');
+        let secondsRemaining = Number(resendButton.dataset.seconds || 0);
+        const canResend = resendButton.dataset.canResend === 'true';
+        const updateCountdown = () => {
+            if (secondsRemaining > 0) {
+                resendButton.disabled = true;
+                countdown.textContent = `(${secondsRemaining}s)`;
+                secondsRemaining -= 1;
+                window.setTimeout(updateCountdown, 1000);
+            } else {
+                resendButton.disabled = !canResend;
+                countdown.textContent = '';
+            }
+        };
+        updateCountdown();
     </script>
 </body>
 </html>

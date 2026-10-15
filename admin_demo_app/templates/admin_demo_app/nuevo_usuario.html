@@ -27,7 +27,7 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {% for field in form %}
-                    {% if field.name != 'roles' %}
+                    {% if field.name != 'roles' and field.name != 'delegaciones_autorizadas' %}
                         <div class="{% if field.name == 'nombres' or field.name == 'apellidos' or field.name == 'password' %}md:col-span-2{% endif %}">
                             <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
                                 {{ field.label }}{% if field.field.required %} *{% endif %}
@@ -38,6 +38,12 @@
                         </div>
                     {% endif %}
                 {% endfor %}
+
+                <div class="md:col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.delegaciones_autorizadas.label }}</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">{{ form.delegaciones_autorizadas }}</div>
+                    {% for error in form.delegaciones_autorizadas.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                </div>
 
                 <div class="md:col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
                     <label class="block text-sm font-medium text-gray-700 mb-2">

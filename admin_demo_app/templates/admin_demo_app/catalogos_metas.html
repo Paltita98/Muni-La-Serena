@@ -79,7 +79,7 @@
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200">
                     <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-slate-50 rounded-t-xl">
                         <h2 class="text-lg font-bold text-gray-900">Catálogo de Indicadores y Metas</h2>
-                        <button class="bg-white border border-gray-300 px-3 py-1.5 rounded text-sm font-medium hover:bg-gray-50">+ Nuevo Indicador</button>
+                        <a href="{% url 'nueva_meta_view' %}" class="bg-white border border-gray-300 px-3 py-1.5 rounded text-sm font-medium hover:bg-gray-50">+ Nueva Meta</a>
                     </div>
                     <div class="p-6">
                         <table class="w-full text-left">
@@ -90,6 +90,7 @@
                                     <th class="pb-3">Cargo Aplicable</th>
                                     <th class="pb-3">Meta (Mensual)</th>
                                     <th class="pb-3 text-right">Ponderación</th>
+                                    <th class="pb-3 text-right">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody class="text-sm">
@@ -100,11 +101,45 @@
                                         <td class="py-3">{{ meta.cargo|default:meta.funcionario|default:"General" }}</td>
                                         <td class="py-3">{{ meta.valor_objetivo }} {{ meta.unidad|default:"" }}</td>
                                         <td class="py-3 text-right font-medium">{{ meta.ponderador_pct }}%</td>
+                                        <td class="py-3 text-right"><div class="inline-flex gap-3"><a class="text-blue-700" href="{% url 'editar_meta_view' meta.id %}">Editar</a><form method="post" action="{% url 'eliminar_meta_view' %}" onsubmit="return confirm('¿Eliminar esta meta?')">{% csrf_token %}<input type="hidden" name="record_id" value="{{ meta.id }}"><button class="text-red-700">Eliminar</button></form></div></td>
                                     </tr>
                                 {% empty %}<tr><td colspan="5" class="py-4 text-gray-500">No hay metas registradas.</td></tr>{% endfor %}
                             </tbody>
                         </table>
                     </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-bold">Ítems del proyecto</h2>
+                        <a href="{% url 'nuevo_item_view' %}" class="bg-red-700 text-white px-3 py-2 rounded text-sm">Nuevo ítem</a>
+                    </div>
+                    <div class="overflow-x-auto"><table class="w-full text-left text-sm">
+                        <thead><tr class="border-b text-gray-500"><th class="py-2">Código</th><th>Nombre</th><th>Descripción</th><th>Estado</th><th>Acciones</th></tr></thead>
+                        <tbody>{% for item in items %}<tr class="border-b"><td class="py-2">{{ item.codigo|default:"-" }}</td><td>{{ item.nombre }}</td><td>{{ item.descripcion }}</td><td>{{ item.get_estado_display }}</td><td class="flex gap-3 py-2"><a class="text-blue-700" href="{% url 'editar_item_view' item.id %}">Editar</a><form method="post" action="{% url 'eliminar_item_view' %}" onsubmit="return confirm('¿Eliminar este ítem?')">{% csrf_token %}<input type="hidden" name="record_id" value="{{ item.id }}"><button class="text-red-700">Eliminar</button></form></td></tr>{% empty %}<tr><td colspan="5" class="py-3">No hay ítems.</td></tr>{% endfor %}</tbody>
+                    </table></div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-bold">Roles y alcance</h2>
+                        <a href="{% url 'nuevo_rol_view' %}" class="bg-red-700 text-white px-3 py-2 rounded text-sm">Nuevo rol</a>
+                    </div>
+                    <div class="overflow-x-auto"><table class="w-full text-left text-sm">
+                        <thead><tr class="border-b text-gray-500"><th class="py-2">Nombre</th><th>Descripción</th><th>Permisos</th><th>Alcance autorizado</th><th>Acciones</th></tr></thead>
+                        <tbody>{% for rol in roles %}<tr class="border-b"><td class="py-2">{{ rol.nombre }}</td><td>{{ rol.descripcion }}</td><td>{{ rol.permisos|join:", " }}</td><td>{{ rol.alcance_autorizado }}</td><td class="flex gap-3 py-2"><a class="text-blue-700" href="{% url 'editar_rol_view' rol.id %}">Editar</a><form method="post" action="{% url 'eliminar_rol_view' %}" onsubmit="return confirm('¿Eliminar este rol?')">{% csrf_token %}<input type="hidden" name="record_id" value="{{ rol.id }}"><button class="text-red-700">Eliminar</button></form></td></tr>{% empty %}<tr><td colspan="5" class="py-3">No hay roles.</td></tr>{% endfor %}</tbody>
+                    </table></div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-bold">Tipos y subatenciones</h2>
+                        <a href="{% url 'nuevo_catalogo_atencion_view' %}" class="bg-red-700 text-white px-3 py-2 rounded text-sm">Nuevo tipo/subatención</a>
+                    </div>
+                    <div class="overflow-x-auto"><table class="w-full text-left text-sm">
+                        <thead><tr class="border-b text-gray-500"><th class="py-2">Código</th><th>Nombre</th><th>Categoría</th><th>Tipo asociado</th><th>Estado</th><th>Acciones</th></tr></thead>
+                        <tbody>{% for catalogo in catalogos_atencion %}<tr class="border-b"><td class="py-2">{{ catalogo.codigo }}</td><td>{{ catalogo.nombre }}</td><td>{{ catalogo.get_categoria_display }}</td><td>{{ catalogo.padre|default:"-" }}</td><td>{{ catalogo.get_estado_display }}</td><td class="flex gap-3 py-2"><a class="text-blue-700" href="{% url 'editar_catalogo_atencion_view' catalogo.id %}">Editar</a><form method="post" action="{% url 'eliminar_catalogo_atencion_view' %}" onsubmit="return confirm('¿Eliminar este catálogo?')">{% csrf_token %}<input type="hidden" name="record_id" value="{{ catalogo.id }}"><button class="text-red-700">Eliminar</button></form></td></tr>{% empty %}<tr><td colspan="6" class="py-3">No hay tipos de atención.</td></tr>{% endfor %}</tbody>
+                    </table></div>
                 </div>
             </div>
         </main>

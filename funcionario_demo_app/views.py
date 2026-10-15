@@ -127,13 +127,17 @@ def atenciones_sociales_view(request):
     funcionario = _funcionario_actual(request)
     atenciones = (
         AtencionSocial.objects.filter(funcionario=funcionario)
-        .select_related('persona', 'catalogo_tipo', 'actividad')
+        .select_related('persona', 'catalogo_tipo', 'catalogo_subtipo', 'delegacion', 'actividad')
         .order_by('-fecha', '-id')
         if funcionario else AtencionSocial.objects.none()
     )
     datos = [{
         'persona': atencion.persona.referencia_anonima,
         'tipo': atencion.catalogo_tipo.nombre,
+        'subatencion': atencion.catalogo_subtipo.nombre if atencion.catalogo_subtipo_id else '',
+        'solicitante': atencion.solicitante,
+        'descripcion': atencion.descripcion,
+        'delegacion': atencion.delegacion.nombre if atencion.delegacion_id else '',
         'categoria': atencion.catalogo_tipo.categoria,
         'categoria_display': atencion.catalogo_tipo.get_categoria_display(),
         'orden_gestion': atencion.orden_gestion,

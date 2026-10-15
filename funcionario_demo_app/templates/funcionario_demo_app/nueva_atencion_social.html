@@ -36,5 +36,19 @@
             </div>
         </form>
     </div>
+    <script>
+        const tipoSelect = document.getElementById('id_catalogo_tipo');
+        const subtipoSelect = document.getElementById('id_catalogo_subtipo');
+        const updateSubtypes = () => {
+            const tipoId = tipoSelect.value;
+            for (const option of subtipoSelect.options) {
+                if (!option.value) continue;
+                option.hidden = option.dataset.tipo !== tipoId;
+                if (option.hidden && option.selected) subtipoSelect.value = '';
+            }
+        };
+        tipoSelect.addEventListener('change', updateSubtypes);
+        updateSubtypes();
+    </script>
 </body>
 </html>

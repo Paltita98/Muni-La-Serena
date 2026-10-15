@@ -1,4 +1,5 @@
 from django import forms
+from django.db.models import Q
 from django.utils import timezone
 
 from admin_demo_app.models import (
@@ -91,7 +92,17 @@ class CompromisoForm(forms.ModelForm):
         self.fields["delegacion"].queryset = Delegacion.objects.filter(estado="activa").order_by("nombre")
 
 
+class SubatencionSelect(forms.Select):
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex, attrs)
+        instance = getattr(value, 'instance', None)
+        if instance:
+            option['attrs']['data-tipo'] = str(instance.padre_id or '')
+        return option
+
+
 class AtencionSocialForm(forms.Form):
+    solicitante = forms.CharField(label="Solicitante", max_length=150)
     referencia_anonima = forms.CharField(
         label="Código anónimo de la persona",
         max_length=40,
@@ -99,6 +110,12 @@ class AtencionSocialForm(forms.Form):
         widget=forms.TextInput(attrs={"autocomplete": "off", "placeholder": "Ej.: CASO-001"}),
     )
     catalogo_tipo = forms.ModelChoiceField(label="Tipo de atención", queryset=CatalogoTipo.objects.none())
+    catalogo_subtipo = forms.ModelChoiceField(
+        label="Subatención", queryset=CatalogoTipo.objects.none(), required=False,
+        widget=SubatencionSelect,
+    )
+    delegacion = forms.ModelChoiceField(label="Delegación", queryset=Delegacion.objects.none())
+    descripcion = forms.CharField(label="Descripción", widget=forms.Textarea(attrs={"rows": 4}))
     orden_gestion = forms.TypedChoiceField(
         label="Número de gestión",
         choices=((1, "1. Primera gestión"), (2, "2. Segunda gestión"), (3, "3. Tercera gestión")),
@@ -131,9 +148,21 @@ class AtencionSocialForm(forms.Form):
                 "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500",
             )
         self.fields["catalogo_tipo"].queryset = CatalogoTipo.objects.filter(
-            estado="activo",
-            categoria__in=("atencion", "subatencion", "servicio"),
+            estado="activo", categoria="atencion", padre__isnull=True,
         ).order_by("nombre")
+        tipo_id = self.data.get('catalogo_tipo') if self.is_bound else None
+        subtipos = CatalogoTipo.objects.filter(estado='activo', categoria='subatencion')
+        if tipo_id:
+            subtipos = subtipos.filter(padre_id=tipo_id)
+        self.fields['catalogo_subtipo'].queryset = subtipos.order_by('nombre')
+        delegaciones = Delegacion.objects.filter(estado='activa')
+        if funcionario:
+            alcance = Q(pk=getattr(funcionario, 'delegacion_id', None)) if getattr(funcionario, 'delegacion_id', None) else Q()
+            autorizadas = getattr(funcionario, 'delegaciones_autorizadas', None)
+            if autorizadas:
+                alcance |= Q(pk__in=autorizadas.values('pk'))
+            delegaciones = delegaciones.filter(alcance) if alcance.children else delegaciones.none()
+        self.fields['delegacion'].queryset = delegaciones.order_by('nombre')
         self.fields["actividad"].queryset = Actividad.objects.filter(
             funcionario=funcionario,
         ).order_by("-fecha_actividad") if funcionario else Actividad.objects.none()
@@ -148,6 +177,10 @@ class AtencionSocialForm(forms.Form):
                 self.add_error("orden_gestion", "Esta persona ya tiene registrada esa gestión.")
         if not self.funcionario:
             self.add_error(None, "No hay un funcionario activo para registrar la atención.")
+        tipo = cleaned_data.get('catalogo_tipo')
+        subtipo = cleaned_data.get('catalogo_subtipo')
+        if subtipo and tipo and subtipo.padre_id != tipo.pk:
+            self.add_error('catalogo_subtipo', 'La subatención debe corresponder al tipo seleccionado.')
         return cleaned_data
 
     def save(self):
@@ -156,7 +189,11 @@ class AtencionSocialForm(forms.Form):
         )
         return AtencionSocial.objects.create(
             persona=persona,
+            solicitante=self.cleaned_data['solicitante'],
+            descripcion=self.cleaned_data['descripcion'],
+            delegacion=self.cleaned_data['delegacion'],
             catalogo_tipo=self.cleaned_data["catalogo_tipo"],
+            catalogo_subtipo=self.cleaned_data['catalogo_subtipo'],
             funcionario=self.funcionario,
             orden_gestion=self.cleaned_data["orden_gestion"],
             fecha=self.cleaned_data["fecha"],

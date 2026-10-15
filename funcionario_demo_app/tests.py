@@ -92,10 +92,18 @@ class AtencionesSocialesViewTests(SimpleTestCase):
             categoria='atencion',
             get_categoria_display=lambda: 'Atención',
         )
+        catalogo_subtipo = SimpleNamespace(nombre='Orientación jurídica')
+        delegacion = SimpleNamespace(nombre='Delegación Norte')
         actividad = SimpleNamespace(pk=12, descripcion='Acompañamiento social')
         atencion = SimpleNamespace(
             persona=SimpleNamespace(referencia_anonima='CASO-001'),
+            solicitante='María Pérez',
+            descripcion='Consulta por apoyo familiar',
+            delegacion=delegacion,
             catalogo_tipo=catalogo_tipo,
+            catalogo_subtipo=catalogo_subtipo,
+            catalogo_subtipo_id=5,
+            delegacion_id=8,
             orden_gestion=1,
             fecha=date(2026, 9, 25),
             resultado='Derivación realizada',
@@ -120,6 +128,7 @@ class AtencionesSocialesViewTests(SimpleTestCase):
         self.assertEqual(render.call_args.args[1], 'funcionario_demo_app/atenciones_sociales.html')
         self.assertEqual(render.call_args.args[2]['atenciones_json'][0]['persona'], 'CASO-001')
         self.assertEqual(render.call_args.args[2]['atenciones_json'][0]['tipo'], 'Orientación familiar')
+        self.assertEqual(render.call_args.args[2]['atenciones_json'][0]['subatencion'], 'Orientación jurídica')
         self.assertEqual(reverse('atenciones_sociales_view'), '/funcionario/atencion-social/')
 
     def test_new_attention_post_saves_and_redirects_to_history(self):
@@ -164,8 +173,12 @@ class AtencionesSocialesViewTests(SimpleTestCase):
         ):
             form = AtencionSocialForm(funcionario=funcionario)
         form.cleaned_data = {
+            'solicitante': 'María Pérez',
             'referencia_anonima': ' CASO-001 ',
             'catalogo_tipo': tipo,
+            'catalogo_subtipo': None,
+            'delegacion': SimpleNamespace(pk=8),
+            'descripcion': 'Consulta de apoyo',
             'orden_gestion': 2,
             'fecha': date(2026, 9, 25),
             'resultado': 'Derivación realizada',
@@ -186,7 +199,11 @@ class AtencionesSocialesViewTests(SimpleTestCase):
         person_manager.get_or_create.assert_called_once_with(referencia_anonima='CASO-001')
         attention_manager.create.assert_called_once_with(
             persona=persona,
+            solicitante='María Pérez',
+            descripcion='Consulta de apoyo',
+            delegacion=form.cleaned_data['delegacion'],
             catalogo_tipo=tipo,
+            catalogo_subtipo=None,
             funcionario=funcionario,
             orden_gestion=2,
             fecha=date(2026, 9, 25),

@@ -1,12 +1,18 @@
-import random
+import secrets
+from datetime import timedelta
 from django.shortcuts import render, redirect
 from django.core.mail import send_mail
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.contrib import messages
 from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
+from django.core.validators import validate_email
+from django.db.models import Q
 from django.utils.crypto import constant_time_compare
+from django.utils import timezone
 
-from admin_demo_app.models import Usuario
+from admin_demo_app.models import CodigoRecuperacion, Usuario
 
 # --- Vistas Originales ---
 def funcionario_demo(request):
@@ -25,11 +31,11 @@ def nuevo_compromiso(request):
 # --- Vistas de Autenticación y Recuperación ---
 def login_view(request):
     if request.method == 'POST':
-        email = (request.POST.get('email') or request.POST.get('username') or '').strip()
+        login_identifier = (request.POST.get('email') or request.POST.get('username') or '').strip()
         password = request.POST.get('password', '')
         user = (
             Usuario.objects.prefetch_related('roles')
-            .filter(email__iexact=email, estado='activo')
+            .filter(Q(email__iexact=login_identifier) | Q(identificador_inst__iexact=login_identifier), estado='activo')
             .first()
         )
 
@@ -64,77 +70,150 @@ def login_view(request):
 
 def recuperar_password(request):
     if request.method == 'POST':
-        email = request.POST.get('email')
-        
-        # Generar código aleatorio de 6 dígitos
-        codigo = str(random.randint(100000, 999999))
-        
-        # Guardar temporalmente en sesión para validarlo en la siguiente vista
-        request.session['reset_codigo'] = codigo
-        request.session['reset_email'] = email
-        
-        # Enviar el correo electrónico
-        asunto = 'Código de recuperación - Sistema Municipal'
-        mensaje = f'Tu código de verificación de 6 dígitos es: {codigo}\n\nEste código expira en 10 minutos.'
-        
+        email = (request.POST.get('email') or '').strip()
         try:
-            send_mail(asunto, mensaje, settings.DEFAULT_FROM_EMAIL, [email])
-            return redirect('main:validar_codigo')
-        except Exception as e:
-            messages.error(request, f'Hubo un problema al enviar el correo. Revisa tu configuración SMTP.')
-            
+            validate_email(email)
+        except ValidationError:
+            messages.error(request, 'Ingresa un correo electrónico válido, por ejemplo nombre@dominio.cl.')
+            return render(request, 'main/recuperar_password.html')
+        request.session['reset_email_mask'] = _enmascarar_correo(email)
+        request.session.pop('reset_user_id', None)
+        request.session.pop('codigo_validado', None)
+        request.session['reset_started_at'] = timezone.now().timestamp()
+        request.session['reset_resends'] = 0
+        request.session['reset_attempts'] = 0
+        user = Usuario.objects.filter(email__iexact=email, estado='activo').first()
+        if user:
+            try:
+                _emitir_codigo_recuperacion(request, user)
+            except Exception:
+                pass
+        messages.success(request, f'Si el correo corresponde a una cuenta activa, recibirás un código de 6 dígitos en {request.session["reset_email_mask"]}. Revisa también la carpeta de spam.')
+        return redirect('main:validar_codigo')
     return render(request, 'main/recuperar_password.html')
 
+
+def _enmascarar_correo(email):
+    local, separator, domain = email.partition('@')
+    if not separator:
+        return '****'
+    visible = local[:1]
+    return f'{visible}****@{domain}'
+
+
+def _emitir_codigo_recuperacion(request, user, reenvio=False):
+    codigo = f'{secrets.randbelow(1_000_000):06d}'
+    challenge = CodigoRecuperacion.objects.filter(usuario=user).order_by('-creado').first()
+    reenvios = challenge.reenvios + 1 if reenvio and challenge else 0
+    send_mail(
+        'Código de recuperación - Sistema Municipal',
+        f'Tu código de verificación de 6 dígitos es: {codigo}\n\nEste código expira en 10 minutos.',
+        settings.DEFAULT_FROM_EMAIL,
+        [user.email],
+    )
+    CodigoRecuperacion.objects.filter(usuario=user).delete()
+    CodigoRecuperacion.objects.create(
+        usuario=user,
+        codigo_hash=make_password(codigo),
+        expira=timezone.now() + timedelta(minutes=10),
+        reenvios=reenvios,
+    )
+    request.session['reset_user_id'] = user.pk
+    request.session['reset_started_at'] = timezone.now().timestamp()
+    request.session['reset_resends'] = reenvios
+    request.session['reset_attempts'] = 0
+    request.session.pop('codigo_validado', None)
+
+
 def validar_codigo(request):
-    correo_destino = request.session.get('reset_email', '')
-    
-    # Si ingresa directo a la URL sin haber pasado por recuperar, lo devolvemos
-    if not correo_destino:
-        return redirect('main:recuperar_password')
-        
+    user_id = request.session.get('reset_user_id')
+    challenge = CodigoRecuperacion.objects.filter(usuario_id=user_id).order_by('-creado').first() if user_id else None
+    correo_destino = request.session.get('reset_email_mask', 'tu correo registrado')
     if request.method == 'POST':
-        # Concatenar los 6 inputs del formulario
-        codigo_ingresado = (
-            request.POST.get('d1', '') + request.POST.get('d2', '') + 
-            request.POST.get('d3', '') + request.POST.get('d4', '') + 
-            request.POST.get('d5', '') + request.POST.get('d6', '')
-        )
-        codigo_guardado = request.session.get('reset_codigo')
-        
-        if codigo_ingresado == codigo_guardado:
-            # Si el código es correcto, habilitamos el paso final
+        codigo_ingresado = ''.join(request.POST.get(f'd{n}', '') for n in range(1, 7))
+        intentos = challenge.intentos if challenge else request.session.get('reset_attempts', 0)
+        if not challenge:
+            if intentos >= 5:
+                messages.error(request, 'Se agotaron los intentos. Solicita un nuevo código.')
+            else:
+                request.session['reset_attempts'] = intentos + 1
+                messages.error(request, 'Código incorrecto o vencido. Verifica los seis dígitos o solicita uno nuevo.')
+        elif challenge.expira <= timezone.now():
+            messages.error(request, 'Código incorrecto o vencido. Verifica los seis dígitos o solicita uno nuevo.')
+        elif challenge.intentos >= 5:
+            messages.error(request, 'Se agotaron los intentos. Solicita un nuevo código.')
+        elif len(codigo_ingresado) == 6 and codigo_ingresado.isdigit() and check_password(codigo_ingresado, challenge.codigo_hash):
             request.session['codigo_validado'] = True
             return redirect('main:nueva_password')
         else:
-            messages.error(request, 'Código incorrecto. Inténtalo de nuevo.')
-            
-    return render(request, 'main/validar_codigo.html', {'correo_destino': correo_destino})
+            challenge.intentos += 1
+            challenge.save(update_fields=['intentos'])
+            messages.error(request, 'Código incorrecto o vencido. Verifica los seis dígitos o solicita uno nuevo.')
+    started_at = challenge.creado.timestamp() if challenge else request.session.get('reset_started_at', timezone.now().timestamp())
+    reenvios = challenge.reenvios if challenge else request.session.get('reset_resends', 0)
+    intentos = challenge.intentos if challenge else request.session.get('reset_attempts', 0)
+    return render(request, 'main/validar_codigo.html', {
+        'correo_destino': correo_destino,
+        'segundos_reenvio': max(0, 60 - int(timezone.now().timestamp() - started_at)),
+        'puede_reenviar': reenvios < 3,
+        'intentos_restantes': max(0, 5 - intentos),
+    })
+
+
+def reenviar_codigo(request):
+    user_id = request.session.get('reset_user_id')
+    challenge = CodigoRecuperacion.objects.filter(usuario_id=user_id).order_by('-creado').first() if user_id else None
+    if request.method != 'POST':
+        return redirect('main:recuperar_password')
+    if not challenge:
+        started_at = request.session.get('reset_started_at', 0)
+        reenvios = request.session.get('reset_resends', 0)
+        if reenvios >= 3:
+            messages.error(request, 'Se alcanzó el máximo de tres reenvíos.')
+        elif timezone.now().timestamp() - started_at < 60:
+            messages.error(request, 'Espera 60 segundos antes de reenviar el código.')
+        else:
+            request.session['reset_resends'] = reenvios + 1
+            request.session['reset_started_at'] = timezone.now().timestamp()
+            messages.success(request, 'Si el correo corresponde a una cuenta activa, enviaremos un nuevo código.')
+        return redirect('main:validar_codigo')
+    if challenge.reenvios >= 3 or challenge.creado > timezone.now() - timedelta(seconds=60):
+        messages.error(request, 'Espera un minuto antes de reenviar el código. El máximo es de tres reenvíos.')
+    else:
+        try:
+            _emitir_codigo_recuperacion(request, challenge.usuario, reenvio=True)
+            messages.success(request, 'Enviamos un nuevo código a tu correo.')
+        except Exception:
+            messages.error(request, 'No fue posible enviar el correo. Inténtalo más tarde.')
+    return redirect('main:validar_codigo')
 
 def nueva_password(request):
-    # Validar que el usuario haya pasado la prueba del código
-    if not request.session.get('codigo_validado'):
+    user_id = request.session.get('reset_user_id')
+    challenge = CodigoRecuperacion.objects.filter(usuario_id=user_id).order_by('-creado').first() if user_id else None
+    if not request.session.get('codigo_validado') or not challenge or challenge.expira <= timezone.now():
         return redirect('main:login_view')
-        
     if request.method == 'POST':
-        nueva = request.POST.get('nueva_password')
-        confirmar = request.POST.get('confirmar_password')
-        
-        if nueva == confirmar:
-            # En un entorno real, aquí actualizarías el hash de la BD:
-            # usuario = Usuario.objects.get(email=request.session['reset_email'])
-            # usuario.set_password(nueva)
-            # usuario.save()
-            
-            messages.success(request, 'Contraseña actualizada correctamente. Ya puedes iniciar sesión.')
-            
-            # Limpiar todos los datos temporales de la sesión
-            request.session.pop('reset_email', None)
-            request.session.pop('reset_codigo', None)
-            request.session.pop('codigo_validado', None)
-            
-            return redirect('main:login_view')
-        else:
+        nueva = request.POST.get('nueva_password', '')
+        confirmar = request.POST.get('confirmar_password', '')
+        if nueva != confirmar:
             messages.error(request, 'Las contraseñas no coinciden.')
-            
+        else:
+            try:
+                validate_password(nueva, user=challenge.usuario)
+            except ValidationError as error:
+                for message in error.messages:
+                    messages.error(request, message)
+            else:
+                challenge.usuario.password_hash = make_password(nueva)
+                challenge.usuario.save(update_fields=['password_hash'])
+                challenge.delete()
+                request.session.pop('reset_user_id', None)
+                request.session.pop('codigo_validado', None)
+                request.session.pop('reset_email_mask', None)
+                request.session.pop('reset_started_at', None)
+                request.session.pop('reset_resends', None)
+                request.session.pop('reset_attempts', None)
+                messages.success(request, 'Contraseña actualizada correctamente. Ya puedes iniciar sesión.')
+                return redirect('main:login_view')
     return render(request, 'main/nueva_password.html')
 
