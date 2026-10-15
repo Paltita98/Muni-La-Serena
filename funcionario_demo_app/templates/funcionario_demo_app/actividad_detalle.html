@@ -61,6 +61,11 @@
                             <a href="{% url 'evidencia_archivo_view' evidencia.id %}" class="text-blue-600 hover:underline">Descargar {{ evidencia.archivo.name }}</a>
                             <p class="text-xs text-gray-500">{{ evidencia.formato|upper }} · {{ evidencia.tamanio_bytes }} bytes · {{ evidencia.fecha_carga|date:"d/m/Y H:i" }}</p>
                         </div>
+                        {% if evidencia.es_imagen %}
+                            <button type="button" data-preview-src="{{ evidencia.url_previsualizacion }}" data-preview-alt="{{ actividad.descripcion }}" class="group shrink-0 overflow-hidden rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-700" aria-haspopup="dialog" aria-label="Ampliar evidencia de {{ actividad.codigo_evidencia }}">
+                                <img src="{{ evidencia.url_previsualizacion }}" alt="Miniatura de evidencia" loading="lazy" class="h-20 w-28 object-cover transition group-hover:scale-105">
+                            </button>
+                        {% endif %}
                         <div class="text-right">
                             <span class="text-xs px-2 py-1 rounded {% if evidencia.estado == 'aprobada' %}bg-green-100 text-green-800{% elif evidencia.estado == 'en_correccion' or evidencia.estado == 'rechazada' %}bg-red-100 text-red-800{% else %}bg-yellow-100 text-yellow-800{% endif %}">{{ evidencia.get_estado_display }}</span>
                             {% with ultima_validacion=evidencia.validaciones.all.0 %}
@@ -74,5 +79,6 @@
             </div>
         </section>
     </main>
+    {% include 'main/_image_preview_dialog.html' %}
 </body>
 </html>

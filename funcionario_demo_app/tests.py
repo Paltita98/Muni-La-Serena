@@ -1,15 +1,17 @@
 from datetime import date
 from decimal import Decimal
+from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from django.test import RequestFactory, SimpleTestCase
+from django.http import Http404
 from django.urls import reverse
 
 from admin_demo_app.models import Actividad, AtencionSocial, CatalogoTipo, Evidencia, Meta, PersonaUsuaria, Usuario, Validacion
 from .forms import AtencionSocialForm, VerificacionEvidenciaForm
-from .views import _calcular_metricas_funcionario, atenciones_sociales_view, nueva_atencion_social_view, validar_evidencia_view, verificador_evidencias_view
+from .views import _calcular_metricas_funcionario, _es_imagen_previsualizable, atenciones_sociales_view, evidencia_previsualizacion_view, nueva_atencion_social_view, validar_evidencia_view, verificador_evidencias_view
 
 
 class MetricasFuncionarioTests(SimpleTestCase):
@@ -336,3 +338,45 @@ class VerificacionEvidenciaTests(SimpleTestCase):
         )
         self.assertIn('Víctor Validador', notify_user.call_args.args[1])
         self.assertIn('Adjunta el respaldo firmado.', notify_user.call_args.args[1])
+
+
+class EvidenceImagePreviewTests(SimpleTestCase):
+    def test_preview_accepts_only_raster_image_extensions(self):
+        for filename in ('foto.jpg', 'foto.JPEG', 'foto.png', 'foto.webp', 'foto.gif', 'foto.bmp'):
+            with self.subTest(filename=filename):
+                self.assertTrue(_es_imagen_previsualizable(filename))
+
+        for filename in ('documento.pdf', 'script.svg', 'foto.exe'):
+            with self.subTest(filename=filename):
+                self.assertFalse(_es_imagen_previsualizable(filename))
+
+    def test_owner_receives_inline_preview_with_safe_content_type(self):
+        evidence_file = SimpleNamespace(name='uploads/foto.JPG', open=lambda mode: BytesIO(b'image-data'))
+        evidence = SimpleNamespace(
+            archivo=evidence_file,
+            actividad=SimpleNamespace(funcionario_id=12),
+        )
+        request = RequestFactory().get('/funcionario/evidencias/5/preview/')
+        request.session = {'user_role': 'FUNCIONARIO', 'user_id': 12}
+
+        with patch('funcionario_demo_app.views.get_object_or_404', return_value=evidence):
+            response = evidencia_previsualizacion_view(request, 5)
+
+        self.assertEqual(response['Content-Type'], 'image/jpeg')
+        self.assertEqual(response['X-Content-Type-Options'], 'nosniff')
+        self.assertEqual(response['Cache-Control'], 'private, no-store')
+        self.assertIn('inline', response['Content-Disposition'])
+
+    def test_non_owner_without_verifier_role_cannot_preview(self):
+        evidence = SimpleNamespace(
+            archivo=SimpleNamespace(name='foto.png'),
+            actividad=SimpleNamespace(funcionario_id=12),
+        )
+        request = RequestFactory().get('/funcionario/evidencias/5/preview/')
+        request.session = {'user_role': 'ADMIN', 'user_id': 3}
+
+        with (
+            patch('funcionario_demo_app.views.get_object_or_404', return_value=evidence),
+            self.assertRaises(Http404),
+        ):
+            evidencia_previsualizacion_view(request, 5)

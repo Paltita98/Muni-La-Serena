@@ -40,6 +40,11 @@
                                     <h2 class="mt-1 font-semibold text-gray-900">{{ evidencia.actividad.descripcion }}</h2>
                                     <p class="mt-1 text-sm text-gray-600">Funcionario: {{ evidencia.actividad.funcionario.nombres }} {{ evidencia.actividad.funcionario.apellidos }} · Ítem: {{ evidencia.actividad.item.nombre }}</p>
                                 </div>
+                                {% if evidencia.es_imagen %}
+                                    <button type="button" data-preview-src="{{ evidencia.url_previsualizacion }}" data-preview-alt="{{ evidencia.actividad.descripcion }}" class="group shrink-0 overflow-hidden rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-700" aria-haspopup="dialog" aria-label="Ampliar evidencia de {{ evidencia.actividad.codigo_evidencia }}">
+                                        <img src="{{ evidencia.url_previsualizacion }}" alt="Miniatura de evidencia" loading="lazy" class="h-20 w-28 object-cover transition group-hover:scale-105">
+                                    </button>
+                                {% endif %}
                                     <a href="{% url 'evidencia_archivo_view' evidencia.id %}" class="inline-flex items-center px-3 py-2 border border-gray-300 rounded text-sm text-blue-700 hover:bg-gray-50">Descargar evidencia</a>
                             </div>
                             <form method="post" action="{% url 'validar_evidencia_view' evidencia.id %}" class="mt-5 border-t border-gray-100 pt-4 space-y-3" data-review-form>
@@ -68,6 +73,7 @@
             </div>
         </main>
     </div>
+    {% include 'main/_image_preview_dialog.html' %}
     <script>
         const searchInput = document.getElementById('evidence-search');
         const evidenceRows = [...document.querySelectorAll('[data-evidence-row]')];

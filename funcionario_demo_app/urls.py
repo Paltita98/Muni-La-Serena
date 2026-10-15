@@ -14,6 +14,7 @@ urlpatterns = [
     path('verificador/evidencias/', views.verificador_evidencias_view, name='verificador_evidencias_view'),
     path('verificador/evidencias/<int:evidencia_id>/validar/', views.validar_evidencia_view, name='validar_evidencia_view'),
     path('evidencias/<int:evidencia_id>/archivo/', views.evidencia_archivo_view, name='evidencia_archivo_view'),
+    path('evidencias/<int:evidencia_id>/preview/', views.evidencia_previsualizacion_view, name='evidencia_previsualizacion_view'),
     path('evidencias/json/', views.evidencias_json_view, name='evidencias_json_view'),
     path('registrar-actividad/', views.registrar_actividad_view, name='registrar_actividad'),
     path('registrar-actividad/', views.registrar_actividad_view, name='registrar_actividad_view'),

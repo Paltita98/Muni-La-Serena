@@ -39,6 +39,11 @@ body {
   color: #ffffff !important;
 }
 
+.sidebar nav a:hover {
+  background-color: #5b1023 !important;
+  color: #ffffff !important;
+}
+
 .brand-logo {
   max-height: 38px;
   width: auto;

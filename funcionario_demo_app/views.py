@@ -197,6 +197,10 @@ def mis_evidencias_view(request):
         'validaciones',
         queryset=Validacion.objects.select_related('verificador').order_by('-fecha'),
     )).order_by('-fecha_carga')
+    for evidencia in evidencias:
+        evidencia.es_imagen = _es_imagen_previsualizable(evidencia.archivo.name)
+        if evidencia.es_imagen:
+            evidencia.url_previsualizacion = reverse('evidencia_previsualizacion_view', args=[evidencia.pk])
     return render(request, 'funcionario_demo_app/mis_evidencias.html', {
         'evidencias': evidencias,
         'funcionario': funcionario,
@@ -242,12 +246,17 @@ def actividad_detalle_view(request, actividad_id):
             return redirect('actividad_detalle_view', actividad_id=actividad.id)
     else:
         form = EvidenciaForm()
+    evidencias = actividad.evidencias.select_related('autor').prefetch_related(Prefetch(
+        'validaciones',
+        queryset=Validacion.objects.select_related('verificador').order_by('-fecha'),
+    )).order_by('-fecha_carga')
+    for evidencia in evidencias:
+        evidencia.es_imagen = _es_imagen_previsualizable(evidencia.archivo.name)
+        if evidencia.es_imagen:
+            evidencia.url_previsualizacion = reverse('evidencia_previsualizacion_view', args=[evidencia.pk])
     return render(request, 'funcionario_demo_app/actividad_detalle.html', {
         'actividad': actividad,
-        'evidencias': actividad.evidencias.select_related('autor').prefetch_related(Prefetch(
-            'validaciones',
-            queryset=Validacion.objects.select_related('verificador').order_by('-fecha'),
-        )).order_by('-fecha_carga'),
+        'evidencias': evidencias,
         'form': form,
         'puede_subir_evidencia': puede_subir_evidencia,
     })
@@ -260,6 +269,10 @@ def verificador_evidencias_view(request):
     evidencias = Evidencia.objects.filter(estado='pendiente').select_related(
         'actividad', 'actividad__funcionario', 'actividad__item', 'autor',
     ).order_by('fecha_carga')
+    for evidencia in evidencias:
+        evidencia.es_imagen = _es_imagen_previsualizable(evidencia.archivo.name)
+        if evidencia.es_imagen:
+            evidencia.url_previsualizacion = reverse('evidencia_previsualizacion_view', args=[evidencia.pk])
     return render(request, 'funcionario_demo_app/verificador_evidencias.html', {
         'evidencias': evidencias,
         'verificador': verificador,
@@ -344,6 +357,47 @@ def evidencia_archivo_view(request, evidencia_id):
         raise Http404
     filename = PurePosixPath(evidencia.archivo.name).name
     return FileResponse(evidencia.archivo.open('rb'), as_attachment=True, filename=filename)
+
+
+def evidencia_previsualizacion_view(request, evidencia_id):
+    evidencia = get_object_or_404(
+        Evidencia.objects.select_related('actividad__funcionario'),
+        pk=evidencia_id,
+    )
+    _autorizar_acceso_evidencia(request, evidencia)
+    extension = PurePosixPath(evidencia.archivo.name).suffix.lower()
+    content_type = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.bmp': 'image/bmp',
+    }.get(extension)
+    if not content_type:
+        raise Http404
+    response = FileResponse(
+        evidencia.archivo.open('rb'),
+        as_attachment=False,
+        filename=PurePosixPath(evidencia.archivo.name).name,
+        content_type=content_type,
+    )
+    response['X-Content-Type-Options'] = 'nosniff'
+    response['Cache-Control'] = 'private, no-store'
+    return response
+
+
+def _autorizar_acceso_evidencia(request, evidencia):
+    role = request.session.get('user_role')
+    user_id = request.session.get('user_id')
+    is_owner = role == 'FUNCIONARIO' and evidencia.actividad.funcionario_id == user_id
+    is_verifier = role == 'VERIFICADOR' and _verificador_actual(request) is not None
+    if not (is_owner or is_verifier):
+        raise Http404
+
+
+def _es_imagen_previsualizable(filename):
+    return PurePosixPath(filename).suffix.lower() in {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'}
 
 
 def evidencias_json_view(request):

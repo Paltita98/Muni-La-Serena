@@ -1,8 +1,8 @@
 {% load static %}
 <aside class="sidebar w-64 shrink-0 text-white flex flex-col overflow-y-auto">
-    <div class="h-16 shrink-0 flex items-center px-4 border-b border-white/15">
+    <div class="min-h-20 shrink-0 flex flex-col items-start justify-center gap-1 px-4 py-2 border-b border-white/15">
         <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo h-8">
-        <span class="ml-3 font-bold text-lg tracking-widest">ADMIN</span>
+        <span class="text-xs font-bold tracking-widest">ADMIN</span>
     </div>
     <nav class="flex-1 px-3 py-4 space-y-1">
         {% if request.session.user_role == 'ADMIN' %}

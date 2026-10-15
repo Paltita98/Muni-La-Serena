@@ -1,0 +1,27 @@
+<dialog id="evidence-image-dialog" class="w-[min(92vw,72rem)] max-w-none max-h-[92vh] rounded-lg border-0 bg-transparent p-0 backdrop:bg-black/80" aria-label="Vista ampliada de evidencia">
+    <div class="relative flex max-h-[92vh] flex-col items-center rounded-lg bg-white p-3 shadow-2xl">
+        <button type="button" data-preview-close class="absolute right-3 top-3 z-10 rounded-full bg-black/70 px-3 py-2 text-sm font-semibold text-white hover:bg-black" aria-label="Cerrar imagen ampliada">Cerrar</button>
+        <img data-preview-image src="" alt="" class="max-h-[calc(92vh-1.5rem)] max-w-full rounded object-contain">
+    </div>
+</dialog>
+<script>
+    (() => {
+        const dialog = document.getElementById('evidence-image-dialog');
+        const previewImage = dialog.querySelector('[data-preview-image]');
+        document.querySelectorAll('[data-preview-src]').forEach((trigger) => {
+            trigger.addEventListener('click', () => {
+                previewImage.src = trigger.dataset.previewSrc;
+                previewImage.alt = trigger.dataset.previewAlt || 'Evidencia ampliada';
+                dialog.showModal();
+            });
+        });
+        dialog.querySelector('[data-preview-close]').addEventListener('click', () => dialog.close());
+        dialog.addEventListener('click', (event) => {
+            if (event.target === dialog) dialog.close();
+        });
+        dialog.addEventListener('close', () => {
+            previewImage.removeAttribute('src');
+            previewImage.alt = '';
+        });
+    })();
+</script>
