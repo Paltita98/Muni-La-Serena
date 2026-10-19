@@ -1,4 +1,5 @@
 from django import forms
+from PIL import Image, UnidentifiedImageError
 from django.db.models import Q
 from django.utils import timezone
 
@@ -15,8 +16,35 @@ from admin_demo_app.models import (
 )
 
 
+class ImageEvidenceField(forms.FileField):
+    def __init__(self, *args, **kwargs):
+        attrs = kwargs.pop('widget_attrs', {})
+        kwargs.setdefault('widget', forms.ClearableFileInput(attrs={
+            'accept': 'image/jpeg,image/png,image/gif,image/webp,image/bmp',
+            **attrs,
+        }))
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        uploaded_file = super().clean(data, initial)
+        if not uploaded_file:
+            return uploaded_file
+        try:
+            with Image.open(uploaded_file) as image:
+                if image.format not in {'JPEG', 'PNG', 'GIF', 'WEBP', 'BMP'}:
+                    raise forms.ValidationError('El archivo debe ser una imagen JPG, PNG, GIF, WEBP o BMP.')
+                image.verify()
+        except forms.ValidationError:
+            raise
+        except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as error:
+            raise forms.ValidationError('El archivo no es una imagen válida.') from error
+        finally:
+            uploaded_file.seek(0)
+        return uploaded_file
+
+
 class EvidenciaForm(forms.Form):
-    archivo = forms.FileField(label="Archivo de evidencia")
+    archivo = ImageEvidenceField(label="Imagen de evidencia")
 
 
 class VerificacionEvidenciaForm(forms.Form):
@@ -39,7 +67,7 @@ class VerificacionEvidenciaForm(forms.Form):
 
 
 class ActividadForm(forms.ModelForm):
-    evidencia = forms.FileField(required=False, label="Adjuntar evidencia")
+    evidencia = ImageEvidenceField(required=False, label="Adjuntar imagen de evidencia")
 
     class Meta:
         model = Actividad

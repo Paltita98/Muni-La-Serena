@@ -6,12 +6,15 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from django.test import RequestFactory, SimpleTestCase
+from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.http import Http404
 from django.urls import reverse
+from PIL import Image
 
 from admin_demo_app.models import Actividad, AtencionSocial, CatalogoTipo, Evidencia, Meta, PersonaUsuaria, Usuario, Validacion
-from .forms import AtencionSocialForm, VerificacionEvidenciaForm
-from .views import _calcular_metricas_funcionario, _es_imagen_previsualizable, atenciones_sociales_view, evidencia_previsualizacion_view, nueva_atencion_social_view, validar_evidencia_view, verificador_evidencias_view
+from .forms import ActividadForm, AtencionSocialForm, EvidenciaForm, ImageEvidenceField, VerificacionEvidenciaForm
+from .views import _calcular_metricas_funcionario, _es_imagen_previsualizable, actividades_view, agenda_colectiva_view, atenciones_sociales_view, evidencia_previsualizacion_view, nueva_atencion_social_view, validar_evidencia_view, verificador_evidencias_view
 
 
 class MetricasFuncionarioTests(SimpleTestCase):
@@ -84,6 +87,74 @@ class AgendaTemplateTests(SimpleTestCase):
 
         self.assertIn('<option value="ingresado">Ingresado</option>', template)
         self.assertIn("ingresado: { label: 'Ingresado', className: 'info' }", template)
+
+
+class ImageEvidenceFieldTests(SimpleTestCase):
+    def png_upload(self, filename='evidence.png'):
+        content = BytesIO()
+        Image.new('RGB', (1, 1), 'red').save(content, format='PNG')
+        return SimpleUploadedFile(filename, content.getvalue(), content_type='image/png')
+
+    def test_accepts_valid_image_and_limits_browser_picker(self):
+        form = EvidenciaForm()
+
+        self.assertEqual(form.fields['archivo'].clean(self.png_upload()).name, 'evidence.png')
+        self.assertEqual(
+            form.fields['archivo'].widget.attrs['accept'],
+            'image/jpeg,image/png,image/gif,image/webp,image/bmp',
+        )
+
+    def test_rejects_pdf_and_word_even_when_renamed_as_image(self):
+        field = ImageEvidenceField()
+        uploads = (
+            SimpleUploadedFile('document.pdf', b'%PDF-1.4 fake', content_type='application/pdf'),
+            SimpleUploadedFile('document.docx', b'PK\x03\x04fake', content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'),
+            SimpleUploadedFile('renamed.jpg', b'%PDF-1.4 fake', content_type='image/jpeg'),
+        )
+
+        for upload in uploads:
+            with self.subTest(filename=upload.name), self.assertRaises(ValidationError):
+                field.clean(upload)
+
+    def test_optional_activity_evidence_uses_same_image_validation(self):
+        field = ActividadForm.base_fields['evidencia']
+
+        with self.assertRaises(ValidationError):
+            field.clean(SimpleUploadedFile('document.pdf', b'%PDF-1.4 fake'))
+
+
+class FuncionarioListadoTests(SimpleTestCase):
+    def test_activities_are_scoped_to_the_active_staff_member(self):
+        funcionario = SimpleNamespace(pk=4)
+        actividad_query = Mock()
+        actividad_query.select_related.return_value.order_by.return_value = []
+        actividad_manager = Mock(filter=Mock(return_value=actividad_query))
+
+        with (
+            patch('funcionario_demo_app.views._funcionario_actual', return_value=funcionario),
+            patch.object(Actividad, 'objects', actividad_manager),
+            patch('funcionario_demo_app.views.render', return_value=object()),
+        ):
+            response = actividades_view(RequestFactory().get('/funcionario/actividades/'))
+
+        self.assertIsNotNone(response)
+        actividad_manager.filter.assert_called_once_with(funcionario=funcionario)
+
+    def test_collective_agenda_is_scoped_to_the_active_staff_member(self):
+        funcionario = SimpleNamespace(pk=4)
+        compromiso_query = Mock()
+        compromiso_query.select_related.return_value.order_by.return_value = []
+        compromiso_manager = Mock(filter=Mock(return_value=compromiso_query))
+
+        with (
+            patch('funcionario_demo_app.views._funcionario_actual', return_value=funcionario),
+            patch('funcionario_demo_app.views.Compromiso.objects', compromiso_manager),
+            patch('funcionario_demo_app.views.render', return_value=object()),
+        ):
+            response = agenda_colectiva_view(RequestFactory().get('/funcionario/agenda-colectiva/'))
+
+        self.assertIsNotNone(response)
+        compromiso_manager.filter.assert_called_once_with(responsable=funcionario)
 
 
 class AtencionesSocialesViewTests(SimpleTestCase):

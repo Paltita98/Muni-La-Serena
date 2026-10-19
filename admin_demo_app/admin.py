@@ -74,7 +74,8 @@ class MetaAdmin(admin.ModelAdmin):
     list_display = ('item', 'cargo', 'funcionario', 'periodo', 'valor_objetivo', 'vigente')
     list_filter = ('vigente', 'periodo', 'cargo')
     search_fields = ('item__nombre', 'funcionario__nombres', 'funcionario__apellidos')
-    autocomplete_fields = ('item', 'cargo', 'funcionario', 'periodo', 'autor')
+    exclude = ('cargo',)
+    autocomplete_fields = ('item', 'funcionario', 'periodo', 'autor')
 
 @admin.register(Actividad)
 class ActividadAdmin(admin.ModelAdmin):

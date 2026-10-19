@@ -234,7 +234,6 @@ class Meta(models.Model):
     )
     periodo = models.ForeignKey(Periodo, on_delete=models.RESTRICT)
     valor_objetivo = models.DecimalField(max_digits=12, decimal_places=2)
-    unidad = models.CharField(max_length=30, blank=True, null=True)
     ponderador_pct = models.DecimalField(max_digits=5, decimal_places=2)
     umbral_minimo_pct = models.DecimalField(max_digits=5, decimal_places=2, default=80.00)
     maximo_computable_pct = models.DecimalField(max_digits=5, decimal_places=2, default=150.00)
@@ -256,8 +255,10 @@ class Meta(models.Model):
 
     def clean(self):
         from django.core.exceptions import ValidationError
-        if not self.cargo_id and not self.funcionario_id:
-            raise ValidationError('La meta debe asociarse a un cargo o a un funcionario.')
+        if self.item_id:
+            self.cargo = self.item.cargo
+        if self.funcionario_id and self.funcionario.cargo_id != self.item.cargo_id:
+            raise ValidationError({'funcionario': 'El funcionario debe pertenecer al cargo del ítem seleccionado.'})
 
     def __str__(self):
         return f'Meta de {self.item}'

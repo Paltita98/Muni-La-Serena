@@ -113,7 +113,10 @@ def _dias_habiles_transcurridos(fecha_inicio, fecha_termino, fecha_actual):
 
 
 def actividades_view(request):
-    actividades = Actividad.objects.select_related('funcionario').order_by('-fecha_actividad')
+    funcionario = _funcionario_actual(request)
+    if funcionario is None:
+        return redirect('main:login_view')
+    actividades = Actividad.objects.filter(funcionario=funcionario).select_related('funcionario').order_by('-fecha_actividad')
     datos = [{
         'id': actividad.id,
         'titulo': actividad.descripcion,
@@ -177,7 +180,10 @@ def nueva_atencion_social_view(request):
 
 
 def agenda_colectiva_view(request):
-    compromisos = Compromiso.objects.select_related('responsable').order_by('fecha_comprometida')
+    funcionario = _funcionario_actual(request)
+    if funcionario is None:
+        return redirect('main:login_view')
+    compromisos = Compromiso.objects.filter(responsable=funcionario).select_related('responsable').order_by('fecha_comprometida')
     datos = [{
         'titulo': compromiso.observacion or compromiso.solicitante,
         'solicitante': compromiso.solicitante,

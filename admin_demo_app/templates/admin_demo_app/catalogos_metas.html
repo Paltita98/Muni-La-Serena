@@ -76,8 +76,8 @@
                                     <tr class="border-b border-gray-50">
                                         <td class="py-3 font-mono text-gray-500">META-{{ meta.id }}</td>
                                         <td class="py-3 font-medium">{{ meta.item.nombre }}</td>
-                                        <td class="py-3">{{ meta.cargo|default:meta.funcionario|default:"General" }}</td>
-                                        <td class="py-3">{{ meta.valor_objetivo }} {{ meta.unidad|default:"" }}</td>
+                                        <td class="py-3">{{ meta.funcionario|default:meta.item.cargo }}</td>
+                                        <td class="py-3">{{ meta.valor_objetivo }} {{ meta.item.unidad|default:"" }}</td>
                                         <td class="py-3 text-right font-medium">{{ meta.ponderador_pct }}%</td>
                                         <td class="py-3 text-right"><div class="inline-flex gap-3"><a class="text-blue-700" href="{% url 'editar_meta_view' meta.id %}">Editar</a><form method="post" action="{% url 'eliminar_meta_view' %}" onsubmit="return confirm('¿Eliminar esta meta?')">{% csrf_token %}<input type="hidden" name="record_id" value="{{ meta.id }}"><button class="text-red-700">Eliminar</button></form></div></td>
                                     </tr>
