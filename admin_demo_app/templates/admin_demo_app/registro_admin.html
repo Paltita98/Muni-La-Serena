@@ -22,7 +22,38 @@
             {% for field in form %}
                 <div>
                     <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
-                    {{ field }}
+                    {% if field.name == 'funcionarios' %}
+                        {{ field }}
+                        <div class="mt-2 grid grid-cols-1 items-center gap-3 md:grid-cols-[1fr_auto_1fr]" data-official-transfer>
+                            <section class="min-w-0 rounded-lg border border-gray-200 bg-white">
+                                <h2 class="border-b border-gray-100 px-3 py-2 text-sm font-semibold text-gray-800">Funcionarios disponibles</h2>
+                                <ul data-official-list="available" class="min-h-52 max-h-64 space-y-1 overflow-y-auto p-2" aria-label="Funcionarios disponibles">
+                                    {% for official in field.field.queryset %}
+                                        <li draggable="true" tabindex="0" data-official-id="{{ official.pk }}" data-cargo-id="{{ official.cargo_id|default:'' }}" class="cursor-grab rounded px-3 py-2 text-sm text-gray-700 hover:bg-red-50 focus:bg-red-50 focus:outline-none">{{ official.nombres }} {{ official.apellidos }} ({{ official.identificador_inst }})</li>
+                                    {% empty %}
+                                        <li data-official-empty class="px-3 py-2 text-sm text-gray-500">Selecciona primero un ítem con funcionarios activos.</li>
+                                    {% endfor %}
+                                </ul>
+                            </section>
+                            <div class="flex justify-center gap-2 md:flex-col">
+                                <button type="button" data-transfer="available" class="rounded border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" aria-label="Asignar funcionario seleccionado">→</button>
+                                <button type="button" data-transfer="assigned" class="rounded border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" aria-label="Quitar funcionario asignado">←</button>
+                            </div>
+                            <section class="min-w-0 rounded-lg border border-red-200 bg-red-50/30">
+                                <h2 class="border-b border-red-100 px-3 py-2 text-sm font-semibold text-gray-800">Usuarios asignados para meta</h2>
+                                <ul data-official-list="assigned" class="min-h-52 max-h-64 space-y-1 overflow-y-auto p-2" aria-label="Usuarios asignados para meta">
+                                    {% for official in field.field.queryset %}
+                                        {% if official.pk|stringformat:'s' in field.value %}
+                                            <li draggable="true" tabindex="0" data-official-id="{{ official.pk }}" data-cargo-id="{{ official.cargo_id|default:'' }}" class="cursor-grab rounded px-3 py-2 text-sm text-gray-700 hover:bg-red-50 focus:bg-red-50 focus:outline-none">{{ official.nombres }} {{ official.apellidos }} ({{ official.identificador_inst }})</li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <li data-official-empty class="px-3 py-2 text-sm text-gray-500" {% if field.value %}hidden{% endif %}>Arrastra funcionarios aquí para asignarlos.</li>
+                                </ul>
+                            </section>
+                        </div>
+                    {% else %}
+                        {{ field }}
+                    {% endif %}
                     {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
                     {% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
                 </div>
@@ -39,15 +70,94 @@
             const cargoDisplay = document.getElementById('id_cargo_mostrado');
             const unitDisplay = document.getElementById('id_unidad_mostrada');
             const officialsSelect = document.getElementById('id_funcionarios');
+            const transfer = document.querySelector('[data-official-transfer]');
+            const availableList = transfer.querySelector('[data-official-list="available"]');
+            const assignedList = transfer.querySelector('[data-official-list="assigned"]');
+            let draggedOfficial = null;
+
+            const updateEmptyStates = () => {
+                availableList.querySelector('[data-official-empty]')?.remove();
+                if (!availableList.querySelector('[data-official-id]')) {
+                    availableList.insertAdjacentHTML('beforeend', '<li data-official-empty class="px-3 py-2 text-sm text-gray-500">No hay funcionarios disponibles para este ítem.</li>');
+                }
+                const assignedEmpty = assignedList.querySelector('[data-official-empty]');
+                const hasAssigned = Boolean(assignedList.querySelector('[data-official-id]'));
+                if (assignedEmpty) assignedEmpty.hidden = hasAssigned;
+            };
+
+            const syncSelectedOfficials = () => {
+                const assignedIds = new Set([...assignedList.querySelectorAll('[data-official-id]')].map((node) => node.dataset.officialId));
+                [...officialsSelect.options].forEach((option) => {
+                    option.selected = assignedIds.has(option.value);
+                });
+                updateEmptyStates();
+            };
+
+            const moveOfficial = (official, destination) => {
+                if (!official || !destination) return;
+                official.removeAttribute('aria-selected');
+                official.classList.remove('bg-red-100');
+                destination.append(official);
+                syncSelectedOfficials();
+            };
+
+            transfer.addEventListener('dragstart', (event) => {
+                const official = event.target.closest('[data-official-id]');
+                if (!official) return;
+                draggedOfficial = official;
+                event.dataTransfer.setData('text/plain', official.dataset.officialId);
+                event.dataTransfer.effectAllowed = 'move';
+            });
+
+            transfer.addEventListener('dragover', (event) => {
+                if (event.target.closest('[data-official-list]')) event.preventDefault();
+            });
+
+            transfer.addEventListener('drop', (event) => {
+                const destination = event.target.closest('[data-official-list]');
+                if (!destination || !draggedOfficial) return;
+                event.preventDefault();
+                moveOfficial(draggedOfficial, destination);
+                draggedOfficial = null;
+            });
+
+            transfer.addEventListener('click', (event) => {
+                const official = event.target.closest('[data-official-id]');
+                if (official) {
+                    const selected = official.getAttribute('aria-selected') === 'true';
+                    official.setAttribute('aria-selected', String(!selected));
+                    official.classList.toggle('bg-red-100', !selected);
+                    return;
+                }
+                const button = event.target.closest('[data-transfer]');
+                if (!button) return;
+                const from = button.dataset.transfer === 'available' ? availableList : assignedList;
+                const to = button.dataset.transfer === 'available' ? assignedList : availableList;
+                [...from.querySelectorAll('[data-official-id][aria-selected="true"]')].forEach((node) => moveOfficial(node, to));
+            });
+
+            transfer.addEventListener('keydown', (event) => {
+                const official = event.target.closest('[data-official-id]');
+                if (!official || !['Enter', ' '].includes(event.key)) return;
+                event.preventDefault();
+                official.click();
+            });
+
             const updateItemDetails = () => {
                 const selectedItem = itemSelect.selectedOptions[0];
                 cargoDisplay.value = selectedItem?.dataset.cargo || '';
                 unitDisplay.value = selectedItem?.dataset.unidad || '';
-                [...officialsSelect.options].forEach((option) => {
-                    const matches = !selectedItem?.dataset.cargoId || option.dataset.cargo === selectedItem.dataset.cargoId;
-                    option.hidden = !matches;
-                    if (!matches) option.selected = false;
+                const cargoId = selectedItem?.dataset.cargoId || '';
+                [...transfer.querySelectorAll('[data-official-id]')].forEach((official) => {
+                    if (cargoId && official.dataset.cargoId !== cargoId) {
+                        availableList.append(official);
+                    }
+                    official.hidden = Boolean(cargoId && official.dataset.cargoId !== cargoId);
                 });
+                [...officialsSelect.options].forEach((option) => {
+                    if (cargoId && option.dataset.cargo !== cargoId) option.selected = false;
+                });
+                syncSelectedOfficials();
             };
             itemSelect.addEventListener('change', updateItemDetails);
             updateItemDetails();

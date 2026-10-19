@@ -30,7 +30,12 @@
                                 <h2 class="font-bold text-gray-900">{{ seccion.titulo }}</h2>
                                 <p class="text-xs text-gray-500 mt-1"><span data-result-count>{{ seccion.filas|length }}</span> registros</p>
                             </div>
-                            {% if seccion.crear_url %}<a href="{{ seccion.crear_url }}" class="px-3 py-2 rounded bg-red-700 text-white text-sm hover:bg-red-800">{{ seccion.crear_texto }}</a>{% endif %}
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button type="button" data-export-table="table-{{ forloop.counter }}" data-export-name="{{ seccion.titulo|slugify }}" class="inline-flex items-center gap-2 rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                    <span aria-hidden="true">↓</span> Exportar Excel
+                                </button>
+                                {% if seccion.crear_url %}<a href="{{ seccion.crear_url }}" class="px-3 py-2 rounded bg-red-700 text-white text-sm hover:bg-red-800">{{ seccion.crear_texto }}</a>{% endif %}
+                            </div>
                         </div>
                         <div class="flex flex-wrap gap-3 px-5 py-4 border-b border-gray-100">
                             <label class="sr-only" for="search-{{ forloop.counter }}">Buscar en {{ seccion.titulo }}</label>
@@ -45,7 +50,7 @@
                             <button type="button" data-clear-filters class="text-sm text-red-700 hover:underline">Limpiar filtros</button>
                         </div>
                         <div class="overflow-x-auto">
-                            <table class="w-full text-left text-sm">
+                            <table id="table-{{ forloop.counter }}" data-has-actions="{% if seccion.editar or seccion.eliminar %}true{% else %}false{% endif %}" class="w-full text-left text-sm">
                                 <thead><tr class="bg-gray-50 text-gray-500 text-xs uppercase">{% for columna in seccion.columnas %}<th class="px-4 py-3">{{ columna }}</th>{% endfor %}{% if seccion.editar or seccion.eliminar %}<th class="px-4 py-3 text-right">Acciones</th>{% endif %}</tr></thead>
                                 <tbody>
                                     {% for fila in seccion.filas %}
@@ -70,7 +75,28 @@
             </div>
         </main>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="{% static 'js/admin-live-filter.js' %}" defer></script>
+    <script>
+        document.querySelectorAll('[data-export-table]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const table = document.getElementById(button.dataset.exportTable);
+                const headers = [...table.tHead.rows[0].cells];
+                if (table.dataset.hasActions === 'true') headers.pop();
+                const header = headers.map((cell) => cell.innerText.trim());
+                const rows = [...table.tBodies[0].querySelectorAll('tr[data-filter-row]:not([hidden])')]
+                    .map((row) => [...row.cells].slice(0, header.length).map((cell) => cell.innerText.trim()));
+                if (!window.XLSX) {
+                    window.Swal?.fire({icon: 'error', title: 'No se pudo exportar', text: 'La herramienta de exportación no está disponible.'});
+                    return;
+                }
+                const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, sheet, 'Registros');
+                XLSX.writeFile(workbook, `${button.dataset.exportName || 'registros'}.xlsx`);
+            });
+        });
+    </script>
     {% include 'main/_sweetalerts.html' %}
 </body>
 </html>

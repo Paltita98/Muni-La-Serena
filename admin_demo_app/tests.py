@@ -1,3 +1,4 @@
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
@@ -100,6 +101,17 @@ class MetaFormTests(SimpleTestCase):
 
         self.assertEqual(form.instance.cargo, item_cargo)
         self.assertIn('funcionarios', form.errors)
+
+
+class AdminExportTemplateTests(SimpleTestCase):
+    def test_each_admin_listing_exports_visible_data_without_actions(self):
+        template_path = Path(__file__).parent / 'templates' / 'admin_demo_app' / 'admin_listado.html'
+        template = template_path.read_text(encoding='utf-8')
+
+        self.assertIn('data-export-table="table-', template)
+        self.assertIn('data-has-actions=', template)
+        self.assertIn("tr[data-filter-row]:not([hidden])", template)
+        self.assertIn('XLSX.writeFile', template)
 
     def test_meta_form_supports_multiple_officials(self):
         form = MetaForm()

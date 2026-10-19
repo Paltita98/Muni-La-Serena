@@ -27,6 +27,14 @@ class MetaOfficialsSelect(forms.SelectMultiple):
         return option
 
 
+class HiddenMetaOfficialsSelect(MetaOfficialsSelect):
+    input_type = 'hidden'
+
+    def render(self, name, value, attrs=None, renderer=None):
+        attrs = {**(attrs or {}), 'hidden': True, 'aria-hidden': 'true', 'tabindex': '-1'}
+        return super().render(name, value, attrs, renderer)
+
+
 class CatalogoTipoForm(forms.ModelForm):
     class Meta:
         model = CatalogoTipo
@@ -103,11 +111,8 @@ class MetaForm(forms.ModelForm):
         label='Funcionarios asignados',
         queryset=Usuario.objects.none(),
         required=False,
-        help_text='Selecciona uno o varios funcionarios del cargo del ítem. Si no seleccionas a nadie, la meta se asigna al cargo completo.',
-        widget=MetaOfficialsSelect(attrs={
-            'size': '6',
-            'class': 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm',
-        }),
+        help_text='Arrastra funcionarios desde la lista disponible hacia Usuarios asignados para meta.',
+        widget=HiddenMetaOfficialsSelect,
     )
 
     class Meta:

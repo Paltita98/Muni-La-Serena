@@ -238,7 +238,7 @@ def admin_items_metas_view(request):
     metas = Meta.objects.select_related('item', 'item__cargo', 'cargo', 'funcionario', 'periodo').order_by('-fecha_registro')
     periodos = Periodo.objects.order_by('-fecha_inicio')
     meta_rows = [_listing_row(
-        [f'META-{meta.pk}', meta.item.nombre, str(meta.funcionario or meta.item.cargo), f'{meta.valor_objetivo} {meta.item.unidad or ""}'.strip(), f'{meta.ponderador_pct}%'],
+        [f'META-{meta.pk}', meta.item.nombre, str(meta.funcionario or meta.item.cargo), str(meta.valor_objetivo), f'{meta.ponderador_pct}%'],
         f'META-{meta.pk} {meta.item.nombre} {meta.cargo or ""} {meta.funcionario or ""} {meta.periodo} {meta.valor_objetivo}',
         {'vigente': 'vigente' if meta.vigente else 'inactiva', 'periodo': str(meta.periodo_id)},
         reverse('editar_meta_view', args=[meta.pk]), reverse('eliminar_meta_view'), meta.pk,

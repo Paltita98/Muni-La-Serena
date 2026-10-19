@@ -14,15 +14,19 @@ def user_notifications(request):
 
     from admin_demo_app.models import Notificacion
 
-    notifications = list(
-        Notificacion.objects.filter(destinatario_id=user_id)
-        .select_related('actor')
-        .order_by('-creada')[:8]
-    )
-    unread_count = Notificacion.objects.filter(
+    user_notifications = Notificacion.objects.filter(destinatario_id=user_id)
+    unread_notifications = Notificacion.objects.filter(
         destinatario_id=user_id,
         leida__isnull=True,
-    ).count()
+    )
+    if request.session.get('user_role') == 'FUNCIONARIO':
+        user_notifications = user_notifications.exclude(tipo='administracion')
+        unread_notifications = unread_notifications.exclude(tipo='administracion')
+
+    notifications = list(
+        user_notifications.select_related('actor').order_by('-creada')[:8]
+    )
+    unread_count = unread_notifications.count()
     return {
         'user_notifications': notifications,
         'unread_notifications_count': unread_count,

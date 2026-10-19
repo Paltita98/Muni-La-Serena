@@ -1,6 +1,6 @@
 from datetime import timedelta
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 from django.contrib.auth.hashers import check_password, make_password
 from django.test import RequestFactory, SimpleTestCase
@@ -247,6 +247,43 @@ class PasswordResetTests(SimpleTestCase):
 
 
 class NotificationTests(SimpleTestCase):
+    def test_staff_notification_context_hides_admin_changes_and_unread_count(self):
+        operational_notification = SimpleNamespace(tipo='evidencia')
+        notifications_query = MagicMock()
+        notifications_query.exclude.return_value.select_related.return_value.order_by.return_value.__getitem__.return_value = [
+            operational_notification,
+        ]
+        unread_query = Mock()
+        unread_query.exclude.return_value.count.return_value = 1
+        manager = Mock()
+        manager.filter.side_effect = [notifications_query, unread_query]
+        request = RequestFactory().get('/')
+        request.session = {'user_id': 17, 'user_role': 'FUNCIONARIO'}
+
+        with patch.object(Notificacion, 'objects', manager):
+            context = user_notifications(request)
+
+        notifications_query.exclude.assert_called_once_with(tipo='administracion')
+        unread_query.exclude.assert_called_once_with(tipo='administracion')
+        self.assertEqual(context['user_notifications'], [operational_notification])
+        self.assertEqual(context['unread_notifications_count'], 1)
+
+    def test_admin_notification_context_keeps_admin_changes(self):
+        notifications_query = MagicMock()
+        notifications_query.select_related.return_value.order_by.return_value.__getitem__.return_value = []
+        unread_query = Mock()
+        unread_query.count.return_value = 0
+        manager = Mock()
+        manager.filter.side_effect = [notifications_query, unread_query]
+        request = RequestFactory().get('/')
+        request.session = {'user_id': 1, 'user_role': 'ADMIN'}
+
+        with patch.object(Notificacion, 'objects', manager):
+            user_notifications(request)
+
+        notifications_query.exclude.assert_not_called()
+        unread_query.exclude.assert_not_called()
+
     def test_marking_notification_read_only_loads_the_current_recipients_record(self):
         user = SimpleNamespace(pk=17)
         notification = SimpleNamespace(leida=None, url='/funcionario/evidencias/', save=Mock())
