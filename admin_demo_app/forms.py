@@ -14,6 +14,16 @@ class MetaItemSelect(forms.Select):
         if item:
             option['attrs']['data-unidad'] = item.unidad or ''
             option['attrs']['data-cargo'] = item.cargo.nombre
+            option['attrs']['data-cargo-id'] = str(item.cargo_id)
+        return option
+
+
+class MetaOfficialsSelect(forms.SelectMultiple):
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex, attrs)
+        official = getattr(value, 'instance', None)
+        if official:
+            option['attrs']['data-cargo'] = str(official.cargo_id or '')
         return option
 
 
@@ -89,11 +99,21 @@ class MetaForm(forms.ModelForm):
         disabled=True,
         widget=forms.TextInput(attrs={'class': 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-100'}),
     )
+    funcionarios = forms.ModelMultipleChoiceField(
+        label='Funcionarios asignados',
+        queryset=Usuario.objects.none(),
+        required=False,
+        help_text='Selecciona uno o varios funcionarios del cargo del ítem. Si no seleccionas a nadie, la meta se asigna al cargo completo.',
+        widget=MetaOfficialsSelect(attrs={
+            'size': '6',
+            'class': 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm',
+        }),
+    )
 
     class Meta:
         model = Meta
         fields = (
-            'item', 'cargo_mostrado', 'unidad_mostrada', 'funcionario', 'periodo', 'valor_objetivo',
+            'item', 'cargo_mostrado', 'unidad_mostrada', 'funcionarios', 'periodo', 'valor_objetivo',
             'ponderador_pct', 'umbral_minimo_pct', 'maximo_computable_pct', 'vigente',
         )
         widgets = {'item': MetaItemSelect}
@@ -102,18 +122,47 @@ class MetaForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['item'].queryset = ItemMedicion.objects.filter(estado='activo').select_related('cargo').order_by('nombre')
         self.fields['item'].help_text = 'El cargo y la unidad se heredan del ítem seleccionado.'
-        self.fields['funcionario'].queryset = Usuario.objects.filter(estado='activo').order_by('nombres', 'apellidos')
         self.fields['periodo'].queryset = Periodo.objects.order_by('-fecha_inicio')
-        self.fields['funcionario'].required = False
+        self.fields['funcionarios'].help_text = (
+            'Selecciona un funcionario para esta meta existente.'
+            if self.instance.pk
+            else 'Selecciona uno o varios funcionarios del cargo del ítem. Si no seleccionas a nadie, la meta se asigna al cargo completo.'
+        )
+        item_id = self.data.get('item') if self.is_bound else self.instance.item_id
+        item = ItemMedicion.objects.filter(pk=item_id, estado='activo').first() if item_id else None
+        officials = Usuario.objects.filter(estado='activo')
+        if item:
+            officials = officials.filter(cargo_id=item.cargo_id)
+        self.fields['funcionarios'].queryset = officials.order_by('apellidos', 'nombres')
+        if self.instance.pk and self.instance.funcionario_id:
+            self.fields['funcionarios'].initial = [self.instance.funcionario_id]
         self.fields['cargo_mostrado'].initial = self.instance.item.cargo.nombre if self.instance.pk else ''
         self.fields['unidad_mostrada'].initial = self.instance.item.unidad if self.instance.pk else ''
 
     def clean(self):
         cleaned_data = super().clean()
         item = cleaned_data.get('item')
-        funcionario = cleaned_data.get('funcionario')
-        if item and funcionario and funcionario.cargo_id != item.cargo_id:
-            self.add_error('funcionario', 'El funcionario debe pertenecer al cargo del ítem seleccionado.')
+        funcionarios = cleaned_data.get('funcionarios', [])
+        periodo = cleaned_data.get('periodo')
+        if self.instance.pk and len(funcionarios) > 1:
+            self.add_error('funcionarios', 'Para editar una meta existente, selecciona un solo funcionario.')
+        if item and any(funcionario.cargo_id != item.cargo_id for funcionario in funcionarios):
+            self.add_error('funcionarios', 'Todos los funcionarios deben pertenecer al cargo del ítem seleccionado.')
+        if item and periodo:
+            for funcionario in funcionarios:
+                duplicada = Meta.objects.filter(
+                    item=item,
+                    periodo=periodo,
+                    funcionario=funcionario,
+                    vigente=True,
+                )
+                if self.instance.pk:
+                    duplicada = duplicada.exclude(pk=self.instance.pk)
+                if duplicada.exists():
+                    self.add_error(
+                        'funcionarios',
+                        f'{funcionario} ya tiene una meta vigente para este ítem y período.',
+                    )
         if item:
             self.instance.cargo = item.cargo
         return cleaned_data

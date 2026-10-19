@@ -38,14 +38,21 @@
             const itemSelect = document.getElementById('id_item');
             const cargoDisplay = document.getElementById('id_cargo_mostrado');
             const unitDisplay = document.getElementById('id_unidad_mostrada');
+            const officialsSelect = document.getElementById('id_funcionarios');
             const updateItemDetails = () => {
                 const selectedItem = itemSelect.selectedOptions[0];
                 cargoDisplay.value = selectedItem?.dataset.cargo || '';
                 unitDisplay.value = selectedItem?.dataset.unidad || '';
+                [...officialsSelect.options].forEach((option) => {
+                    const matches = !selectedItem?.dataset.cargoId || option.dataset.cargo === selectedItem.dataset.cargoId;
+                    option.hidden = !matches;
+                    if (!matches) option.selected = false;
+                });
             };
             itemSelect.addEventListener('change', updateItemDetails);
             updateItemDetails();
         </script>
     {% endif %}
+    {% include 'main/_sweetalerts.html' %}
 </body>
 </html>

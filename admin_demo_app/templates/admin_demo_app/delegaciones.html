@@ -35,7 +35,6 @@
                     </div>
                 </div>
 
-                {% for message in messages %}<p class="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">{{ message }}</p>{% endfor %}
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                     {% for delegacion in delegaciones %}
                         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -65,7 +64,7 @@
                                 <span class="text-sm text-gray-500">{{ delegacion.ambito|default:"Sin ámbito" }}</span>
                                 <div class="mt-2 flex justify-end gap-3">
                                     <a href="{% url 'editar_delegacion_view' delegacion.id %}" class="text-sm text-blue-700 hover:underline">Editar</a>
-                                    <form method="post" action="{% url 'eliminar_delegacion_view' %}" onsubmit="return confirm('¿Eliminar esta delegación?')">
+                                    <form method="post" action="{% url 'eliminar_delegacion_view' %}" data-swal-confirm data-confirm-title="¿Eliminar esta delegación?" data-confirm-text="Esta acción puede fallar si existen registros asociados.">
                                         {% csrf_token %}<input type="hidden" name="record_id" value="{{ delegacion.id }}">
                                         <button class="text-sm text-red-700 hover:underline" type="submit">Eliminar</button>
                                     </form>
@@ -79,5 +78,6 @@
             </div>
         </main>
     </div>
+    {% include 'main/_sweetalerts.html' %}
 </body>
 </html>

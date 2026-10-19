@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.db import transaction
 from django.db.models.deletion import ProtectedError
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -374,14 +375,60 @@ def gestionar_meta_view(request, meta_id=None):
     if request.method == 'POST':
         form = MetaForm(request.POST, instance=meta)
         if form.is_valid():
-            meta = form.save(commit=False)
-            if not meta.pk:
-                meta.autor = get_object_or_404(Usuario, pk=request.session.get('user_id'), estado='activo')
-            meta.save()
             actor_id = request.session.get('user_id')
-            notificar_administradores(actor_id, f'Meta para {meta.item.nombre} guardada.')
-            notificar_asignados_meta(meta, actor_id, f'Se guardó una meta para {meta.item.nombre}.')
-            messages.success(request, 'Meta guardada correctamente.')
+            autor = meta.autor if meta else get_object_or_404(
+                Usuario, pk=actor_id, estado='activo',
+            )
+            funcionarios = list(form.cleaned_data['funcionarios'])
+            asignacion_individual = bool(funcionarios)
+            metas_guardadas = []
+            with transaction.atomic():
+                meta_base = form.save(commit=False)
+                meta_base.autor = autor
+                if meta and funcionarios:
+                    asignado_actual = next(
+                        (persona for persona in funcionarios if persona.pk == meta.funcionario_id),
+                        funcionarios[0],
+                    )
+                    meta_base.funcionario = asignado_actual
+                    meta_base.save()
+                    metas_guardadas.append(meta_base)
+                    funcionarios = [persona for persona in funcionarios if persona.pk != asignado_actual.pk]
+                elif not funcionarios:
+                    meta_base.funcionario = None
+                    meta_base.cargo = meta_base.item.cargo
+                    meta_base.save()
+                    metas_guardadas.append(meta_base)
+                else:
+                    meta_base.funcionario = funcionarios.pop(0)
+                    meta_base.save()
+                    metas_guardadas.append(meta_base)
+
+                for funcionario in funcionarios:
+                    copia_meta = Meta.objects.create(
+                        item=meta_base.item,
+                        cargo=meta_base.item.cargo,
+                        funcionario=funcionario,
+                        periodo=meta_base.periodo,
+                        valor_objetivo=meta_base.valor_objetivo,
+                        ponderador_pct=meta_base.ponderador_pct,
+                        umbral_minimo_pct=meta_base.umbral_minimo_pct,
+                        maximo_computable_pct=meta_base.maximo_computable_pct,
+                        autor=autor,
+                        vigente=meta_base.vigente,
+                    )
+                    metas_guardadas.append(copia_meta)
+
+            notificar_administradores(actor_id, f'Meta para {meta_base.item.nombre} guardada.')
+            for meta_guardada in metas_guardadas:
+                notificar_asignados_meta(
+                    meta_guardada,
+                    actor_id,
+                    f'Se guardó una meta para {meta_guardada.item.nombre}.',
+                )
+            cantidad = len(metas_guardadas)
+            mensajes = f'Meta guardada correctamente para {cantidad} funcionarios.' if asignacion_individual else 'Meta guardada correctamente para el cargo.'
+            messages.success(request, mensajes)
             return redirect('admin_catalogos_view')
     else:
         form = MetaForm(instance=meta)

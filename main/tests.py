@@ -40,6 +40,7 @@ class LoginViewTests(SimpleTestCase):
             'password': 'ClaveSegura123!',
         })
         request.session = LoginSession()
+        request._messages = Mock()
         user_query = Mock()
         user_query.filter.return_value.first.return_value = user
 
@@ -50,12 +51,14 @@ class LoginViewTests(SimpleTestCase):
         return response, request.session
 
     def test_admin_login_redirects_to_admin_panel(self):
-        response, session = self._login('Administrador')
+        with patch('main.views.messages.success') as success:
+            response, session = self._login('Administrador')
 
         self.assertEqual(response.url, '/administrador/panel/')
         self.assertEqual(session['user_role'], 'ADMIN')
         self.assertEqual(session['user_id'], 17)
         self.assertEqual(session['user_name'], 'Ana Pérez')
+        self.assertIn('Bienvenido/a, Ana Pérez.', success.call_args.args[1])
 
     def test_staff_login_redirects_to_staff_panel(self):
         response, session = self._login('Funcionario')
@@ -81,9 +84,13 @@ class LoginViewTests(SimpleTestCase):
         )
         request = self.factory.post('/', {'username': user.identificador_inst, 'password': 'ClaveSegura123!'})
         request.session = LoginSession()
+        request._messages = Mock()
         query = Mock()
         query.filter.return_value.first.return_value = user
-        with patch.object(Usuario, 'objects') as manager:
+        with (
+            patch.object(Usuario, 'objects') as manager,
+            patch('main.views.messages.success'),
+        ):
             manager.prefetch_related.return_value = query
             response = login_view(request)
         self.assertEqual(response.url, '/administrador/panel/')
@@ -98,6 +105,7 @@ class LoginViewTests(SimpleTestCase):
             'password': 'incorrecta',
         })
         request.session = LoginSession()
+        request._messages = []
         user_query = Mock()
         user_query.filter.return_value.first.return_value = user
 
@@ -114,8 +122,10 @@ class LoginViewTests(SimpleTestCase):
     def test_logout_flushes_session_and_redirects_to_login(self):
         request = self.factory.post('/cerrar-sesion/')
         request.session = LoginSession(user_id=4, user_role='ADMIN')
+        request._messages = Mock()
 
-        response = logout_view(request)
+        with patch('main.views.messages.success'):
+            response = logout_view(request)
 
         self.assertEqual(response.url, '/login/')
         self.assertEqual(request.session, {})

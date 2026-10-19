@@ -29,11 +29,6 @@
             </header>
 
             <div class="p-8 space-y-6">
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
                 <div class="flex justify-between items-end">
                     <div>
                         <h1 class="text-2xl font-bold text-gray-900">Directorio de Usuarios</h1>
@@ -67,7 +62,7 @@
                                     <td class="p-4 text-gray-500">{% for rol in usuario.roles.all %}{{ rol.nombre }}{% if not forloop.last %}, {% endif %}{% empty %}Sin rol{% endfor %}</td>
                                     <td class="p-4 text-gray-500">{{ usuario.delegacion|default:"Sin delegación" }}</td>
                                     <td class="p-4"><span class="px-2 py-1 {% if usuario.estado == 'activo' %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %} text-xs rounded-full font-medium">{{ usuario.get_estado_display }}</span></td>
-                                    <td class="p-4 text-right"><div class="inline-flex gap-3"><a href="{% url 'editar_usuario_view' usuario.id %}" class="text-blue-600 hover:underline">Editar</a>{% if usuario.estado == 'activo' %}<form method="post" action="{% url 'eliminar_usuario_view' %}" onsubmit="return confirm('¿Desactivar este usuario?')">{% csrf_token %}<input type="hidden" name="record_id" value="{{ usuario.id }}"><button class="text-red-700 hover:underline">Desactivar</button></form>{% endif %}</div></td>
+                                    <td class="p-4 text-right"><div class="inline-flex gap-3"><a href="{% url 'editar_usuario_view' usuario.id %}" class="text-blue-600 hover:underline">Editar</a>{% if usuario.estado == 'activo' %}<form method="post" action="{% url 'eliminar_usuario_view' %}" data-swal-confirm data-confirm-title="¿Desactivar este usuario?" data-confirm-text="Se conservará su historial, pero ya no podrá iniciar sesión.">{% csrf_token %}<input type="hidden" name="record_id" value="{{ usuario.id }}"><button class="text-red-700 hover:underline">Desactivar</button></form>{% endif %}</div></td>
                                 </tr>
                             {% empty %}
                                 <tr><td colspan="6" class="p-8 text-center text-gray-500">No hay usuarios registrados.</td></tr>
@@ -78,5 +73,6 @@
             </div>
         </main>
     </div>
+    {% include 'main/_sweetalerts.html' %}
 </body>
 </html>

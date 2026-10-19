@@ -1,0 +1,50 @@
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const alerts = [];
+    {% for message in messages %}
+        alerts.push({
+            icon: '{% if message.tags == "success" %}success{% elif message.tags == "error" %}error{% elif message.tags == "warning" %}warning{% else %}info{% endif %}',
+            title: '{% if message.tags == "success" %}Operación exitosa{% elif message.tags == "error" %}No se pudo completar{% elif message.tags == "warning" %}Atención{% else %}Información{% endif %}',
+            text: '{{ message|escapejs }}'
+        });
+    {% endfor %}
+    {% if form.errors %}
+        alerts.push({
+            icon: 'error',
+            title: 'Validación fallida',
+            text: 'Revisa los campos marcados y vuelve a intentarlo.'
+        });
+    {% endif %}
+    for (const alert of alerts) {
+        await Swal.fire({confirmButtonText: 'Entendido', ...alert});
+    }
+
+    document.addEventListener('submit', async (event) => {
+        const form = event.target.closest('form[data-swal-confirm]');
+        if (!form || form.dataset.confirmed === 'true') return;
+        event.preventDefault();
+        const result = await Swal.fire({
+            icon: 'warning',
+            title: form.dataset.confirmTitle || '¿Confirmas esta acción?',
+            text: form.dataset.confirmText || 'Esta acción puede afectar los datos guardados.',
+            showCancelButton: true,
+            confirmButtonText: form.dataset.confirmButton || 'Confirmar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#b91c1c',
+            reverseButtons: true
+        });
+        if (result.isConfirmed) {
+            form.dataset.confirmed = 'true';
+            form.requestSubmit(event.submitter);
+        } else {
+            await Swal.fire({
+                icon: 'info',
+                title: 'Acción cancelada',
+                text: form.dataset.cancelText || 'No se realizaron cambios.',
+                confirmButtonText: 'Entendido'
+            });
+        }
+    });
+});
+</script>

@@ -23,7 +23,6 @@
                 </div>
             </header>
             <div class="p-5 md:p-8 space-y-4">
-                {% for message in messages %}<div role="status" class="rounded border px-4 py-3 text-sm bg-green-50 border-green-200 text-green-700">{{ message }}</div>{% endfor %}
                 {% for evidencia in evidencias %}
                     {% with ultima_validacion=evidencia.validaciones.all.0 %}
                     <article class="bg-white border border-gray-200 rounded-lg p-5">
@@ -61,5 +60,6 @@
         </main>
     </div>
     {% include 'main/_image_preview_dialog.html' %}
+    {% include 'main/_sweetalerts.html' %}
 </body>
 </html>

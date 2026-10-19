@@ -1,5 +1,5 @@
 <div class="px-4 pb-6">
-    <form method="post" action="{% url 'main:logout_view' %}">
+    <form method="post" action="{% url 'main:logout_view' %}" data-swal-confirm data-confirm-title="¿Cerrar sesión?" data-confirm-text="Tu sesión se cerrará en este dispositivo." data-confirm-button="Cerrar sesión" data-cancel-text="Tu sesión continúa activa.">
         {% csrf_token %}
         <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 text-red-100 hover:bg-red-800 rounded-lg transition text-left" aria-label="Cerrar sesión">
             <span aria-hidden="true">↪</span><span class="font-medium">Cerrar sesión</span>

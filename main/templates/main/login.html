@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SGR - Iniciar sesión</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
 <body class="page-shell flex items-center justify-center min-h-screen p-4 sm:p-8">
@@ -22,10 +21,6 @@
                 <h1 class="text-2xl font-bold text-gray-900">Sistema Municipal</h1>
                 <p class="text-sm text-gray-500 mt-1">Gestión de Atención Ciudadana</p>
             </div>
-
-            {% for message in messages %}
-                <div role="alert" class="rounded-lg border px-4 py-3 text-sm {% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-700{% else %}bg-red-50 border-red-200 text-red-700{% endif %}">{{ message }}</div>
-            {% endfor %}
 
             <form method="POST" class="space-y-5">
                 {% csrf_token %}
@@ -48,10 +43,6 @@
             </div>
         </div>
     </div>
-    {% for message in messages %}
-        {% if message.tags == 'success' %}
-            <script>Swal.fire({icon: 'success', title: 'Contraseña actualizada', text: '{{ message|escapejs }}', confirmButtonText: 'Continuar'});</script>
-        {% endif %}
-    {% endfor %}
+    {% include 'main/_sweetalerts.html' %}
 </body>
 </html>

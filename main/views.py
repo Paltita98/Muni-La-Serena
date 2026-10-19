@@ -71,6 +71,7 @@ def login_view(request):
                 request.session['user_role'] = role
                 request.session['user_email'] = user.email
                 request.session['user_name'] = f'{user.nombres} {user.apellidos}'.strip()
+                messages.success(request, f'Bienvenido/a, {request.session["user_name"]}.')
                 destinations = {
                     'ADMIN': 'admin_dashboard_view',
                     'FUNCIONARIO': 'funcionario_demo_view',
@@ -97,6 +98,7 @@ def role_dashboard_view(request):
 @require_POST
 def logout_view(request):
     request.session.flush()
+    messages.success(request, 'Cerraste sesión correctamente.')
     return redirect('main:login_view')
 
 
