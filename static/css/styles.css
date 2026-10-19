@@ -449,6 +449,117 @@ button:hover {
 }
 
 @media (max-width: 760px) {
+  .page-shell > .flex.h-screen.overflow-hidden {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .page-shell > .flex.h-screen.overflow-hidden > .sidebar {
+    width: 100%;
+    min-height: 56px;
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: center;
+    overflow: visible;
+  }
+
+  .page-shell > .flex.h-screen.overflow-hidden > .sidebar > div:first-child {
+    height: 56px;
+    min-height: 56px;
+    flex: 0 0 auto;
+    padding: 0 0.75rem;
+    border-right: 1px solid rgba(255, 255, 255, 0.15);
+    border-bottom: 0;
+  }
+
+  .page-shell > .flex.h-screen.overflow-hidden > .sidebar .brand-logo {
+    max-width: 112px;
+    max-height: 30px;
+  }
+
+  .page-shell > .flex.h-screen.overflow-hidden > .sidebar nav {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 0.25rem;
+    overflow-x: auto;
+    padding: 0.35rem;
+    white-space: nowrap;
+  }
+
+  .page-shell > .flex.h-screen.overflow-hidden > .sidebar nav > * {
+    flex: 0 0 auto;
+    margin-top: 0;
+  }
+
+  .page-shell > .flex.h-screen.overflow-hidden > .sidebar nav a {
+    padding: 0.6rem 0.75rem;
+  }
+
+  .page-shell > .flex.h-screen.overflow-hidden > .sidebar > div:last-child {
+    flex: 0 0 auto;
+    padding: 0 0.5rem;
+  }
+
+  .page-shell > .flex.h-screen.overflow-hidden > .sidebar > div:last-child form {
+    margin: 0;
+  }
+
+  .page-shell > .flex.h-screen.overflow-hidden > .sidebar > div:last-child button {
+    width: auto;
+    padding: 0.6rem;
+    white-space: nowrap;
+  }
+
+  .page-shell > .flex.h-screen.overflow-hidden > main {
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+    overflow-y: visible;
+  }
+
+  .page-shell main > header {
+    height: auto;
+    min-height: 4rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .page-shell main > header > div {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .page-shell main > header .w-96 {
+    width: 100%;
+    max-width: 24rem;
+  }
+
+  .page-shell main > header > .flex {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .page-shell main .p-8 {
+    padding: 1rem;
+  }
+
+  .page-shell main form.grid-cols-4 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .page-shell main table {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
   .page-content {
     padding: 1rem;
   }
