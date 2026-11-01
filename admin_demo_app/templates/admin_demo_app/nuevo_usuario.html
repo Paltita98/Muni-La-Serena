@@ -27,10 +27,16 @@
                 </div>
             {% endif %}
 
+            {% if not modo_edicion %}
+                <p class="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+                    El acceso temporal se enviará al correo institucional. La persona deberá crear su contraseña personal al ingresar por primera vez.
+                </p>
+            {% endif %}
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {% for field in form %}
                     {% if field.name != 'roles' and field.name != 'delegaciones_autorizadas' %}
-                        <div class="{% if field.name == 'nombres' or field.name == 'apellidos' or field.name == 'password' %}md:col-span-2{% endif %}">
+                        <div class="{% if field.name == 'nombres' or field.name == 'apellidos' %}md:col-span-2{% endif %}">
                             <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
                                 {{ field.label }}{% if field.field.required %} *{% endif %}
                             </label>

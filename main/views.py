@@ -71,6 +71,10 @@ def login_view(request):
                 request.session['user_role'] = role
                 request.session['user_email'] = user.email
                 request.session['user_name'] = f'{user.nombres} {user.apellidos}'.strip()
+                if getattr(user, 'debe_cambiar_password', False):
+                    request.session['must_change_password'] = True
+                    messages.info(request, 'Por seguridad, crea tu contraseña personal para continuar.')
+                    return redirect('main:primer_cambio_password')
                 messages.success(request, f'Bienvenido/a, {request.session["user_name"]}.')
                 destinations = {
                     'ADMIN': 'admin_dashboard_view',
@@ -86,6 +90,47 @@ def login_view(request):
         messages.error(request, 'Correo o contraseña incorrectos, o usuario sin un rol de acceso válido.')
 
     return render(request, 'main/login.html')
+
+
+def primer_cambio_password(request):
+    if not request.session.get('must_change_password'):
+        return redirect('main:login_view')
+
+    user = _usuario_sesion_activo(request)
+    if not user or not user.debe_cambiar_password:
+        request.session.pop('must_change_password', None)
+        return redirect('main:login_view')
+
+    if request.method == 'POST':
+        nueva = request.POST.get('nueva_password', '')
+        confirmar = request.POST.get('confirmar_password', '')
+        if nueva != confirmar:
+            messages.error(request, 'Las contraseñas no coinciden.')
+        elif check_password(nueva, user.password_hash):
+            messages.error(request, 'La contraseña personal debe ser distinta de la contraseña temporal.')
+        else:
+            try:
+                validate_password(nueva, user=user)
+            except ValidationError as error:
+                for message in error.messages:
+                    messages.error(request, message)
+            else:
+                user.password_hash = make_password(nueva)
+                user.debe_cambiar_password = False
+                user.save(update_fields=['password_hash', 'debe_cambiar_password'])
+                request.session.pop('must_change_password', None)
+                messages.success(request, 'Tu contraseña personal quedó guardada.')
+                destinations = {
+                    'ADMIN': 'admin_dashboard_view',
+                    'FUNCIONARIO': 'funcionario_demo_view',
+                    'VERIFICADOR': 'verificador_evidencias_view',
+                    'COORDINADOR': 'role_dashboard_view',
+                    'DELEGADO': 'role_dashboard_view',
+                    'CONSULTA': 'role_dashboard_view',
+                }
+                return redirect(destinations.get(request.session.get('user_role'), 'main:login_view'))
+
+    return render(request, 'main/nueva_password.html', {'primer_acceso': True})
 
 
 def role_dashboard_view(request):
@@ -274,7 +319,8 @@ def nueva_password(request):
                     messages.error(request, message)
             else:
                 challenge.usuario.password_hash = make_password(nueva)
-                challenge.usuario.save(update_fields=['password_hash'])
+                challenge.usuario.debe_cambiar_password = False
+                challenge.usuario.save(update_fields=['password_hash', 'debe_cambiar_password'])
                 challenge.delete()
                 request.session.pop('reset_user_id', None)
                 request.session.pop('codigo_validado', None)

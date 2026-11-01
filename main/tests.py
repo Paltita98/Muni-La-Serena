@@ -10,7 +10,8 @@ from admin_demo_app import views as admin_views
 from admin_demo_app.models import CodigoRecuperacion, Notificacion, Usuario
 from funcionario_demo_app import views as funcionario_views
 from .context_processors import user_notifications
-from .views import login_view, marcar_notificacion_leida, nueva_password, recuperar_password
+from .middleware import ForceInitialPasswordChangeMiddleware
+from .views import login_view, marcar_notificacion_leida, nueva_password, primer_cambio_password, recuperar_password
 
 
 class LoginSession(dict):
@@ -26,13 +27,14 @@ class LoginViewTests(SimpleTestCase):
     def setUp(self):
         self.factory = RequestFactory()
 
-    def _login(self, role_name):
+    def _login(self, role_name, must_change_password=False):
         user = SimpleNamespace(
             pk=17,
             email='funcionario@muni.cl',
             nombres='Ana',
             apellidos='Pérez',
             password_hash=make_password('ClaveSegura123!'),
+            debe_cambiar_password=must_change_password,
             roles=SimpleNamespace(all=lambda: [SimpleNamespace(nombre=role_name)]),
         )
         request = self.factory.post('/', {
@@ -59,6 +61,12 @@ class LoginViewTests(SimpleTestCase):
         self.assertEqual(session['user_id'], 17)
         self.assertEqual(session['user_name'], 'Ana Pérez')
         self.assertIn('Bienvenido/a, Ana Pérez.', success.call_args.args[1])
+
+    def test_first_login_redirects_to_required_password_change(self):
+        response, session = self._login('Administrador', must_change_password=True)
+
+        self.assertEqual(response.url, '/primer-cambio-password/')
+        self.assertTrue(session['must_change_password'])
 
     def test_staff_login_redirects_to_staff_panel(self):
         response, session = self._login('Funcionario')
@@ -200,6 +208,72 @@ class PasswordResetTests(SimpleTestCase):
         self.assertEqual(request.session['reset_email_mask'], 'p****@ejemplo.com')
         self.assertNotIn('persona@ejemplo.com', success.call_args.args[1])
 
+
+class InitialPasswordChangeTests(SimpleTestCase):
+    def test_middleware_blocks_routes_until_password_change(self):
+        request = RequestFactory().get('/administrador/panel/')
+        request.session = LoginSession(must_change_password=True)
+        get_response = Mock(return_value='view response')
+
+        response = ForceInitialPasswordChangeMiddleware(get_response)(request)
+
+        self.assertEqual(response.url, '/primer-cambio-password/')
+        get_response.assert_not_called()
+
+    def test_password_change_updates_hash_and_releases_session(self):
+        user = SimpleNamespace(
+            debe_cambiar_password=True,
+            password_hash=make_password('Temporal123!'),
+            save=Mock(),
+        )
+        request = RequestFactory().post('/primer-cambio-password/', {
+            'nueva_password': 'PersonalSegura456!',
+            'confirmar_password': 'PersonalSegura456!',
+        })
+        request.session = LoginSession(
+            user_id=17,
+            user_role='ADMIN',
+            must_change_password=True,
+        )
+        request._messages = Mock()
+
+        with (
+            patch('main.views._usuario_sesion_activo', return_value=user),
+            patch('main.views.messages.success'),
+        ):
+            response = primer_cambio_password(request)
+
+        self.assertEqual(response.url, '/administrador/panel/')
+        self.assertTrue(check_password('PersonalSegura456!', user.password_hash))
+        self.assertFalse(user.debe_cambiar_password)
+        self.assertNotIn('must_change_password', request.session)
+
+    def test_password_change_rejects_the_temporary_password(self):
+        temporary_password = 'Temporal123!'
+        user = SimpleNamespace(
+            debe_cambiar_password=True,
+            password_hash=make_password(temporary_password),
+            save=Mock(),
+        )
+        request = RequestFactory().post('/primer-cambio-password/', {
+            'nueva_password': temporary_password,
+            'confirmar_password': temporary_password,
+        })
+        request.session = LoginSession(user_id=17, user_role='ADMIN', must_change_password=True)
+        request._messages = Mock()
+
+        with (
+            patch('main.views._usuario_sesion_activo', return_value=user),
+            patch('main.views.messages.error') as error,
+            patch('main.views.render', return_value='rendered'),
+        ):
+            response = primer_cambio_password(request)
+
+        self.assertEqual(response, 'rendered')
+        user.save.assert_not_called()
+        self.assertTrue(request.session['must_change_password'])
+        error.assert_called_once()
+
     def test_recovery_for_known_email_uses_same_verification_step(self):
         user = SimpleNamespace(pk=3, email='persona@ejemplo.com')
         manager = Mock()
@@ -219,7 +293,7 @@ class PasswordResetTests(SimpleTestCase):
         self.assertEqual(request.session['reset_email_mask'], 'p****@ejemplo.com')
 
     def test_validated_reset_persists_a_hashed_password_and_consumes_code(self):
-        user = SimpleNamespace(password_hash='', save=Mock())
+        user = SimpleNamespace(password_hash='', debe_cambiar_password=False, save=Mock())
         challenge = SimpleNamespace(
             usuario=user,
             expira=timezone.now() + timedelta(minutes=5),
@@ -241,7 +315,7 @@ class PasswordResetTests(SimpleTestCase):
 
         self.assertEqual(response.url, '/login/')
         self.assertTrue(check_password('MuySeguraClave482!', user.password_hash))
-        user.save.assert_called_once_with(update_fields=['password_hash'])
+        user.save.assert_called_once_with(update_fields=['password_hash', 'debe_cambiar_password'])
         challenge.delete.assert_called_once_with()
         self.assertNotIn('reset_user_id', request.session)
 

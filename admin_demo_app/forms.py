@@ -1,7 +1,4 @@
 from django import forms
-from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError
-from django.contrib.auth.hashers import make_password
 
 from .validators import validate_chilean_rut
 from .models import Cargo, CatalogoTipo, Delegacion, ItemMedicion, Meta, Periodo, Rol, Usuario
@@ -70,6 +67,8 @@ class DelegacionForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for name in ('codigo', 'direccion', 'comuna'):
             self.fields[name].required = True
+        if not self.instance.pk:
+            self.fields['comuna'].initial = 'La Serena'
 
 
 class RolForm(forms.ModelForm):
@@ -174,18 +173,6 @@ class MetaForm(forms.ModelForm):
 
 
 class UsuarioForm(forms.ModelForm):
-    password = forms.CharField(
-        label="Contraseña",
-        required=False,
-        widget=forms.PasswordInput(attrs={
-            "autocomplete": "new-password",
-            "minlength": "8",
-            "pattern": "(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}",
-            "title": "Usa al menos 8 caracteres, una mayúscula y un carácter especial.",
-        }),
-        help_text="Déjala vacía al editar para conservar la contraseña actual.",
-    )
-
     class Meta:
         model = Usuario
         fields = (
@@ -193,7 +180,6 @@ class UsuarioForm(forms.ModelForm):
             "nombres",
             "apellidos",
             "email",
-            "password",
             "cargo",
             "delegacion",
             "delegaciones_autorizadas",
@@ -238,28 +224,8 @@ class UsuarioForm(forms.ModelForm):
         self.fields["delegacion"].required = True
         self.fields["roles"].required = True
 
-    def clean_password(self):
-        password = self.cleaned_data.get("password")
-        if not self.instance.pk and not password:
-            raise forms.ValidationError("La contraseña es obligatoria al crear un usuario.")
-        if password:
-            try:
-                validate_password(password, user=self.instance if self.instance.pk else None)
-            except ValidationError as error:
-                raise forms.ValidationError(error.messages) from error
-        return password
-
     def clean_identificador_inst(self):
         identificador = self.cleaned_data["identificador_inst"].strip().replace('.', '').upper()
         validate_chilean_rut(identificador)
         return identificador
 
-    def save(self, commit=True):
-        usuario = super().save(commit=False)
-        password = self.cleaned_data.get("password")
-        if password:
-            usuario.password_hash = make_password(password)
-        if commit:
-            usuario.save()
-            self.save_m2m()
-        return usuario

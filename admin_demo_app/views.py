@@ -1,4 +1,10 @@
+import secrets
+import string
+
 from django.contrib import messages
+from django.conf import settings
+from django.contrib.auth.hashers import make_password
+from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
 from django.db.models import Q
@@ -476,27 +482,75 @@ def gestionar_usuario_view(request, usuario_id=None):
         form = UsuarioForm(request.POST, instance=usuario)
         if form.is_valid():
             creado = usuario is None
-            usuario = form.save()
-            actor_id = request.session.get('user_id')
-            accion = 'creada' if creado else 'actualizada'
-            notificar_administradores(actor_id, f'La cuenta de {usuario.nombres} {usuario.apellidos} fue {accion}.')
-            notificar(
-                usuario.pk,
-                f'Tu cuenta fue {accion} por administración.' if not creado else 'Tu cuenta fue creada. Ya puedes ingresar al sistema.',
-                tipo='administracion',
-                url='/login/',
-                actor_id=actor_id,
-            )
-            messages.success(request, f'Usuario {usuario.nombres} {usuario.apellidos} guardado correctamente.')
-            return redirect('admin_usuarios_view')
+            if creado:
+                temporary_password = _generar_password_temporal()
+                try:
+                    with transaction.atomic():
+                        usuario = form.save(commit=False)
+                        usuario.password_hash = make_password(temporary_password)
+                        usuario.debe_cambiar_password = True
+                        usuario.save()
+                        form.save_m2m()
+                        sent = send_mail(
+                            'Acceso inicial al Sistema Municipal',
+                            (
+                                f'Hola {usuario.nombres},\n\n'
+                                'Tu cuenta del Sistema Municipal fue creada. '
+                                f'Ingresa en {request.build_absolute_uri(reverse("main:login_view"))} '
+                                f'usando tu correo institucional y esta contraseña temporal: {temporary_password}\n\n'
+                                'En el primer ingreso el sistema te pedirá crear una contraseña personal. '
+                                'La administración no conoce ni puede cambiar esa contraseña personal.'
+                            ),
+                            settings.DEFAULT_FROM_EMAIL,
+                            [usuario.email],
+                            fail_silently=False,
+                        )
+                        if sent != 1:
+                            raise RuntimeError('No se pudo enviar el correo de acceso inicial.')
+                except Exception:
+                    messages.error(
+                        request,
+                        'No se pudo enviar el acceso al correo institucional; la cuenta no fue creada. Revisa la configuración de correo.',
+                    )
+                else:
+                    _notificar_cuenta_usuario(request, usuario, creado=True)
+                    messages.success(request, f'Usuario {usuario.nombres} {usuario.apellidos} creado. Enviamos el acceso inicial a su correo.')
+                    return redirect('admin_usuarios_view')
+            else:
+                usuario = form.save()
+                _notificar_cuenta_usuario(request, usuario, creado=False)
+                messages.success(request, f'Usuario {usuario.nombres} {usuario.apellidos} guardado correctamente.')
+                return redirect('admin_usuarios_view')
     else:
         form = UsuarioForm(instance=usuario)
 
     return render(request, 'admin_demo_app/nuevo_usuario.html', {
         'form': form,
         'usuario': usuario,
-        'modo_edicion': usuario is not None,
+        'modo_edicion': usuario_id is not None,
     })
+
+
+def _generar_password_temporal():
+    groups = (string.ascii_uppercase, string.ascii_lowercase, string.digits, string.punctuation)
+    alphabet = ''.join(groups)
+    characters = [secrets.choice(group) for group in groups]
+    characters.extend(secrets.choice(alphabet) for _ in range(12))
+    secrets.SystemRandom().shuffle(characters)
+    return ''.join(characters)
+
+
+def _notificar_cuenta_usuario(request, usuario, creado):
+    actor_id = request.session.get('user_id')
+    accion = 'creada' if creado else 'actualizada'
+    notificar_administradores(actor_id, f'La cuenta de {usuario.nombres} {usuario.apellidos} fue {accion}.')
+    notificar(
+        usuario.pk,
+        'Tu cuenta fue actualizada por administración.' if not creado else 'Tu cuenta fue creada. Revisa tu correo para obtener el acceso inicial.',
+        tipo='administracion',
+        url='/login/',
+        actor_id=actor_id,
+    )
 
 
 def editar_usuario_view(request, usuario_id):

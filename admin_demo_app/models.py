@@ -41,7 +41,7 @@ class Delegacion(models.Model):
     nombre = models.CharField(max_length=120, unique=True)
     codigo = models.CharField(max_length=30, unique=True, null=True, blank=True)
     direccion = models.CharField(max_length=255, blank=True)
-    comuna = models.CharField(max_length=100, blank=True)
+    comuna = models.CharField(max_length=100, blank=True, default='La Serena')
     ambito = models.CharField(max_length=120, blank=True, null=True)
     estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='activa')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -64,6 +64,7 @@ class Usuario(models.Model):
     apellidos = models.CharField(max_length=100)
     email = models.EmailField(max_length=150, unique=True)
     password_hash = models.CharField(max_length=255) # En un entorno real se usa la auth nativa de Django
+    debe_cambiar_password = models.BooleanField(default=False)
     cargo = models.ForeignKey(Cargo, on_delete=models.SET_NULL, null=True, blank=True)
     delegacion = models.ForeignKey(Delegacion, on_delete=models.SET_NULL, null=True, blank=True)
     delegaciones_autorizadas = models.ManyToManyField(

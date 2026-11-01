@@ -7,7 +7,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.test import RequestFactory, SimpleTestCase
 
-from .forms import MetaForm, UsuarioForm
+from .forms import DelegacionForm, MetaForm, UsuarioForm
 from .models import Alerta, Auditoria, Cargo, Compromiso, Delegacion, Periodo, Usuario
 from .validators import validate_chilean_rut
 from .views import admin_dashboard_view, gestionar_meta_view
@@ -69,6 +69,13 @@ class UserInputValidationTests(SimpleTestCase):
 
         self.assertEqual(form.fields['identificador_inst'].widget.attrs['pattern'], '[0-9]{7,8}-[0-9kK]')
         self.assertEqual(form.fields['email'].widget.input_type, 'email')
+        self.assertNotIn('password_hash', form.fields)
+        self.assertNotIn('password', form.fields)
+
+    def test_new_delegation_defaults_to_la_serena(self):
+        form = DelegacionForm()
+
+        self.assertEqual(form.fields['comuna'].initial, 'La Serena')
 
     def test_password_requires_minimum_length_uppercase_and_special_character(self):
         validate_password('Clave123!')

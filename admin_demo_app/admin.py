@@ -44,10 +44,14 @@ class DelegacionAdmin(admin.ModelAdmin):
 @admin.register(Usuario)
 class UsuarioAdmin(admin.ModelAdmin):
     form = UsuarioForm
+    exclude = ('password_hash', 'debe_cambiar_password')
     list_display = ('identificador_inst', 'nombres', 'apellidos', 'email', 'cargo', 'delegacion', 'estado')
     list_filter = ('estado', 'cargo', 'delegacion')
     search_fields = ('identificador_inst', 'nombres', 'apellidos', 'email')
     filter_horizontal = ('roles',) # Crea una interfaz visual mejorada para la relación de roles
+
+    def has_add_permission(self, request):
+        return False
 
 @admin.register(Periodo)
 class PeriodoAdmin(admin.ModelAdmin):
