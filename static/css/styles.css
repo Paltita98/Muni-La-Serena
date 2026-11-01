@@ -523,6 +523,26 @@ button:hover {
     align-self: flex-start;
     background: transparent;
     box-shadow: none;
+    z-index: 20;
+  }
+
+  .page-shell > .flex.h-screen.overflow-hidden > .sidebar.is-collapsed > div:first-child {
+    position: relative;
+    z-index: 21;
+    width: 16rem;
+    height: 80px;
+    min-height: 80px;
+    flex: 0 0 80px;
+    background: var(--primary);
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+
+  .page-shell > .flex.h-screen.overflow-hidden > .sidebar.is-collapsed > div:first-child > :not(.sidebar-toggle) {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
   }
 
   .page-shell > .flex.h-screen.overflow-hidden > .sidebar + main {
