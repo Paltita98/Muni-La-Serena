@@ -510,6 +510,7 @@ button:hover {
 @media (min-width: 761px) {
   .page-shell > .flex.h-screen.overflow-hidden > .sidebar {
     width: 16rem;
+    flex-shrink: 0;
     height: 100vh;
     max-height: 100vh;
     flex-basis: 16rem;
