@@ -66,7 +66,7 @@ class Usuario(models.Model):
     password_hash = models.CharField(max_length=255) # En un entorno real se usa la auth nativa de Django
     debe_cambiar_password = models.BooleanField(default=False)
     cargo = models.ForeignKey(Cargo, on_delete=models.SET_NULL, null=True, blank=True)
-    delegacion = models.ForeignKey(Delegacion, on_delete=models.SET_NULL, null=True, blank=True)
+    delegacion = models.ForeignKey(Delegacion, on_delete=models.PROTECT, null=True, blank=True)
     delegaciones_autorizadas = models.ManyToManyField(
         Delegacion, related_name='usuarios_autorizados', blank=True,
     )

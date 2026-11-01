@@ -78,10 +78,20 @@ def _delete_record(request, model, success_url):
     if request.method == 'POST':
         record = get_object_or_404(model, pk=request.POST.get('record_id'))
         descripcion = str(record)
+        if model is Delegacion and Usuario.objects.filter(
+            Q(delegacion=record) | Q(delegaciones_autorizadas=record),
+        ).exists():
+            messages.error(request, 'No se puede eliminar la delegación porque tiene funcionarios asignados o autorizados.')
+            return redirect(success_url)
         try:
             record.delete()
         except ProtectedError:
-            messages.error(request, 'No se puede eliminar porque existen registros relacionados.')
+            mensaje = (
+                'No se puede eliminar la delegación porque existen funcionarios u otros registros relacionados.'
+                if model is Delegacion
+                else 'No se puede eliminar porque existen registros relacionados.'
+            )
+            messages.error(request, mensaje)
         else:
             notificar_administradores(
                 request.session.get('user_id'),

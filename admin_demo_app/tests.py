@@ -10,7 +10,7 @@ from django.test import RequestFactory, SimpleTestCase
 from .forms import DelegacionForm, MetaForm, UsuarioForm
 from .models import Alerta, Auditoria, Cargo, Compromiso, Delegacion, Periodo, Usuario
 from .validators import validate_chilean_rut
-from .views import admin_dashboard_view, gestionar_meta_view
+from .views import admin_dashboard_view, eliminar_delegacion_view, gestionar_meta_view
 
 
 class AdminDashboardTests(SimpleTestCase):
@@ -54,6 +54,31 @@ class AdminDashboardTests(SimpleTestCase):
         self.assertEqual(context['delegaciones_dashboard'], [delegacion])
         self.assertEqual(delegacion.funcionarios_count, 3)
         self.assertEqual(delegacion.compromisos_count, 5)
+
+
+class DelegacionDeletionTests(SimpleTestCase):
+    def test_delegation_with_assigned_or_authorized_users_cannot_be_deleted(self):
+        delegacion = SimpleNamespace(pk=12, delete=Mock())
+        request = RequestFactory().post('/administrador/delegaciones/eliminar/', {'record_id': 12})
+        request.session = {'user_role': 'ADMIN', 'user_id': 1}
+        user_query = Mock()
+        user_query.exists.return_value = True
+
+        with (
+            patch('admin_demo_app.views.get_object_or_404', return_value=delegacion),
+            patch.object(Usuario, 'objects') as user_manager,
+            patch('admin_demo_app.views.messages.error') as error,
+            patch('admin_demo_app.views.redirect', return_value='redirect'),
+        ):
+            user_manager.filter.return_value = user_query
+            response = eliminar_delegacion_view(request)
+
+        self.assertEqual(response, 'redirect')
+        delegacion.delete.assert_not_called()
+        error.assert_called_once_with(
+            request,
+            'No se puede eliminar la delegación porque tiene funcionarios asignados o autorizados.',
+        )
 
 
 class UserInputValidationTests(SimpleTestCase):
