@@ -513,12 +513,33 @@ button:hover {
     height: 100vh;
     max-height: 100vh;
     flex-basis: 16rem;
+    position: relative;
+    z-index: 2;
   }
 
   .page-shell > .flex.h-screen.overflow-hidden > .sidebar.is-collapsed {
     height: 80px;
     max-height: 80px;
     align-self: flex-start;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .page-shell > .flex.h-screen.overflow-hidden > .sidebar + main {
+    position: relative;
+    z-index: 1;
+    transition: flex-basis 280ms ease, transform 280ms ease;
+  }
+
+  .page-shell > .flex.h-screen.overflow-hidden > .sidebar.is-collapsed + main {
+    flex: 0 0 100%;
+    width: 100%;
+    max-width: 100%;
+    transform: translateX(-16rem);
+  }
+
+  .page-shell > .flex.h-screen.overflow-hidden > .sidebar.is-collapsed + main > header {
+    padding-left: 18rem;
   }
 
   .page-shell > .flex.h-screen.overflow-hidden > .sidebar.is-collapsed > div:first-child {
