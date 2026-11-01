@@ -458,6 +458,13 @@ button:hover {
   transition: height 280ms ease, max-height 280ms ease;
 }
 
+.page-shell > .flex.h-screen.overflow-hidden > .sidebar > div:first-child,
+.page-shell > .flex.h-screen.overflow-hidden > main > header {
+  height: 80px;
+  min-height: 80px;
+  flex-shrink: 0;
+}
+
 .page-shell > .flex.h-screen.overflow-hidden > .sidebar nav,
 .page-shell > .flex.h-screen.overflow-hidden > .sidebar > div:last-child {
   transition: opacity 180ms ease, transform 220ms ease, visibility 0s;
@@ -509,13 +516,13 @@ button:hover {
   }
 
   .page-shell > .flex.h-screen.overflow-hidden > .sidebar.is-collapsed {
-    height: 56px;
-    max-height: 56px;
+    height: 80px;
+    max-height: 80px;
     align-self: flex-start;
   }
 
   .page-shell > .flex.h-screen.overflow-hidden > .sidebar.is-collapsed > div:first-child {
-    flex: 0 0 56px;
+    flex: 0 0 80px;
   }
 
   .page-shell > .flex.h-screen.overflow-hidden > .sidebar:not(.is-collapsed) nav,
@@ -549,15 +556,15 @@ button:hover {
 
   .page-shell > .flex.h-screen.overflow-hidden > .sidebar.is-collapsed {
     width: 100%;
-    height: 56px;
-    max-height: 56px;
+    height: 80px;
+    max-height: 80px;
     align-self: stretch;
     overflow: hidden;
   }
 
   .page-shell > .flex.h-screen.overflow-hidden > .sidebar > div:first-child {
-    height: 56px;
-    min-height: 56px;
+    height: 80px;
+    min-height: 80px;
     flex: 0 0 auto;
     display: flex;
     flex-direction: row;
@@ -622,7 +629,7 @@ button:hover {
   }
 
   .page-shell > .flex.h-screen.overflow-hidden > .sidebar:not(.is-collapsed) nav {
-    max-height: calc(100dvh - 56px);
+    max-height: calc(100dvh - 80px);
     overflow-y: auto;
     padding: 0.5rem 0.75rem;
     opacity: 1;
