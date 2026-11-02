@@ -52,19 +52,14 @@ def login_view(request):
             role_names = [role.nombre.casefold() for role in user.roles.all()]
             if password_valid and any('admin' in role_name for role_name in role_names):
                 role = 'ADMIN'
-<<<<<<< HEAD
-            elif password_valid and any('delegad' in role_name for role_name in role_names):
-                role = 'DELEGADO'
-=======
             elif password_valid and any('verificador' in role_name for role_name in role_names):
                 role = 'VERIFICADOR'
->>>>>>> bf8a9b678a7b37f45b69949e9c5e318cd3552a68
+            elif password_valid and any('delegado' in role_name or 'jefatura' in role_name for role_name in role_names):
+                role = 'DELEGADO'
             elif password_valid and any('funcion' in role_name for role_name in role_names):
                 role = 'FUNCIONARIO'
             elif password_valid and any('coordinador' in role_name for role_name in role_names):
                 role = 'COORDINADOR'
-            elif password_valid and any('delegado' in role_name or 'jefatura' in role_name for role_name in role_names):
-                role = 'DELEGADO'
             elif password_valid and any('consulta' in role_name for role_name in role_names):
                 role = 'CONSULTA'
             else:
@@ -76,12 +71,6 @@ def login_view(request):
                 request.session['user_role'] = role
                 request.session['user_email'] = user.email
                 request.session['user_name'] = f'{user.nombres} {user.apellidos}'.strip()
-<<<<<<< HEAD
-                destinations = {
-                    'ADMIN': 'admin_dashboard_view',
-                    'DELEGADO': 'delegado_demo_view',
-                    'FUNCIONARIO': 'funcionario_demo_view',
-=======
                 if getattr(user, 'debe_cambiar_password', False):
                     request.session['must_change_password'] = True
                     messages.info(request, 'Por seguridad, crea tu contraseña personal para continuar.')
@@ -92,9 +81,8 @@ def login_view(request):
                     'FUNCIONARIO': 'funcionario_demo_view',
                     'VERIFICADOR': 'verificador_evidencias_view',
                     'COORDINADOR': 'role_dashboard_view',
-                    'DELEGADO': 'role_dashboard_view',
+                    'DELEGADO': 'delegado_demo_view',
                     'CONSULTA': 'role_dashboard_view',
->>>>>>> bf8a9b678a7b37f45b69949e9c5e318cd3552a68
                 }
                 destination = destinations[role]
                 return redirect(destination)

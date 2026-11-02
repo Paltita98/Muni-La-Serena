@@ -31,10 +31,10 @@
             {% if actividad.contacto_nombre %}<div><p class="text-xs text-gray-500">Contacto</p><p class="font-medium">{{ actividad.contacto_nombre }}{% if actividad.contacto_telefono %} · {{ actividad.contacto_telefono }}{% endif %}</p></div>{% endif %}
         </section>
 
-<<<<<<< HEAD
         {% if puede_adjuntar %}
             <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                <h2 class="text-lg font-bold text-gray-900 mb-4">Agregar evidencia</h2>
+                <h2 class="text-lg font-bold text-gray-900 mb-4">{% if puede_subir_evidencia %}Enviar o reenviar evidencia{% else %}Evidencia en revisión{% endif %}</h2>
+                {% if puede_subir_evidencia %}
                 <form method="post" enctype="multipart/form-data" class="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
                     {% csrf_token %}
                     <div class="flex-1 w-full">
@@ -42,26 +42,13 @@
                         {{ form.archivo }}
                         {% for error in form.archivo.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
                     </div>
-                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg">Incorporar evidencia</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg">Enviar evidencia</button>
                 </form>
+                {% else %}
+                    <p class="text-sm text-gray-600">Espera la decisión del verificador. Si solicita correcciones, aquí podrás enviar una nueva versión.</p>
+                {% endif %}
             </section>
         {% endif %}
-=======
-        <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h2 class="text-lg font-bold text-gray-900 mb-4">{% if puede_subir_evidencia %}Enviar o reenviar evidencia{% else %}Evidencia en revisión{% endif %}</h2>
-            {% if puede_subir_evidencia %}
-            <form method="post" enctype="multipart/form-data" class="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
-                {% csrf_token %}
-                <div class="flex-1 w-full">
-                    <label for="{{ form.archivo.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Archivo</label>
-                    {{ form.archivo }}
-                    {% for error in form.archivo.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
-                </div>
-                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg">Enviar evidencia</button>
-            </form>
-            {% else %}<p class="text-sm text-gray-600">Espera la decisión del verificador. Si solicita correcciones, aquí podrás enviar una nueva versión.</p>{% endif %}
-        </section>
->>>>>>> bf8a9b678a7b37f45b69949e9c5e318cd3552a68
 
         <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
             <h2 class="text-lg font-bold text-gray-900 mb-4">Evidencias incorporadas</h2>

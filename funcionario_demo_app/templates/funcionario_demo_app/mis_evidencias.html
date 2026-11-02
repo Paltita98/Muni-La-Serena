@@ -4,72 +4,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SGR - Mis Evidencias</title>
+    <title>{% if is_delegado %}Evidencias de la delegación{% else %}Mis evidencias{% endif %} - SGR</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
 <body class="page-shell">
     <div class="flex h-screen overflow-hidden">
-<<<<<<< HEAD
-        <aside class="sidebar w-64 text-white flex flex-col">
+        <aside class="sidebar w-64 shrink-0 text-white flex flex-col">
             <div class="h-16 flex items-center px-4 border-b border-white/15">
                 <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo">
             </div>
             <nav class="flex-1 px-4 py-6 space-y-2">
-                <a href="{{ panel_url }}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
-                    <span>📊</span><span class="ml-3 font-medium">{% if is_delegado %}Panel Delegado{% else %}Mi Tablero{% endif %}</span>
-                </a>
-                <a href="{% url 'actividades_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
-                    <span>📝</span><span class="ml-3 font-medium">Actividades</span>
-                </a>
-                <a href="{% url 'atenciones_sociales_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
-                    <span>🤝</span><span class="ml-3 font-medium">Atención Social</span>
-                </a>
-                <a href="{% url 'agenda_colectiva_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
-                    <span>📅</span><span class="ml-3 font-medium">Agenda Colectiva</span>
-                </a>
-                <a href="{% url 'mis_evidencias_view' %}" class="flex items-center px-4 py-3 bg-white/10 text-white rounded-lg">
-                    <span>📎</span><span class="ml-3 font-medium">Mis Evidencias</span>
-                </a>
+                <a href="{{ panel_url }}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg">Panel</a>
+                <a href="{% url 'actividades_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg">Actividades</a>
+                <a href="{% url 'atenciones_sociales_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg">Atención Social</a>
+                <a href="{% url 'agenda_colectiva_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg">Agenda Colectiva</a>
+                {% if not is_delegado %}<a href="{% url 'mis_evidencias_view' %}" class="flex items-center px-4 py-3 bg-white/10 text-white rounded-lg">Mis Evidencias</a>{% endif %}
             </nav>
         </aside>
 
-        <main class="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50">
-            <header class="h-16 bg-white shadow-sm flex justify-between items-center px-8">
-                <div class="w-96 relative">
-                    <input type="text" id="searchEvidence" placeholder="Buscar evidencia o código..." class="w-full bg-gray-100 text-sm rounded-full pl-4 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
-                    <span class="absolute right-3 top-2 text-gray-400">🔍</span>
-                </div>
-                <div class="flex items-center space-x-6">
-                    {% if not is_delegado %}
-                    <button class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition shadow-sm">+ Subir Evidencia</button>
-                    {% endif %}
-                </div>
-            </header>
-
-            <div class="page-content">
-                <div class="section-header">
-                    <div>
-                        <h1>{% if is_delegado %}Evidencias de la Delegación{% else %}Mis Evidencias{% endif %}</h1>
-                        <p>Documentos y fotografías asociados a las actividades visibles para tu perfil.</p>
-                    </div>
-                </div>
-
-                <section class="list-panel">
-                    <div class="list-header">
-                        <h2>{% if is_delegado %}Evidencias del equipo{% else %}Galería de evidencias{% endif %}</h2>
-                        <span class="badge info" id="evidenceCount">0 evidencias</span>
-                    </div>
-                    <div class="list-body">
-                        <div id="evidenceGrid" class="evidence-grid"></div>
-                    </div>
-                </section>
-=======
-        {% include 'funcionario_demo_app/_sidebar_rol.html' %}
         <main class="min-w-0 flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50">
-            <header class="min-h-16 bg-white shadow-sm flex items-center justify-between px-5 md:px-8 py-3">
+            <header class="min-h-16 bg-white shadow-sm flex items-center justify-between gap-4 px-5 md:px-8 py-3">
                 <div>
-                    <h1 class="text-lg font-bold text-gray-900">Mis Evidencias</h1>
+                    <h1 class="text-lg font-bold text-gray-900">{% if is_delegado %}Evidencias de la delegación{% else %}Mis Evidencias{% endif %}</h1>
                     <p class="text-xs text-gray-500">Estado de revisión y observaciones del verificador.</p>
                 </div>
                 <div class="flex items-center gap-3">
@@ -82,12 +39,12 @@
                     {% with ultima_validacion=evidencia.validaciones.all.0 %}
                     <article class="bg-white border border-gray-200 rounded-lg p-5">
                         <div class="flex flex-wrap items-start justify-between gap-4">
-                            <div>
+                            <div class="min-w-0">
                                 <p class="text-xs text-gray-500">{{ evidencia.actividad.codigo_evidencia }} · Enviada {{ evidencia.fecha_carga|date:'d/m/Y H:i' }}</p>
                                 <h2 class="mt-1 font-semibold text-gray-900">{{ evidencia.actividad.descripcion }}</h2>
                                 <p class="mt-1 text-sm text-gray-600">{{ evidencia.actividad.item.nombre }} · {{ evidencia.archivo.name }}</p>
                             </div>
-                            {% if evidencia.es_imagen %}
+                            {% if evidencia.es_imagen and evidencia.url_previsualizacion %}
                                 <button type="button" data-preview-src="{{ evidencia.url_previsualizacion }}" data-preview-alt="{{ evidencia.actividad.descripcion }}" class="group shrink-0 overflow-hidden rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-700" aria-haspopup="dialog" aria-label="Ampliar evidencia de {{ evidencia.actividad.codigo_evidencia }}">
                                     <img src="{{ evidencia.url_previsualizacion }}" alt="Miniatura de evidencia" loading="lazy" class="h-20 w-28 object-cover transition group-hover:scale-105">
                                 </button>
@@ -96,7 +53,7 @@
                         </div>
                         <div class="mt-4 flex flex-wrap gap-3 items-center">
                             <a href="{% url 'evidencia_archivo_view' evidencia.id %}" class="text-sm text-blue-700 hover:underline">Descargar archivo</a>
-                            {% if evidencia.estado == 'en_correccion' or evidencia.estado == 'rechazada' %}
+                            {% if not is_delegado and evidencia.estado == 'en_correccion' or not is_delegado and evidencia.estado == 'rechazada' %}
                                 <a href="{% url 'actividad_detalle_view' evidencia.actividad_id %}" class="px-3 py-2 rounded bg-red-700 text-white text-sm hover:bg-red-800">Corregir y reenviar evidencia</a>
                             {% endif %}
                         </div>
@@ -109,9 +66,8 @@
                     </article>
                     {% endwith %}
                 {% empty %}
-                    <div class="bg-white border border-gray-200 rounded-lg px-5 py-12 text-center text-gray-500">Todavía no has enviado evidencias.</div>
+                    <div class="bg-white border border-gray-200 rounded-lg px-5 py-12 text-center text-gray-500">{% if is_delegado %}Esta delegación todavía no tiene evidencias.{% else %}Todavía no has enviado evidencias.{% endif %}</div>
                 {% endfor %}
->>>>>>> bf8a9b678a7b37f45b69949e9c5e318cd3552a68
             </div>
         </main>
     </div>

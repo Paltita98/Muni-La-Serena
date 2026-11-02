@@ -74,13 +74,12 @@ class LoginViewTests(SimpleTestCase):
         self.assertEqual(response.url, '/funcionario/panel/')
         self.assertEqual(session['user_role'], 'FUNCIONARIO')
 
-<<<<<<< HEAD
     def test_delegate_login_redirects_to_delegate_panel(self):
         response, session = self._login('Delegado')
 
         self.assertEqual(response.url, '/funcionario/delegado/panel/')
         self.assertEqual(session['user_role'], 'DELEGADO')
-=======
+
     def test_verifier_login_redirects_to_evidence_review(self):
         response, session = self._login('Verificador')
 
@@ -109,7 +108,6 @@ class LoginViewTests(SimpleTestCase):
             manager.prefetch_related.return_value = query
             response = login_view(request)
         self.assertEqual(response.url, '/administrador/panel/')
->>>>>>> bf8a9b678a7b37f45b69949e9c5e318cd3552a68
 
     def test_invalid_password_does_not_create_authenticated_session(self):
         user = SimpleNamespace(

@@ -6,18 +6,13 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-<<<<<<< HEAD
 from django.test import RequestFactory, SimpleTestCase, TestCase
-=======
-from django.test import RequestFactory, SimpleTestCase
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.http import Http404
->>>>>>> bf8a9b678a7b37f45b69949e9c5e318cd3552a68
 from django.urls import reverse
 from PIL import Image
 
-<<<<<<< HEAD
 from admin_demo_app.models import (
     Actividad,
     AtencionSocial,
@@ -32,14 +27,27 @@ from admin_demo_app.models import (
     PersonaUsuaria,
     Periodo,
     Usuario,
+    Validacion,
 )
-from .forms import AtencionSocialForm
-from .views import _calcular_metricas_funcionario, atenciones_sociales_view, nueva_atencion_social_view
-=======
-from admin_demo_app.models import Actividad, AtencionSocial, CatalogoTipo, Evidencia, Meta, PersonaUsuaria, Usuario, Validacion
-from .forms import ActividadForm, AtencionSocialForm, EvidenciaForm, ImageEvidenceField, VerificacionEvidenciaForm
-from .views import _calcular_metricas_funcionario, _es_imagen_previsualizable, actividades_view, agenda_colectiva_view, atenciones_sociales_view, buscar_personas_view, evidencia_previsualizacion_view, nueva_atencion_social_view, validar_evidencia_view, verificador_evidencias_view
->>>>>>> bf8a9b678a7b37f45b69949e9c5e318cd3552a68
+from .forms import (
+    ActividadForm,
+    AtencionSocialForm,
+    EvidenciaForm,
+    ImageEvidenceField,
+    VerificacionEvidenciaForm,
+)
+from .views import (
+    _calcular_metricas_funcionario,
+    _es_imagen_previsualizable,
+    actividades_view,
+    agenda_colectiva_view,
+    atenciones_sociales_view,
+    buscar_personas_view,
+    evidencia_previsualizacion_view,
+    nueva_atencion_social_view,
+    validar_evidencia_view,
+    verificador_evidencias_view,
+)
 
 
 class MetricasFuncionarioTests(SimpleTestCase):
@@ -114,7 +122,6 @@ class AgendaTemplateTests(SimpleTestCase):
         self.assertIn("ingresado: { label: 'Ingresado', className: 'info' }", template)
 
 
-<<<<<<< HEAD
 class FlujoCompromisosTests(TestCase):
     def setUp(self):
         self.delegado = self.crear_usuario('DEL-001', 'delegado')
@@ -342,7 +349,6 @@ class FlujoCompromisosTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual([item['codigo'] for item in response.json()], ['ACT-CENTRO1'])
-=======
 class ImageEvidenceFieldTests(SimpleTestCase):
     def png_upload(self, filename='evidence.png'):
         content = BytesIO()
@@ -383,13 +389,15 @@ class FuncionarioListadoTests(SimpleTestCase):
         actividad_query = Mock()
         actividad_query.select_related.return_value.order_by.return_value = []
         actividad_manager = Mock(filter=Mock(return_value=actividad_query))
+        request = RequestFactory().get('/funcionario/actividades/')
+        request.session = {'user_role': 'FUNCIONARIO'}
 
         with (
             patch('funcionario_demo_app.views._funcionario_actual', return_value=funcionario),
             patch.object(Actividad, 'objects', actividad_manager),
             patch('funcionario_demo_app.views.render', return_value=object()),
         ):
-            response = actividades_view(RequestFactory().get('/funcionario/actividades/'))
+            response = actividades_view(request)
 
         self.assertIsNotNone(response)
         actividad_manager.filter.assert_called_once_with(funcionario=funcionario)
@@ -399,17 +407,18 @@ class FuncionarioListadoTests(SimpleTestCase):
         compromiso_query = Mock()
         compromiso_query.select_related.return_value.order_by.return_value = []
         compromiso_manager = Mock(filter=Mock(return_value=compromiso_query))
+        request = RequestFactory().get('/funcionario/agenda-colectiva/')
+        request.session = {'user_role': 'FUNCIONARIO'}
 
         with (
             patch('funcionario_demo_app.views._funcionario_actual', return_value=funcionario),
             patch('funcionario_demo_app.views.Compromiso.objects', compromiso_manager),
             patch('funcionario_demo_app.views.render', return_value=object()),
         ):
-            response = agenda_colectiva_view(RequestFactory().get('/funcionario/agenda-colectiva/'))
+            response = agenda_colectiva_view(request)
 
         self.assertIsNotNone(response)
         compromiso_manager.filter.assert_called_once_with(responsable=funcionario)
->>>>>>> bf8a9b678a7b37f45b69949e9c5e318cd3552a68
 
 
 class AtencionesSocialesViewTests(SimpleTestCase):

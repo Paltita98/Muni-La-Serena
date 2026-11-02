@@ -12,11 +12,8 @@ from admin_demo_app.models import (
     ItemMedicion,
     Periodo,
     PersonaUsuaria,
-<<<<<<< HEAD
     Usuario,
-=======
     Validacion,
->>>>>>> bf8a9b678a7b37f45b69949e9c5e318cd3552a68
 )
 from admin_demo_app.validators import validate_chilean_rut
 
