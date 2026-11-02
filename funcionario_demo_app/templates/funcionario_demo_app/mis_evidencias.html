@@ -15,8 +15,8 @@
                 <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo">
             </div>
             <nav class="flex-1 px-4 py-6 space-y-2">
-                <a href="{% url 'funcionario_demo_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
-                    <span>📊</span><span class="ml-3 font-medium">Mi Tablero</span>
+                <a href="{{ panel_url }}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
+                    <span>📊</span><span class="ml-3 font-medium">{% if is_delegado %}Panel Delegado{% else %}Mi Tablero{% endif %}</span>
                 </a>
                 <a href="{% url 'actividades_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
                     <span>📝</span><span class="ml-3 font-medium">Actividades</span>
@@ -40,21 +40,23 @@
                     <span class="absolute right-3 top-2 text-gray-400">🔍</span>
                 </div>
                 <div class="flex items-center space-x-6">
+                    {% if not is_delegado %}
                     <button class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition shadow-sm">+ Subir Evidencia</button>
+                    {% endif %}
                 </div>
             </header>
 
             <div class="page-content">
                 <div class="section-header">
                     <div>
-                        <h1>Mis Evidencias</h1>
-                        <p>Documentos y fotografías asociadas a cada actividad o compromiso.</p>
+                        <h1>{% if is_delegado %}Evidencias de la Delegación{% else %}Mis Evidencias{% endif %}</h1>
+                        <p>Documentos y fotografías asociados a las actividades visibles para tu perfil.</p>
                     </div>
                 </div>
 
                 <section class="list-panel">
                     <div class="list-header">
-                        <h2>Galería de evidencias</h2>
+                        <h2>{% if is_delegado %}Evidencias del equipo{% else %}Galería de evidencias{% endif %}</h2>
                         <span class="badge info" id="evidenceCount">0 evidencias</span>
                     </div>
                     <div class="list-body">

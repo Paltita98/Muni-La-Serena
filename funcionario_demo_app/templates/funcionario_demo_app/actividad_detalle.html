@@ -34,18 +34,20 @@
             {% if actividad.contacto_nombre %}<div><p class="text-xs text-gray-500">Contacto</p><p class="font-medium">{{ actividad.contacto_nombre }}{% if actividad.contacto_telefono %} · {{ actividad.contacto_telefono }}{% endif %}</p></div>{% endif %}
         </section>
 
-        <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h2 class="text-lg font-bold text-gray-900 mb-4">Agregar evidencia</h2>
-            <form method="post" enctype="multipart/form-data" class="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
-                {% csrf_token %}
-                <div class="flex-1 w-full">
-                    <label for="{{ form.archivo.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Archivo</label>
-                    {{ form.archivo }}
-                    {% for error in form.archivo.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
-                </div>
-                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg">Incorporar evidencia</button>
-            </form>
-        </section>
+        {% if puede_adjuntar %}
+            <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">Agregar evidencia</h2>
+                <form method="post" enctype="multipart/form-data" class="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+                    {% csrf_token %}
+                    <div class="flex-1 w-full">
+                        <label for="{{ form.archivo.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Archivo</label>
+                        {{ form.archivo }}
+                        {% for error in form.archivo.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                    </div>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg">Incorporar evidencia</button>
+                </form>
+            </section>
+        {% endif %}
 
         <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
             <h2 class="text-lg font-bold text-gray-900 mb-4">Evidencias incorporadas</h2>

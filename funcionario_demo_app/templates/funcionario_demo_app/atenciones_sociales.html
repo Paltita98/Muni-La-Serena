@@ -15,8 +15,8 @@
                 <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo">
             </div>
             <nav class="flex-1 px-4 py-6 space-y-2">
-                <a href="{% url 'funcionario_demo_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
-                    <span>📊</span><span class="ml-3 font-medium">Mi Tablero</span>
+                <a href="{{ panel_url }}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
+                    <span>📊</span><span class="ml-3 font-medium">{% if is_delegado %}Panel Delegado{% else %}Mi Tablero{% endif %}</span>
                 </a>
                 <a href="{% url 'actividades_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
                     <span>📝</span><span class="ml-3 font-medium">Actividades</span>
@@ -39,14 +39,14 @@
                     <input type="search" id="searchInput" placeholder="Buscar persona, tipo o resultado..." class="w-full bg-gray-100 text-sm rounded-full pl-4 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
                     <span class="absolute right-3 top-2 text-gray-400">🔍</span>
                 </div>
-                <a href="{% url 'nueva_atencion_social_view' %}" class="brand-button px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm inline-flex items-center">+ Registrar Atención</a>
+                {% if not is_delegado %}<a href="{% url 'nueva_atencion_social_view' %}" class="brand-button px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm inline-flex items-center">+ Registrar Atención</a>{% endif %}
             </header>
 
             <div class="page-content">
                 <div class="section-header">
                     <div>
                         <h1>Atención Social</h1>
-                        <p>Historial de atenciones y gestiones registradas.</p>
+                        <p>{% if is_delegado %}Atenciones sociales del equipo de tu delegación, identificadas por referencia anónima.{% else %}Historial de tus atenciones y gestiones registradas.{% endif %}</p>
                     </div>
                 </div>
 
@@ -108,7 +108,7 @@
             if (!filtered.length) {
                 addText(list, 'div', 'empty-state', atenciones.length
                     ? 'No hay atenciones con ese criterio.'
-                    : 'Este funcionario todavía no tiene atenciones sociales registradas.');
+                    : '{% if is_delegado %}Esta delegación todavía no tiene atenciones sociales registradas.{% else %}Este funcionario todavía no tiene atenciones sociales registradas.{% endif %}');
                 return;
             }
 

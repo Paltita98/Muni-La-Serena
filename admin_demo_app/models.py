@@ -297,7 +297,8 @@ class AtencionSocial(models.Model):
 class Compromiso(models.Model):
     ESTADO_CHOICES = [
         ('ingresado', 'Ingresado'), ('pendiente', 'Pendiente'),
-        ('en_proceso', 'En proceso'), ('realizado', 'Realizado'),
+        ('en_proceso', 'En proceso'), ('revision', 'En revisión'),
+        ('realizado', 'Realizado'),
     ]
 
     actividad_origen = models.ForeignKey(Actividad, on_delete=models.SET_NULL, null=True, blank=True)

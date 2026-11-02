@@ -10,6 +10,7 @@ from admin_demo_app.models import (
     ItemMedicion,
     Periodo,
     PersonaUsuaria,
+    Usuario,
 )
 
 
@@ -86,9 +87,70 @@ class CompromisoForm(forms.ModelForm):
             "observacion": forms.Textarea(attrs={"rows": 4}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, funcionario=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["delegacion"].queryset = Delegacion.objects.filter(estado="activa").order_by("nombre")
+        delegaciones = Delegacion.objects.filter(estado="activa")
+        if funcionario and funcionario.delegacion_id:
+            delegaciones = delegaciones.filter(pk=funcionario.delegacion_id)
+        else:
+            delegaciones = Delegacion.objects.none()
+        self.fields["delegacion"].queryset = delegaciones.order_by("nombre")
+
+
+class DelegadoCompromisoForm(forms.ModelForm):
+    class Meta:
+        model = Compromiso
+        fields = (
+            "fecha_comprometida",
+            "responsable",
+            "solicitante",
+            "territorio",
+            "observacion",
+        )
+        labels = {
+            "fecha_comprometida": "Fecha comprometida",
+            "responsable": "Funcionario responsable",
+            "solicitante": "Solicitante (vecino/institución)",
+            "territorio": "Territorio o sector",
+            "observacion": "Descripción del compromiso",
+        }
+        widgets = {
+            "fecha_comprometida": forms.DateInput(attrs={"type": "date"}),
+            "observacion": forms.Textarea(attrs={"rows": 4}),
+        }
+
+    def __init__(self, *args, delegacion=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.delegacion = delegacion
+        self.fields["responsable"].queryset = (
+            Usuario.objects.filter(delegacion=delegacion, estado="activo")
+            .order_by("apellidos", "nombres")
+            if delegacion else Usuario.objects.none()
+        )
+        for field in self.fields.values():
+            field.widget.attrs.setdefault(
+                "class",
+                "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500",
+            )
+
+
+class CompromisoEstadoForm(forms.Form):
+    estado = forms.ChoiceField(label="Nuevo estado")
+    observacion = forms.CharField(
+        label="Comentario de seguimiento",
+        max_length=500,
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
+
+    def __init__(self, *args, estados_permitidos=(), **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["estado"].choices = estados_permitidos
+        for field in self.fields.values():
+            field.widget.attrs.setdefault(
+                "class",
+                "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500",
+            )
 
 
 class AtencionSocialForm(forms.Form):

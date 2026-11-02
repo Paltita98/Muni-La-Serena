@@ -44,6 +44,8 @@ def login_view(request):
             role_names = [role.nombre.casefold() for role in user.roles.all()]
             if password_valid and any('admin' in role_name for role_name in role_names):
                 role = 'ADMIN'
+            elif password_valid and any('delegad' in role_name for role_name in role_names):
+                role = 'DELEGADO'
             elif password_valid and any('funcion' in role_name for role_name in role_names):
                 role = 'FUNCIONARIO'
             else:
@@ -55,7 +57,12 @@ def login_view(request):
                 request.session['user_role'] = role
                 request.session['user_email'] = user.email
                 request.session['user_name'] = f'{user.nombres} {user.apellidos}'.strip()
-                destination = 'admin_dashboard_view' if role == 'ADMIN' else 'funcionario_demo_view'
+                destinations = {
+                    'ADMIN': 'admin_dashboard_view',
+                    'DELEGADO': 'delegado_demo_view',
+                    'FUNCIONARIO': 'funcionario_demo_view',
+                }
+                destination = destinations[role]
                 return redirect(destination)
 
         messages.error(request, 'Correo o contraseña incorrectos, o usuario sin un rol de acceso válido.')

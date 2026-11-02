@@ -7,13 +7,30 @@ from pathlib import Path
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Count, Q
-from django.http import JsonResponse
+from django.http import Http404, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
-from admin_demo_app.models import AtencionSocial, Actividad, Compromiso, Evidencia, Meta, Periodo, Usuario
+from admin_demo_app.models import (
+    AtencionSocial,
+    Actividad,
+    Compromiso,
+    CompromisoEstadoHistorial,
+    Delegacion,
+    Evidencia,
+    Meta,
+    Periodo,
+    Usuario,
+)
 
-from .forms import AtencionSocialForm, ActividadForm, CompromisoForm, EvidenciaForm
+from .forms import (
+    AtencionSocialForm,
+    ActividadForm,
+    CompromisoEstadoForm,
+    CompromisoForm,
+    DelegadoCompromisoForm,
+    EvidenciaForm,
+)
 
 
 def funcionario_demo_view(request):
@@ -29,6 +46,184 @@ def funcionario_demo_view(request):
         'actividades_recientes': actividades[:5],
         'compromisos_proximos': compromisos[:5],
         'metricas': metricas,
+    })
+
+
+def delegado_demo_view(request):
+    delegado = _delegado_actual(request)
+    if delegado is None:
+        return redirect('main:login_view')
+
+    delegacion = _delegacion_del_delegado(delegado)
+    compromisos = (
+        Compromiso.objects.filter(delegacion=delegacion)
+        .select_related('responsable')
+        .order_by('fecha_comprometida')
+        if delegacion else Compromiso.objects.none()
+    )
+    fecha_actual = date.today()
+    compromisos_pendientes = compromisos.exclude(estado='realizado')
+    equipo = (
+        Usuario.objects.filter(delegacion=delegacion, estado='activo').order_by('apellidos', 'nombres')
+        if delegacion else Usuario.objects.none()
+    )
+    actividades = (
+        Actividad.objects.filter(funcionario__delegacion=delegacion)
+        .select_related('funcionario', 'item')
+        .order_by('-fecha_actividad')
+        if delegacion else Actividad.objects.none()
+    )
+    atenciones = (
+        AtencionSocial.objects.filter(funcionario__delegacion=delegacion)
+        .select_related('persona', 'catalogo_tipo', 'funcionario')
+        .order_by('-fecha', '-id')
+        if delegacion else AtencionSocial.objects.none()
+    )
+
+    return render(request, 'funcionario_demo_app/delegado_demo.html', {
+        'delegado': delegado,
+        'delegacion': delegacion,
+        'compromisos': compromisos[:10],
+        'compromisos_total': compromisos.count(),
+        'compromisos_en_proceso': compromisos.filter(estado='en_proceso').count(),
+        'compromisos_revision': compromisos.filter(estado='revision').count(),
+        'compromisos_pendientes': compromisos_pendientes.count(),
+        'compromisos_vencidos': compromisos_pendientes.filter(fecha_comprometida__lt=fecha_actual).count(),
+        'equipo': equipo[:5],
+        'equipo_total': equipo.count(),
+        'actividades_recientes': actividades[:5],
+        'actividades_total': actividades.count(),
+        'atenciones_recientes': atenciones[:5],
+        'atenciones_total': atenciones.count(),
+        'fecha_actual': fecha_actual,
+    })
+
+
+def delegado_compromiso_view(request, compromiso_id=None):
+    delegado = _delegado_actual(request)
+    if delegado is None:
+        return redirect('main:login_view')
+    delegacion = _delegacion_del_delegado(delegado)
+    if delegacion is None:
+        messages.error(request, 'No tienes una delegación asignada para gestionar compromisos.')
+        return redirect('delegado_demo_view')
+
+    compromiso = None
+    if compromiso_id is not None:
+        compromiso = get_object_or_404(
+            Compromiso.objects.select_related('responsable', 'delegacion'),
+            pk=compromiso_id,
+            delegacion=delegacion,
+        )
+
+    if compromiso and compromiso.estado == 'revision':
+        estados_permitidos = [('realizado', 'Validar cumplimiento'), ('en_proceso', 'Devolver a seguimiento')]
+    elif compromiso and compromiso.estado == 'realizado':
+        estados_permitidos = [('en_proceso', 'Reabrir compromiso')]
+    else:
+        estados_permitidos = []
+
+    form = DelegadoCompromisoForm(
+        request.POST if request.method == 'POST' and request.POST.get('accion') == 'guardar' else None,
+        instance=compromiso,
+        delegacion=delegacion,
+    )
+    estado_form = CompromisoEstadoForm(
+        request.POST if request.method == 'POST' and request.POST.get('accion') == 'estado' else None,
+        estados_permitidos=estados_permitidos,
+    )
+
+    if request.method == 'POST' and request.POST.get('accion') == 'guardar':
+        if form.is_valid():
+            with transaction.atomic():
+                nuevo_compromiso = form.save(commit=False)
+                nuevo_compromiso.delegacion = delegacion
+                if compromiso is None:
+                    nuevo_compromiso.estado = 'ingresado'
+                nuevo_compromiso.save()
+                if compromiso is None:
+                    _registrar_cambio_compromiso(
+                        nuevo_compromiso,
+                        'ingresado',
+                        delegado,
+                        'Compromiso asignado por la delegación.',
+                    )
+            messages.success(request, 'Compromiso asignado correctamente.' if compromiso is None else 'Compromiso actualizado.')
+            return redirect('delegado_compromiso_view', compromiso_id=nuevo_compromiso.pk)
+    elif request.method == 'POST' and request.POST.get('accion') == 'estado' and compromiso:
+        if estado_form.is_valid():
+            nuevo_estado = estado_form.cleaned_data['estado']
+            if nuevo_estado in dict(estados_permitidos):
+                observacion = estado_form.cleaned_data['observacion']
+                with transaction.atomic():
+                    estado_anterior = compromiso.estado
+                    compromiso.estado = nuevo_estado
+                    compromiso.save(update_fields=['estado'])
+                    _registrar_cambio_compromiso(
+                        compromiso,
+                        nuevo_estado,
+                        delegado,
+                        observacion,
+                        estado_anterior=estado_anterior,
+                    )
+                messages.success(request, 'Revisión del compromiso guardada.')
+                return redirect('delegado_compromiso_view', compromiso_id=compromiso.pk)
+
+    return render(request, 'funcionario_demo_app/gestionar_compromiso.html', {
+        'delegado': delegado,
+        'delegacion': delegacion,
+        'compromiso': compromiso,
+        'form': form,
+        'estado_form': estado_form,
+        'estados_permitidos': estados_permitidos,
+        'historial': compromiso.historial_estados.select_related('autor').order_by('-fecha') if compromiso else [],
+    })
+
+
+def funcionario_compromiso_view(request, compromiso_id):
+    funcionario = _funcionario_actual(request)
+    if funcionario is None:
+        return redirect('main:login_view')
+    compromiso = get_object_or_404(
+        Compromiso.objects.select_related('responsable', 'delegacion'),
+        pk=compromiso_id,
+        responsable=funcionario,
+    )
+    if compromiso.estado in ('ingresado', 'pendiente'):
+        estados_permitidos = [('en_proceso', 'Marcar en proceso')]
+    elif compromiso.estado == 'en_proceso':
+        estados_permitidos = [('revision', 'Enviar a revisión')]
+    else:
+        estados_permitidos = []
+    estado_form = CompromisoEstadoForm(
+        request.POST if request.method == 'POST' else None,
+        estados_permitidos=estados_permitidos,
+    )
+
+    if request.method == 'POST' and estado_form.is_valid():
+        nuevo_estado = estado_form.cleaned_data['estado']
+        if nuevo_estado in dict(estados_permitidos):
+            observacion = estado_form.cleaned_data['observacion']
+            with transaction.atomic():
+                estado_anterior = compromiso.estado
+                compromiso.estado = nuevo_estado
+                compromiso.save(update_fields=['estado'])
+                _registrar_cambio_compromiso(
+                    compromiso,
+                    nuevo_estado,
+                    funcionario,
+                    observacion,
+                    estado_anterior=estado_anterior,
+                )
+            messages.success(request, 'Estado del compromiso actualizado.')
+            return redirect('funcionario_compromiso_view', compromiso_id=compromiso.pk)
+
+    return render(request, 'funcionario_demo_app/actualizar_compromiso.html', {
+        'funcionario': funcionario,
+        'compromiso': compromiso,
+        'estado_form': estado_form,
+        'estados_permitidos': estados_permitidos,
+        'historial': compromiso.historial_estados.select_related('autor').order_by('-fecha'),
     })
 
 
@@ -111,7 +306,20 @@ def _dias_habiles_transcurridos(fecha_inicio, fecha_termino, fecha_actual):
 
 
 def actividades_view(request):
-    actividades = Actividad.objects.select_related('funcionario').order_by('-fecha_actividad')
+    delegado = _delegado_actual(request)
+    funcionario = _funcionario_actual(request)
+    if delegado:
+        delegacion = _delegacion_del_delegado(delegado)
+        actividades = Actividad.objects.filter(funcionario__delegacion=delegacion) if delegacion else Actividad.objects.none()
+        panel_url = reverse('delegado_demo_view')
+        is_delegado = True
+    elif funcionario:
+        actividades = Actividad.objects.filter(funcionario=funcionario)
+        panel_url = reverse('funcionario_demo_view')
+        is_delegado = False
+    else:
+        return redirect('main:login_view')
+    actividades = actividades.select_related('funcionario').order_by('-fecha_actividad')
     datos = [{
         'id': actividad.id,
         'titulo': actividad.descripcion,
@@ -120,17 +328,28 @@ def actividades_view(request):
         'estado': actividad.estado,
         'url': reverse('actividad_detalle_view', args=[actividad.id]),
     } for actividad in actividades]
-    return render(request, 'funcionario_demo_app/actividades.html', {'actividades_json': datos})
+    return render(request, 'funcionario_demo_app/actividades.html', {
+        'actividades_json': datos,
+        'is_delegado': is_delegado,
+        'panel_url': panel_url,
+    })
 
 
 def atenciones_sociales_view(request):
+    delegado = _delegado_actual(request)
     funcionario = _funcionario_actual(request)
-    atenciones = (
-        AtencionSocial.objects.filter(funcionario=funcionario)
-        .select_related('persona', 'catalogo_tipo', 'actividad')
-        .order_by('-fecha', '-id')
-        if funcionario else AtencionSocial.objects.none()
-    )
+    if delegado:
+        delegacion = _delegacion_del_delegado(delegado)
+        atenciones = AtencionSocial.objects.filter(funcionario__delegacion=delegacion) if delegacion else AtencionSocial.objects.none()
+        panel_url = reverse('delegado_demo_view')
+        is_delegado = True
+    elif funcionario:
+        atenciones = AtencionSocial.objects.filter(funcionario=funcionario)
+        panel_url = reverse('funcionario_demo_view')
+        is_delegado = False
+    else:
+        return redirect('main:login_view')
+    atenciones = atenciones.select_related('persona', 'catalogo_tipo', 'actividad', 'funcionario').order_by('-fecha', '-id')
     datos = [{
         'persona': atencion.persona.referencia_anonima,
         'tipo': atencion.catalogo_tipo.nombre,
@@ -144,11 +363,15 @@ def atenciones_sociales_view(request):
     } for atencion in atenciones]
     return render(request, 'funcionario_demo_app/atenciones_sociales.html', {
         'atenciones_json': datos,
+        'is_delegado': is_delegado,
+        'panel_url': panel_url,
     })
 
 
 def nueva_atencion_social_view(request):
     funcionario = _funcionario_actual(request)
+    if funcionario is None:
+        return redirect('main:login_view')
     if request.method == 'POST':
         form = AtencionSocialForm(request.POST, funcionario=funcionario)
         if form.is_valid():
@@ -165,25 +388,73 @@ def nueva_atencion_social_view(request):
 
 
 def agenda_colectiva_view(request):
-    compromisos = Compromiso.objects.select_related('responsable').order_by('fecha_comprometida')
+    delegado = _delegado_actual(request)
+    funcionario = _funcionario_actual(request)
+    if delegado:
+        delegacion = _delegacion_del_delegado(delegado)
+        compromisos = Compromiso.objects.filter(delegacion=delegacion) if delegacion else Compromiso.objects.none()
+        panel_url = reverse('delegado_demo_view')
+        is_delegado = True
+    elif funcionario:
+        compromisos = Compromiso.objects.filter(responsable=funcionario)
+        panel_url = reverse('funcionario_demo_view')
+        is_delegado = False
+    else:
+        return redirect('main:login_view')
+    compromisos = compromisos.select_related('responsable').order_by('fecha_comprometida')
     datos = [{
+        'id': compromiso.pk,
         'titulo': compromiso.observacion or compromiso.solicitante,
         'solicitante': compromiso.solicitante,
         'vence': compromiso.fecha_comprometida.strftime('%d/%m/%Y'),
         'estado': compromiso.estado,
+        'url': reverse(
+            'delegado_compromiso_view' if is_delegado else 'funcionario_compromiso_view',
+            args=[compromiso.pk],
+        ),
     } for compromiso in compromisos]
-    return render(request, 'funcionario_demo_app/agenda_colectiva.html', {'compromisos_json': datos})
+    return render(request, 'funcionario_demo_app/agenda_colectiva.html', {
+        'compromisos_json': datos,
+        'is_delegado': is_delegado,
+        'panel_url': panel_url,
+    })
 
 
 def mis_evidencias_view(request):
-    return render(request, 'funcionario_demo_app/mis_evidencias.html')
+    delegado = _delegado_actual(request)
+    funcionario = _funcionario_actual(request)
+    if delegado:
+        is_delegado = True
+        panel_url = reverse('delegado_demo_view')
+    elif funcionario:
+        is_delegado = False
+        panel_url = reverse('funcionario_demo_view')
+    else:
+        return redirect('main:login_view')
+    return render(request, 'funcionario_demo_app/mis_evidencias.html', {
+        'is_delegado': is_delegado,
+        'panel_url': panel_url,
+    })
 
 
 def actividad_detalle_view(request, actividad_id):
-    actividad = get_object_or_404(
-        Actividad.objects.select_related('funcionario', 'periodo', 'item'),
-        pk=actividad_id,
-    )
+    delegado = _delegado_actual(request)
+    funcionario_actual = _funcionario_actual(request)
+    actividades = Actividad.objects.select_related('funcionario', 'periodo', 'item')
+    if delegado:
+        delegacion = _delegacion_del_delegado(delegado)
+        if not delegacion:
+            raise Http404
+        actividades = actividades.filter(funcionario__delegacion=delegacion)
+        if request.method == 'POST':
+            return HttpResponseForbidden('El Delegado puede consultar la actividad, pero no cargar evidencias por el responsable.')
+        puede_adjuntar = False
+    elif funcionario_actual:
+        actividades = actividades.filter(funcionario=funcionario_actual)
+        puede_adjuntar = True
+    else:
+        return redirect('main:login_view')
+    actividad = get_object_or_404(actividades, pk=actividad_id)
     funcionario = actividad.funcionario
     if request.method == 'POST':
         form = EvidenciaForm(request.POST, request.FILES)
@@ -204,20 +475,32 @@ def actividad_detalle_view(request, actividad_id):
         'actividad': actividad,
         'evidencias': actividad.evidencias.select_related('autor').order_by('-fecha_carga'),
         'form': form,
+        'puede_adjuntar': puede_adjuntar,
     })
 
 
 def evidencias_json_view(request):
+    delegado = _delegado_actual(request)
+    funcionario = _funcionario_actual(request)
+    if delegado:
+        delegacion = _delegacion_del_delegado(delegado)
+        evidencias = Evidencia.objects.filter(actividad__funcionario__delegacion=delegacion) if delegacion else Evidencia.objects.none()
+    elif funcionario:
+        evidencias = Evidencia.objects.filter(actividad__funcionario=funcionario)
+    else:
+        return JsonResponse({'error': 'Acceso no autorizado.'}, status=403)
     evidencias = [{
         'nombre': evidencia.actividad.descripcion,
         'codigo': evidencia.actividad.codigo_evidencia,
         'imagen': evidencia.archivo.url if evidencia.archivo else '',
-    } for evidencia in Evidencia.objects.select_related('actividad').order_by('-fecha_carga')]
+    } for evidencia in evidencias.select_related('actividad').order_by('-fecha_carga')]
     return JsonResponse(evidencias, safe=False)
 
 
 def registrar_actividad_view(request):
     funcionario = _funcionario_actual(request)
+    if funcionario is None:
+        return redirect('main:login_view')
     if request.method == 'POST':
         form = ActividadForm(request.POST, request.FILES, funcionario=funcionario)
         if form.is_valid() and funcionario and _periodo_actual():
@@ -246,15 +529,22 @@ def registrar_actividad_view(request):
 def nuevo_compromiso_view(request):
     funcionario = _funcionario_actual(request)
     if request.method == 'POST':
-        form = CompromisoForm(request.POST)
+        form = CompromisoForm(request.POST, funcionario=funcionario)
         if form.is_valid() and funcionario:
-            compromiso = form.save(commit=False)
-            compromiso.responsable = funcionario
-            compromiso.save()
+            with transaction.atomic():
+                compromiso = form.save(commit=False)
+                compromiso.responsable = funcionario
+                compromiso.save()
+                _registrar_cambio_compromiso(
+                    compromiso,
+                    compromiso.estado,
+                    funcionario,
+                    'Compromiso registrado por el funcionario.',
+                )
             messages.success(request, 'Compromiso guardado en la agenda colectiva.')
             return redirect('agenda_colectiva_view')
     else:
-        form = CompromisoForm()
+        form = CompromisoForm(funcionario=funcionario)
     return render(request, 'funcionario_demo_app/nuevo_compromiso.html', {'form': form, 'funcionario': funcionario})
 
 
@@ -262,8 +552,31 @@ def _periodo_actual():
     return Periodo.objects.filter(estado='abierto').order_by('-fecha_inicio').first()
 
 
+def _delegacion_del_delegado(delegado):
+    return delegado.delegacion or Delegacion.objects.filter(responsable=delegado).first()
+
+
+def _registrar_cambio_compromiso(compromiso, estado_nuevo, autor, observacion, estado_anterior=None):
+    CompromisoEstadoHistorial.objects.create(
+        compromiso=compromiso,
+        estado_anterior=estado_anterior,
+        estado_nuevo=estado_nuevo,
+        autor=autor,
+        observacion=observacion,
+    )
+
+
 def _funcionario_actual(request):
     if request.session.get('user_role') != 'FUNCIONARIO':
+        return None
+    return Usuario.objects.select_related('cargo', 'delegacion').filter(
+        pk=request.session.get('user_id'),
+        estado='activo',
+    ).first()
+
+
+def _delegado_actual(request):
+    if request.session.get('user_role') != 'DELEGADO':
         return None
     return Usuario.objects.select_related('cargo', 'delegacion').filter(
         pk=request.session.get('user_id'),
