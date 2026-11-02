@@ -10,21 +10,7 @@
 </head>
 <body class="bg-gray-50 text-gray-800 page-shell">
     <div class="flex h-screen overflow-hidden">
-        <aside class="sidebar w-64 shrink-0 text-white flex flex-col">
-            <div class="h-16 flex items-center px-5 border-b border-white/15">
-                <span class="text-lg font-bold tracking-wide">SGR <span class="font-normal text-slate-300">/ Delegado</span></span>
-            </div>
-            <nav class="flex-1 px-4 py-6 space-y-2">
-                <a href="{% url 'delegado_demo_view' %}" class="block px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg">Resumen</a>
-                <a href="{% url 'actividades_view' %}" class="block px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg">Actividades</a>
-                <a href="{% url 'atenciones_sociales_view' %}" class="block px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg">Atención Social</a>
-                <a href="{% url 'agenda_colectiva_view' %}" class="block px-4 py-3 bg-blue-600 text-white rounded-lg">Agenda Colectiva</a>
-            </nav>
-            <div class="px-6 py-5 border-t border-white/15">
-                <p class="text-xs uppercase tracking-wider text-slate-400">Delegación a cargo</p>
-                <p class="mt-1 text-sm font-semibold text-white">{{ delegacion.nombre|default:"Sin delegación asignada" }}</p>
-            </div>
-        </aside>
+        {% include 'funcionario_demo_app/_delegado_sidebar.html' with active_section='compromisos' %}
 
         <main class="min-w-0 flex-1 flex flex-col h-screen overflow-y-auto">
             <header class="min-h-16 bg-white shadow-sm flex items-center justify-between gap-4 px-5 md:px-8 py-3 border-b border-gray-100">

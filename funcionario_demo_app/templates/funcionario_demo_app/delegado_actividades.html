@@ -1,0 +1,17 @@
+{% extends 'funcionario_demo_app/delegado_seccion_base.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block section_content %}
+    <p class="text-sm text-gray-500">{{ actividades|length }} actividad{{ actividades|length|pluralize:"es" }} en la delegación.</p>
+    <section class="overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[700px] text-left text-sm">
+                <thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr><th class="px-5 py-3">Actividad</th><th class="px-5 py-3">Funcionario</th><th class="px-5 py-3">Ítem</th><th class="px-5 py-3">Fecha</th><th class="px-5 py-3">Estado</th></tr></thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for actividad in actividades %}
+                        <tr><td class="px-5 py-4"><a class="font-semibold text-red-800 hover:underline" href="{% url 'actividad_detalle_view' actividad.id %}">{{ actividad.descripcion }}</a><p class="mt-1 text-xs text-gray-500">{{ actividad.codigo_evidencia }}</p></td><td class="px-5 py-4">{{ actividad.funcionario.nombres }} {{ actividad.funcionario.apellidos }}</td><td class="px-5 py-4">{{ actividad.item.nombre }}</td><td class="px-5 py-4">{{ actividad.fecha_actividad|date:'d/m/Y' }}</td><td class="px-5 py-4">{{ actividad.get_estado_display }}</td></tr>
+                    {% empty %}<tr><td colspan="5" class="px-5 py-10 text-center text-gray-500">No hay actividades registradas para esta delegación.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+{% endblock %}

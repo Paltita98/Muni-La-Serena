@@ -285,13 +285,21 @@ class FlujoCompromisosTests(TestCase):
         self.assertNotContains(response, 'Operativo comunitario Norte')
         self.assertNotContains(response, 'CASO-NORTE')
 
-        response = self.client.get(reverse('actividades_view'))
+        response = self.client.get(reverse('delegado_actividades_view'))
         self.assertContains(response, 'Operativo comunitario Centro')
         self.assertNotContains(response, 'Operativo comunitario Norte')
 
-        response = self.client.get(reverse('atenciones_sociales_view'))
+        response = self.client.get(reverse('delegado_atenciones_view'))
         self.assertContains(response, 'CASO-CENTRO')
         self.assertNotContains(response, 'CASO-NORTE')
+
+        response = self.client.get(reverse('delegado_equipo_view'))
+        self.assertContains(response, 'funcionario Prueba')
+        self.assertNotContains(response, 'otro Prueba')
+        self.assertContains(response, reverse('delegado_actividades_view'))
+        self.assertContains(response, reverse('delegado_atenciones_view'))
+        self.assertContains(response, reverse('delegado_compromisos_view'))
+        self.assertContains(response, reverse('delegado_equipo_view'))
 
     def test_delegate_can_read_own_activity_but_cannot_upload_evidence_as_staff(self):
         self.iniciar_sesion_rol('DELEGADO', self.delegado)
