@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 
 # =============================================================================
@@ -8,6 +8,8 @@ from django.utils import timezone
 class Rol(models.Model):
     nombre = models.CharField(max_length=60, unique=True, verbose_name="Nombre del Rol")
     descripcion = models.CharField(max_length=255, blank=True, null=True)
+    permisos = models.JSONField(default=list, blank=True)
+    alcance_autorizado = models.CharField(max_length=255, blank=True)
 
     class Meta:
         verbose_name = "Rol"
@@ -37,6 +39,9 @@ class Delegacion(models.Model):
     ESTADO_CHOICES = [('activa', 'Activa'), ('inactiva', 'Inactiva')]
     
     nombre = models.CharField(max_length=120, unique=True)
+    codigo = models.CharField(max_length=30, unique=True, null=True, blank=True)
+    direccion = models.CharField(max_length=255, blank=True)
+    comuna = models.CharField(max_length=100, blank=True, default='La Serena')
     ambito = models.CharField(max_length=120, blank=True, null=True)
     estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='activa')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -59,8 +64,12 @@ class Usuario(models.Model):
     apellidos = models.CharField(max_length=100)
     email = models.EmailField(max_length=150, unique=True)
     password_hash = models.CharField(max_length=255) # En un entorno real se usa la auth nativa de Django
+    debe_cambiar_password = models.BooleanField(default=False)
     cargo = models.ForeignKey(Cargo, on_delete=models.SET_NULL, null=True, blank=True)
-    delegacion = models.ForeignKey(Delegacion, on_delete=models.SET_NULL, null=True, blank=True)
+    delegacion = models.ForeignKey(Delegacion, on_delete=models.PROTECT, null=True, blank=True)
+    delegaciones_autorizadas = models.ManyToManyField(
+        Delegacion, related_name='usuarios_autorizados', blank=True,
+    )
     roles = models.ManyToManyField(Rol, related_name='usuarios') # Reemplaza la tabla intermedia usuario_rol
     estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='activo')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -71,6 +80,19 @@ class Usuario(models.Model):
 
     def __str__(self):
         return f"{self.nombres} {self.apellidos} ({self.identificador_inst})"
+
+
+class CodigoRecuperacion(models.Model):
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='codigos_recuperacion')
+    codigo_hash = models.CharField(max_length=128)
+    creado = models.DateTimeField(auto_now_add=True)
+    expira = models.DateTimeField()
+    intentos = models.PositiveSmallIntegerField(default=0)
+    reenvios = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Código de recuperación'
+        verbose_name_plural = 'Códigos de recuperación'
 
 
 # =============================================================================
@@ -100,7 +122,9 @@ class ItemMedicion(models.Model):
     ESTADO_CHOICES = [('activo', 'Activo'), ('inactivo', 'Inactivo')]
 
     cargo = models.ForeignKey(Cargo, on_delete=models.RESTRICT)
+    codigo = models.CharField(max_length=30, unique=True, null=True, blank=True)
     nombre = models.CharField(max_length=120)
+    descripcion = models.TextField(blank=True)
     tipo = models.CharField(max_length=15, choices=TIPO_CHOICES, default='cuantitativo')
     unidad = models.CharField(max_length=30, blank=True, null=True)
     formula_desc = models.CharField(max_length=255, blank=True, null=True)
@@ -186,6 +210,7 @@ class CatalogoTipo(models.Model):
     categoria = models.CharField(max_length=15, choices=CATEGORIA_CHOICES)
     nombre = models.CharField(max_length=120)
     codigo = models.CharField(max_length=30, unique=True)
+    descripcion = models.TextField(blank=True)
     area = models.CharField(max_length=80, blank=True, null=True)
     padre = models.ForeignKey(
         'self', on_delete=models.SET_NULL, null=True, blank=True,
@@ -210,7 +235,6 @@ class Meta(models.Model):
     )
     periodo = models.ForeignKey(Periodo, on_delete=models.RESTRICT)
     valor_objetivo = models.DecimalField(max_digits=12, decimal_places=2)
-    unidad = models.CharField(max_length=30, blank=True, null=True)
     ponderador_pct = models.DecimalField(max_digits=5, decimal_places=2)
     umbral_minimo_pct = models.DecimalField(max_digits=5, decimal_places=2, default=80.00)
     maximo_computable_pct = models.DecimalField(max_digits=5, decimal_places=2, default=150.00)
@@ -232,8 +256,10 @@ class Meta(models.Model):
 
     def clean(self):
         from django.core.exceptions import ValidationError
-        if not self.cargo_id and not self.funcionario_id:
-            raise ValidationError('La meta debe asociarse a un cargo o a un funcionario.')
+        if self.item_id:
+            self.cargo = self.item.cargo
+        if self.funcionario_id and self.funcionario.cargo_id != self.item.cargo_id:
+            raise ValidationError({'funcionario': 'El funcionario debe pertenecer al cargo del ítem seleccionado.'})
 
     def __str__(self):
         return f'Meta de {self.item}'
@@ -262,7 +288,25 @@ class Validacion(models.Model):
 
 class PersonaUsuaria(models.Model):
     referencia_anonima = models.CharField(max_length=40, unique=True)
+    rut = models.CharField(max_length=12, unique=True, null=True, blank=True)
+    nombre = models.CharField(max_length=150, blank=True)
+    telefono = models.CharField(max_length=20, blank=True)
     fecha_registro = models.DateTimeField(auto_now_add=True)
+
+    @classmethod
+    def crear_con_referencia_incremental(cls, *, rut=None, nombre='', telefono=''):
+        with transaction.atomic():
+            mayor_correlativo = 0
+            referencias = cls.objects.select_for_update().values_list('referencia_anonima', flat=True)
+            for referencia in referencias:
+                if referencia.startswith('CASO-') and referencia[5:].isdigit():
+                    mayor_correlativo = max(mayor_correlativo, int(referencia[5:]))
+            return cls.objects.create(
+                referencia_anonima=f'CASO-{mayor_correlativo + 1:03d}',
+                rut=rut,
+                nombre=nombre,
+                telefono=telefono,
+            )
 
     class Meta:
         verbose_name = 'Persona Usuaria'
@@ -274,8 +318,18 @@ class PersonaUsuaria(models.Model):
 
 class AtencionSocial(models.Model):
     persona = models.ForeignKey(PersonaUsuaria, on_delete=models.RESTRICT, related_name='atenciones')
+    solicitante = models.CharField(max_length=150, blank=True)
+    descripcion = models.TextField(blank=True)
+    delegacion = models.ForeignKey(
+        Delegacion, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='atenciones_sociales',
+    )
     actividad = models.ForeignKey(Actividad, on_delete=models.SET_NULL, null=True, blank=True)
     catalogo_tipo = models.ForeignKey(CatalogoTipo, on_delete=models.RESTRICT)
+    catalogo_subtipo = models.ForeignKey(
+        CatalogoTipo, on_delete=models.RESTRICT, null=True, blank=True,
+        related_name='atenciones_subtipo',
+    )
     funcionario = models.ForeignKey(Usuario, on_delete=models.RESTRICT, related_name='atenciones_sociales')
     orden_gestion = models.PositiveSmallIntegerField()
     fecha = models.DateField()
@@ -303,6 +357,10 @@ class Compromiso(models.Model):
 
     actividad_origen = models.ForeignKey(Actividad, on_delete=models.SET_NULL, null=True, blank=True)
     delegacion = models.ForeignKey(Delegacion, on_delete=models.RESTRICT, related_name='compromisos')
+    persona = models.ForeignKey(
+        PersonaUsuaria, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='compromisos',
+    )
     solicitante = models.CharField(max_length=150)
     territorio = models.CharField(max_length=120, blank=True, null=True)
     responsable = models.ForeignKey(Usuario, on_delete=models.RESTRICT, related_name='compromisos_responsable')
@@ -403,6 +461,33 @@ class Alerta(models.Model):
     class Meta:
         verbose_name = 'Alerta'
         verbose_name_plural = 'Alertas'
+
+
+class Notificacion(models.Model):
+    TIPO_CHOICES = [
+        ('sistema', 'Sistema'),
+        ('evidencia', 'Evidencia'),
+        ('actividad', 'Actividad'),
+        ('compromiso', 'Compromiso'),
+        ('administracion', 'Administración'),
+    ]
+
+    destinatario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='notificaciones')
+    actor = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='notificaciones_generadas',
+    )
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='sistema')
+    mensaje = models.CharField(max_length=500)
+    url = models.CharField(max_length=255, blank=True)
+    creada = models.DateTimeField(auto_now_add=True)
+    leida = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Notificación'
+        verbose_name_plural = 'Notificaciones'
+        ordering = ('-creada',)
+        indexes = [models.Index(fields=('destinatario', 'leida', 'creada'))]
 
 
 class Auditoria(models.Model):

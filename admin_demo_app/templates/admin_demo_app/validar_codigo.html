@@ -25,10 +25,6 @@
                 </p>
             </div>
 
-            {% for message in messages %}
-                <div role="alert" class="rounded-lg border px-4 py-3 text-sm {% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-700{% else %}bg-red-50 border-red-200 text-red-700{% endif %}">{{ message }}</div>
-            {% endfor %}
-
             <form method="POST" class="space-y-5">
                 {% csrf_token %}
                 <div class="code-inputs flex gap-2 justify-center">
@@ -74,5 +70,6 @@
             });
         });
     </script>
+    {% include 'main/_sweetalerts.html' %}
 </body>
 </html>

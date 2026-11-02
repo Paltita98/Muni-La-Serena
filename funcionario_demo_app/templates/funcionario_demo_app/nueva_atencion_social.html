@@ -15,20 +15,26 @@
                 <h1 class="text-lg font-bold text-white">Registrar Atención Social</h1>
                 <p class="mt-1 text-xs text-slate-300">{% if funcionario %}Funcionario: {{ funcionario.nombres }} {{ funcionario.apellidos }}{% else %}No hay un funcionario activo asignado{% endif %}</p>
             </div>
-            <a href="{% url 'funcionario_demo_view' %}" class="text-slate-300 hover:text-white text-sm font-medium">Cerrar</a>
+            <div class="flex items-center gap-3">
+                {% include 'main/_notification_bell.html' %}
+                <a href="{% url 'funcionario_demo_view' %}" class="text-slate-300 hover:text-white text-sm font-medium">Cerrar</a>
+            </div>
         </div>
         <form method="post" class="form-body space-y-5">
             {% csrf_token %}
             {% if form.non_field_errors %}
                 <div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{{ form.non_field_errors }}</div>
             {% endif %}
+            {% include 'funcionario_demo_app/_persona_solicitante.html' %}
             {% for field in form %}
+                {% if field.name != 'persona' and field.name != 'nuevo_rut' and field.name != 'nuevo_nombre' and field.name != 'nuevo_telefono' %}
                 <div>
                     <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
                     {{ field }}
                     {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
                     {% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
                 </div>
+                {% endif %}
             {% endfor %}
             <div class="pt-4 flex justify-end gap-3 border-t border-gray-100">
                 <a href="{% url 'atenciones_sociales_view' %}" class="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</a>
@@ -36,5 +42,20 @@
             </div>
         </form>
     </div>
+    <script>
+        const tipoSelect = document.getElementById('id_catalogo_tipo');
+        const subtipoSelect = document.getElementById('id_catalogo_subtipo');
+        const updateSubtypes = () => {
+            const tipoId = tipoSelect.value;
+            for (const option of subtipoSelect.options) {
+                if (!option.value) continue;
+                option.hidden = option.dataset.tipo !== tipoId;
+                if (option.hidden && option.selected) subtipoSelect.value = '';
+            }
+        };
+        tipoSelect.addEventListener('change', updateSubtypes);
+        updateSubtypes();
+    </script>
+    {% include 'main/_sweetalerts.html' %}
 </body>
 </html>

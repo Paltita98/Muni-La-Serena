@@ -12,16 +12,22 @@
     <div class="form-card">
         <div class="form-header dark">
             <h1 class="text-lg font-bold text-white">Registrar Nuevo Compromiso</h1>
-            <a href="{% url 'funcionario_demo_view' %}" class="text-slate-300 hover:text-white text-sm font-medium">Cerrar</a>
+            <div class="flex items-center gap-3">
+                {% include 'main/_notification_bell.html' %}
+                <a href="{% url 'funcionario_demo_view' %}" class="text-slate-300 hover:text-white text-sm font-medium">Cerrar</a>
+            </div>
         </div>
         <form method="post" class="form-body space-y-5">
             {% csrf_token %}
+            {% include 'funcionario_demo_app/_persona_solicitante.html' %}
             {% for field in form %}
+                {% if field.name != 'persona' and field.name != 'nuevo_rut' and field.name != 'nuevo_nombre' and field.name != 'nuevo_telefono' %}
                 <div>
                     <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
                     {{ field }}
                     {% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
                 </div>
+                {% endif %}
             {% endfor %}
             {% if form.non_field_errors %}<div class="text-sm text-red-600">{{ form.non_field_errors }}</div>{% endif %}
             <div class="pt-4 flex justify-end gap-3 border-t border-gray-100">
@@ -30,5 +36,6 @@
             </div>
         </form>
     </div>
+    {% include 'main/_sweetalerts.html' %}
 </body>
 </html>

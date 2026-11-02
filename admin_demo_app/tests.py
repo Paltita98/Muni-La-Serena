@@ -1,10 +1,18 @@
+from datetime import datetime
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+from django import forms
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from django.db.models.deletion import ProtectedError
 from django.test import RequestFactory, SimpleTestCase
 
-from .models import Alerta, Auditoria, Compromiso, Delegacion, Periodo, Usuario
-from .views import admin_dashboard_view
+from .forms import DelegacionForm, MetaForm, UsuarioForm
+from .models import Alerta, Auditoria, Cargo, Compromiso, Delegacion, Periodo, PersonaUsuaria, Rol, Usuario
+from .validators import validate_chilean_rut
+from .views import admin_dashboard_view, admin_solicitantes_view, admin_usuarios_view, eliminar_delegacion_view, eliminar_usuario_permanente_view, gestionar_meta_view
 
 
 class AdminDashboardTests(SimpleTestCase):
@@ -48,3 +56,351 @@ class AdminDashboardTests(SimpleTestCase):
         self.assertEqual(context['delegaciones_dashboard'], [delegacion])
         self.assertEqual(delegacion.funcionarios_count, 3)
         self.assertEqual(delegacion.compromisos_count, 5)
+
+
+class DelegacionDeletionTests(SimpleTestCase):
+    def test_delegation_with_assigned_or_authorized_users_cannot_be_deleted(self):
+        delegacion = SimpleNamespace(pk=12, delete=Mock())
+        request = RequestFactory().post('/administrador/delegaciones/eliminar/', {'record_id': 12})
+        request.session = {'user_role': 'ADMIN', 'user_id': 1}
+        user_query = Mock()
+        user_query.exists.return_value = True
+
+        with (
+            patch('admin_demo_app.views.get_object_or_404', return_value=delegacion),
+            patch.object(Usuario, 'objects') as user_manager,
+            patch('admin_demo_app.views.messages.error') as error,
+            patch('admin_demo_app.views.redirect', return_value='redirect'),
+        ):
+            user_manager.filter.return_value = user_query
+            response = eliminar_delegacion_view(request)
+
+        self.assertEqual(response, 'redirect')
+        delegacion.delete.assert_not_called()
+        error.assert_called_once_with(
+            request,
+            'No se puede eliminar la delegación porque tiene funcionarios asignados o autorizados.',
+        )
+
+
+class UsuarioHardDeleteTests(SimpleTestCase):
+    def setUp(self):
+        self.request = RequestFactory().post(
+            '/administrador/usuarios/eliminar-permanente/', {'record_id': 7},
+        )
+        self.request.session = {'user_role': 'ADMIN', 'user_id': 1}
+        self.usuario = SimpleNamespace(
+            pk=7, nombres='Ana', apellidos='Pérez', delete=Mock(),
+        )
+
+    def test_deletes_user_without_protected_records(self):
+        with (
+            patch('admin_demo_app.views.get_object_or_404', return_value=self.usuario),
+            patch('admin_demo_app.views.notificar_administradores'),
+            patch('admin_demo_app.views.messages.success') as success,
+            patch('admin_demo_app.views.redirect', return_value='redirect'),
+        ):
+            response = eliminar_usuario_permanente_view(self.request)
+
+        self.assertEqual(response, 'redirect')
+        self.usuario.delete.assert_called_once_with()
+        success.assert_called_once_with(self.request, 'Usuario eliminado permanentemente.')
+
+    def test_protected_user_is_not_deleted(self):
+        self.usuario.delete.side_effect = ProtectedError('protected', [])
+        with (
+            patch('admin_demo_app.views.get_object_or_404', return_value=self.usuario),
+            patch('admin_demo_app.views.messages.error') as error,
+            patch('admin_demo_app.views.redirect', return_value='redirect'),
+        ):
+            response = eliminar_usuario_permanente_view(self.request)
+
+        self.assertEqual(response, 'redirect')
+        error.assert_called_once()
+
+    def test_current_admin_cannot_delete_own_account(self):
+        self.usuario.pk = 1
+        with (
+            patch('admin_demo_app.views.get_object_or_404', return_value=self.usuario),
+            patch('admin_demo_app.views.messages.error') as error,
+            patch('admin_demo_app.views.redirect', return_value='redirect'),
+        ):
+            response = eliminar_usuario_permanente_view(self.request)
+
+        self.assertEqual(response, 'redirect')
+        self.usuario.delete.assert_not_called()
+        error.assert_called_once_with(
+            self.request, 'No puedes eliminar la cuenta con la que iniciaste sesión.',
+        )
+
+    def test_user_listing_includes_permanent_delete_action(self):
+        usuario = SimpleNamespace(
+            pk=7,
+            nombres='Ana',
+            apellidos='Pérez',
+            identificador_inst='19864005-0',
+            email='ana@example.test',
+            roles=SimpleNamespace(values_list=Mock(return_value=['FUNCIONARIO'])),
+            delegacion_id=None,
+            delegacion=None,
+            estado='inactivo',
+            get_estado_display=lambda: 'Inactivo',
+        )
+        usuarios = Mock()
+        usuarios.prefetch_related.return_value.select_related.return_value.order_by.return_value = [usuario]
+        roles = Mock()
+        roles.order_by.return_value = []
+        delegaciones = Mock()
+        delegaciones.order_by.return_value = []
+        request = RequestFactory().get('/administrador/usuarios/')
+        request.session = {'user_role': 'ADMIN'}
+
+        with (
+            patch.object(Usuario, 'objects', usuarios),
+            patch.object(Rol, 'objects', roles),
+            patch.object(Delegacion, 'objects', delegaciones),
+            patch('admin_demo_app.views.render', return_value='rendered') as render,
+        ):
+            response = admin_usuarios_view(request)
+
+        self.assertEqual(response, 'rendered')
+        row = render.call_args.args[2]['secciones'][0]['filas'][0]
+        self.assertEqual(row['permanent_delete_url'], '/administrador/usuarios/eliminar-permanente/')
+
+
+class AdminSolicitantesTests(SimpleTestCase):
+    def test_solicitantes_section_requires_admin_role(self):
+        request = RequestFactory().get('/administrador/solicitantes/')
+        request.session = {'user_role': 'FUNCIONARIO'}
+
+        with patch('admin_demo_app.views.redirect', return_value='login') as redirect:
+            response = admin_solicitantes_view(request)
+
+        self.assertEqual(response, 'login')
+        redirect.assert_called_once_with('main:login_view')
+
+    def test_solicitantes_list_reads_person_table_and_shows_contacts(self):
+        persona = SimpleNamespace(
+            pk=12,
+            referencia_anonima='CASO-012',
+            rut='19864005-0',
+            nombre='Ana Pérez',
+            telefono='+56912345678',
+            atenciones_count=2,
+            compromisos_count=1,
+            fecha_registro=datetime(2026, 11, 2),
+        )
+        manager = Mock()
+        manager.annotate.return_value.order_by.return_value = [persona]
+        request = RequestFactory().get('/administrador/solicitantes/')
+        request.session = {'user_role': 'ADMIN'}
+
+        with (
+            patch.object(PersonaUsuaria, 'objects', manager),
+            patch('admin_demo_app.views.render', return_value='rendered') as render,
+        ):
+            response = admin_solicitantes_view(request)
+
+        self.assertEqual(response, 'rendered')
+        manager.annotate.assert_called_once()
+        section = render.call_args.args[2]['secciones'][0]
+        self.assertEqual(section['titulo'], 'Personas solicitantes registradas')
+        self.assertEqual(section['filas'][0]['cells'][:6], [
+            'CASO-012', '19864005-0', 'Ana Pérez', '+56912345678', '2', '1',
+        ])
+
+
+class UserInputValidationTests(SimpleTestCase):
+    def test_valid_chilean_rut_is_accepted(self):
+        validate_chilean_rut('19864005-0')
+
+    def test_invalid_rut_check_digit_is_rejected(self):
+        with self.assertRaises(ValidationError):
+            validate_chilean_rut('19864005-1')
+
+    def test_user_form_exposes_rut_format_hint(self):
+        form = UsuarioForm()
+
+        self.assertEqual(form.fields['identificador_inst'].widget.attrs['pattern'], '[0-9]{7,8}-[0-9kK]')
+        self.assertEqual(form.fields['email'].widget.input_type, 'email')
+        self.assertNotIn('password_hash', form.fields)
+        self.assertNotIn('password', form.fields)
+
+    def test_new_delegation_defaults_to_la_serena(self):
+        form = DelegacionForm()
+
+        self.assertEqual(form.fields['comuna'].initial, 'La Serena')
+
+    def test_password_requires_minimum_length_uppercase_and_special_character(self):
+        validate_password('Clave123!')
+
+        for password in ('Corta1!', 'clave123!', 'Clave1234'):
+            with self.subTest(password=password), self.assertRaises(ValidationError):
+                validate_password(password)
+
+
+class MetaFormTests(SimpleTestCase):
+    def test_cargo_and_unit_are_not_editable_meta_fields(self):
+        form = MetaForm()
+
+        self.assertNotIn('cargo', form.fields)
+        self.assertNotIn('unidad', form.fields)
+        self.assertIn('cargo_mostrado', form.fields)
+        self.assertIn('unidad_mostrada', form.fields)
+        self.assertTrue(form.fields['cargo_mostrado'].disabled)
+        self.assertTrue(form.fields['unidad_mostrada'].disabled)
+
+    def test_meta_inherits_item_cargo_and_rejects_other_cargo_official(self):
+        item_cargo = Cargo(pk=3)
+        item = SimpleNamespace(cargo=item_cargo, cargo_id=3)
+        funcionario = SimpleNamespace(cargo_id=8)
+        form = MetaForm()
+        form.cleaned_data = {'item': item, 'funcionarios': [funcionario]}
+        form._errors = {}
+
+        form.clean()
+
+        self.assertEqual(form.instance.cargo, item_cargo)
+        self.assertIn('funcionarios', form.errors)
+
+
+class AdminExportTemplateTests(SimpleTestCase):
+    def test_each_admin_listing_exports_visible_data_without_actions(self):
+        template_path = Path(__file__).parent / 'templates' / 'admin_demo_app' / 'admin_listado.html'
+        template = template_path.read_text(encoding='utf-8')
+
+        self.assertIn('data-export-table="table-', template)
+        self.assertIn('data-has-actions=', template)
+        self.assertIn("tr[data-filter-row]:not([hidden])", template)
+        self.assertIn('XLSX.writeFile', template)
+
+    def test_meta_form_supports_multiple_officials(self):
+        form = MetaForm()
+
+        self.assertIsInstance(form.fields['funcionarios'], forms.ModelMultipleChoiceField)
+        self.assertNotIn('funcionario', form.fields)
+
+    def test_editing_existing_meta_rejects_multiple_officials(self):
+        form = MetaForm()
+        form.instance.pk = 12
+        form.cleaned_data = {
+            'item': SimpleNamespace(cargo=Cargo(pk=3), cargo_id=3),
+            'funcionarios': [SimpleNamespace(cargo_id=3), SimpleNamespace(cargo_id=3)],
+        }
+        form._errors = {}
+
+        form.clean()
+
+        self.assertIn('funcionarios', form.errors)
+
+    def test_duplicate_active_meta_for_official_is_rejected(self):
+        cargo = Cargo(pk=3)
+        item = SimpleNamespace(cargo=cargo, cargo_id=3)
+        official = SimpleNamespace(pk=5, cargo_id=3, __str__=lambda self: 'Ana Pérez')
+        form = MetaForm()
+        form.cleaned_data = {
+            'item': item,
+            'periodo': SimpleNamespace(pk=1),
+            'funcionarios': [official],
+        }
+        form._errors = {}
+        duplicate_query = Mock()
+        duplicate_query.exists.return_value = True
+
+        with patch('admin_demo_app.forms.Meta.objects.filter', return_value=duplicate_query):
+            form.clean()
+
+        self.assertIn('funcionarios', form.errors)
+
+    def test_creating_meta_assigns_individual_copy_to_each_selected_official(self):
+        cargo = Cargo(pk=3)
+        item = SimpleNamespace(nombre='Visitas', cargo=cargo)
+        officials = [
+            SimpleNamespace(pk=5, cargo_id=3),
+            SimpleNamespace(pk=6, cargo_id=3),
+        ]
+        period = SimpleNamespace(pk=1)
+        meta_base = SimpleNamespace(
+            pk=None,
+            item=item,
+            periodo=period,
+            valor_objetivo=10,
+            ponderador_pct=100,
+            umbral_minimo_pct=80,
+            maximo_computable_pct=150,
+            vigente=True,
+            save=Mock(),
+        )
+        form = Mock()
+        form.is_valid.return_value = True
+        form.cleaned_data = {'funcionarios': officials}
+        form.save.return_value = meta_base
+        request = RequestFactory().post('/administrador/metas/nueva/')
+        request.session = {'user_role': 'ADMIN', 'user_id': 1}
+        copies = []
+
+        def create_meta(**kwargs):
+            copy = SimpleNamespace(item=kwargs['item'], funcionario=kwargs['funcionario'])
+            copies.append(copy)
+            return copy
+
+        with (
+            patch('admin_demo_app.views._admin_access', return_value=None),
+            patch('admin_demo_app.views.MetaForm', return_value=form),
+            patch('admin_demo_app.views.get_object_or_404', return_value=SimpleNamespace(pk=1)),
+            patch('admin_demo_app.views.Meta.objects') as meta_manager,
+            patch('admin_demo_app.views.transaction.atomic'),
+            patch('admin_demo_app.views.notificar_administradores'),
+            patch('admin_demo_app.views.notificar_asignados_meta'),
+            patch('admin_demo_app.views.messages.success') as success,
+            patch('admin_demo_app.views.redirect', return_value='redirect'),
+        ):
+            meta_manager.create.side_effect = create_meta
+            response = gestionar_meta_view(request)
+
+        self.assertEqual(response, 'redirect')
+        self.assertEqual(meta_base.funcionario, officials[0])
+        self.assertEqual([copy.funcionario for copy in copies], [officials[1]])
+        self.assertEqual(meta_manager.create.call_count, 1)
+        self.assertIn('2 funcionarios', success.call_args.args[1])
+
+    def test_invalid_meta_does_not_report_success(self):
+        form = Mock()
+        form.is_valid.return_value = False
+        request = RequestFactory().post('/administrador/metas/nueva/')
+        request.session = {'user_role': 'ADMIN', 'user_id': 1}
+
+        with (
+            patch('admin_demo_app.views._admin_access', return_value=None),
+            patch('admin_demo_app.views.MetaForm', return_value=form),
+            patch('admin_demo_app.views.messages.success') as success,
+            patch('admin_demo_app.views.render', return_value=object()),
+        ):
+            gestionar_meta_view(request)
+
+        success.assert_not_called()
+
+    def test_meta_database_failure_does_not_report_success(self):
+        meta_base = SimpleNamespace(
+            pk=None,
+            item=SimpleNamespace(cargo=SimpleNamespace(pk=3)),
+            save=Mock(side_effect=RuntimeError('database unavailable')),
+        )
+        form = Mock()
+        form.is_valid.return_value = True
+        form.cleaned_data = {'funcionarios': []}
+        form.save.return_value = meta_base
+        request = RequestFactory().post('/administrador/metas/nueva/')
+        request.session = {'user_role': 'ADMIN', 'user_id': 1}
+
+        with (
+            patch('admin_demo_app.views._admin_access', return_value=None),
+            patch('admin_demo_app.views.MetaForm', return_value=form),
+            patch('admin_demo_app.views.get_object_or_404', return_value=SimpleNamespace(pk=1)),
+            patch('admin_demo_app.views.transaction.atomic'),
+            patch('admin_demo_app.views.messages.success') as success,
+            self.assertRaisesRegex(RuntimeError, 'database unavailable'),
+        ):
+            gestionar_meta_view(request)
+
+        success.assert_not_called()

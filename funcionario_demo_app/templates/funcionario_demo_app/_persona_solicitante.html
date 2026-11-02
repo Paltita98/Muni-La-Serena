@@ -1,0 +1,93 @@
+<section data-persona-picker data-search-url="{% url 'buscar_personas_view' %}" class="space-y-2">
+    {{ form.persona }}
+    <label for="persona-search" class="block text-sm font-medium text-gray-700">Buscar persona por nombre o RUT</label>
+    <input id="persona-search" type="search" autocomplete="off" placeholder="Escribe al menos 2 caracteres" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" data-persona-query>
+    <div class="text-sm text-gray-600" data-persona-selected aria-live="polite">No hay una persona seleccionada.</div>
+    <div class="space-y-1" data-persona-results role="listbox" aria-label="Resultados de personas"></div>
+    <button type="button" class="text-sm font-medium text-red-700 hover:underline" data-persona-add>+ Agregar persona nueva</button>
+    {% for field in form %}
+        {% if field.name == 'nuevo_rut' or field.name == 'nuevo_nombre' or field.name == 'nuevo_telefono' %}
+            {% for error in field.errors %}<p class="text-xs text-red-600">{{ error }}</p>{% endfor %}
+        {% endif %}
+    {% endfor %}
+    <dialog data-persona-dialog data-show-on-load="{% if form.nuevo_rut.errors or form.nuevo_nombre.errors or form.nuevo_telefono.errors %}true{% else %}false{% endif %}" class="w-full max-w-md rounded-lg p-0 shadow-xl backdrop:bg-black/40">
+        <div class="p-5">
+            <h2 class="text-lg font-semibold text-gray-900">Agregar persona</h2>
+            <p class="mt-1 text-sm text-gray-600">Ingresa sus datos para asociarla al registro.</p>
+            <div class="mt-4 space-y-3">
+                {% for field in form %}
+                    {% if field.name == 'nuevo_rut' or field.name == 'nuevo_nombre' or field.name == 'nuevo_telefono' %}
+                        <div>
+                            <label for="{{ field.id_for_label }}" class="mb-1 block text-sm font-medium text-gray-700">{{ field.label }} *</label>
+                            {{ field }}
+                            {% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            <div class="mt-5 flex justify-end gap-2">
+                <button type="button" class="rounded border border-gray-300 px-3 py-2 text-sm" data-persona-cancel>Cancelar</button>
+                <button type="button" class="rounded bg-red-700 px-3 py-2 text-sm font-medium text-white" data-persona-confirm>Usar esta persona</button>
+            </div>
+        </div>
+    </dialog>
+</section>
+<script>
+    document.querySelectorAll('[data-persona-picker]').forEach((picker) => {
+        const query = picker.querySelector('[data-persona-query]');
+        const selected = picker.querySelector('[data-persona-selected]');
+        const results = picker.querySelector('[data-persona-results]');
+        const personField = picker.querySelector('input[name="persona"]');
+        const dialog = picker.querySelector('[data-persona-dialog]');
+        const newFields = ['nuevo_rut', 'nuevo_nombre', 'nuevo_telefono'].map((name) => picker.querySelector(`[name="${name}"]`));
+        if (dialog.dataset.showOnLoad === 'true') dialog.showModal();
+
+        const clearResults = () => results.replaceChildren();
+        query.addEventListener('input', async () => {
+            clearResults();
+            if (query.value.trim().length < 2) return;
+            try {
+                const response = await fetch(`${picker.dataset.searchUrl}?q=${encodeURIComponent(query.value.trim())}`, {
+                    headers: {'X-Requested-With': 'XMLHttpRequest'},
+                });
+                if (!response.ok) return;
+                const data = await response.json();
+                data.results.forEach((person) => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'block w-full rounded border border-gray-200 px-3 py-2 text-left text-sm hover:bg-gray-50';
+                    button.textContent = `${person.nombre} · ${person.rut || person.referencia} · ${person.telefono || 'Sin teléfono'}`;
+                    button.addEventListener('click', () => {
+                        personField.value = person.id;
+                        selected.textContent = `Seleccionada: ${button.textContent}`;
+                        newFields.forEach((field) => { field.value = ''; });
+                        clearResults();
+                        query.value = '';
+                    });
+                    results.appendChild(button);
+                });
+                if (!data.results.length) {
+                    const empty = document.createElement('p');
+                    empty.className = 'text-sm text-gray-500';
+                    empty.textContent = 'No se encontraron coincidencias. Puedes agregar una persona nueva.';
+                    results.appendChild(empty);
+                }
+            } catch {
+                clearResults();
+            }
+        });
+
+        picker.querySelector('[data-persona-add]').addEventListener('click', () => {
+            personField.value = '';
+            selected.textContent = 'Completa los datos de la nueva persona.';
+            dialog.showModal();
+        });
+        picker.querySelector('[data-persona-cancel]').addEventListener('click', () => dialog.close());
+        picker.querySelector('[data-persona-confirm]').addEventListener('click', () => {
+            if (newFields.every((field) => field.value.trim())) {
+                selected.textContent = `Nueva persona: ${newFields[1].value.trim()} · ${newFields[0].value.trim()}`;
+                dialog.close();
+            }
+        });
+    });
+</script>

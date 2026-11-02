@@ -1,4 +1,6 @@
 from django import forms
+from PIL import Image, UnidentifiedImageError
+from django.db.models import Q
 from django.utils import timezone
 
 from admin_demo_app.models import (
@@ -10,16 +12,114 @@ from admin_demo_app.models import (
     ItemMedicion,
     Periodo,
     PersonaUsuaria,
+<<<<<<< HEAD
     Usuario,
+=======
+    Validacion,
+>>>>>>> bf8a9b678a7b37f45b69949e9c5e318cd3552a68
 )
+from admin_demo_app.validators import validate_chilean_rut
+
+
+class PersonaSolicitanteFields:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['persona'].queryset = PersonaUsuaria.objects.all()
+        for field_name in ('nuevo_rut', 'nuevo_nombre', 'nuevo_telefono'):
+            self.fields[field_name].widget.attrs['class'] = (
+                'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm '
+                'focus:outline-none focus:ring-2 focus:ring-red-500'
+            )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get('persona'):
+            return cleaned_data
+
+        rut = cleaned_data.get('nuevo_rut', '').strip().replace('.', '').upper()
+        nombre = cleaned_data.get('nuevo_nombre', '').strip()
+        telefono = cleaned_data.get('nuevo_telefono', '').strip()
+        if not rut:
+            self.add_error('nuevo_rut', 'Ingresa el RUT o selecciona una persona existente.')
+        else:
+            try:
+                validate_chilean_rut(rut)
+            except forms.ValidationError as error:
+                self.add_error('nuevo_rut', error)
+            if PersonaUsuaria.objects.filter(rut=rut).exists():
+                self.add_error('nuevo_rut', 'Este RUT ya está registrado. Búscalo y selecciónalo.')
+        if not nombre:
+            self.add_error('nuevo_nombre', 'Ingresa el nombre de la persona.')
+        if not telefono:
+            self.add_error('nuevo_telefono', 'Ingresa el teléfono de la persona.')
+        cleaned_data['nuevo_rut'] = rut
+        cleaned_data['nuevo_nombre'] = nombre
+        cleaned_data['nuevo_telefono'] = telefono
+        return cleaned_data
+
+    def obtener_persona(self):
+        persona = self.cleaned_data.get('persona')
+        if persona:
+            return persona
+        return PersonaUsuaria.crear_con_referencia_incremental(
+            rut=self.cleaned_data['nuevo_rut'],
+            nombre=self.cleaned_data['nuevo_nombre'],
+            telefono=self.cleaned_data['nuevo_telefono'],
+        )
+
+
+class ImageEvidenceField(forms.FileField):
+    def __init__(self, *args, **kwargs):
+        attrs = kwargs.pop('widget_attrs', {})
+        kwargs.setdefault('widget', forms.ClearableFileInput(attrs={
+            'accept': 'image/jpeg,image/png,image/gif,image/webp,image/bmp',
+            **attrs,
+        }))
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        uploaded_file = super().clean(data, initial)
+        if not uploaded_file:
+            return uploaded_file
+        try:
+            with Image.open(uploaded_file) as image:
+                if image.format not in {'JPEG', 'PNG', 'GIF', 'WEBP', 'BMP'}:
+                    raise forms.ValidationError('El archivo debe ser una imagen JPG, PNG, GIF, WEBP o BMP.')
+                image.verify()
+        except forms.ValidationError:
+            raise
+        except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as error:
+            raise forms.ValidationError('El archivo no es una imagen válida.') from error
+        finally:
+            uploaded_file.seek(0)
+        return uploaded_file
 
 
 class EvidenciaForm(forms.Form):
-    archivo = forms.FileField(label="Archivo de evidencia")
+    archivo = ImageEvidenceField(label="Imagen de evidencia")
+
+
+class VerificacionEvidenciaForm(forms.Form):
+    decision = forms.ChoiceField(
+        label='Decisión',
+        choices=(('aprobada', 'Aprobar evidencia'), ('rechazada', 'Rechazar y solicitar corrección')),
+    )
+    observacion = forms.CharField(
+        label='Observación para el funcionario',
+        max_length=500,
+        required=False,
+        widget=forms.Textarea(attrs={'rows': 3}),
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get('decision') == 'rechazada' and not cleaned_data.get('observacion', '').strip():
+            self.add_error('observacion', 'Describe qué debe corregir el funcionario antes de devolver la evidencia.')
+        return cleaned_data
 
 
 class ActividadForm(forms.ModelForm):
-    evidencia = forms.FileField(required=False, label="Adjuntar evidencia")
+    evidencia = ImageEvidenceField(required=False, label="Adjuntar imagen de evidencia")
 
     class Meta:
         model = Actividad
@@ -65,20 +165,28 @@ class ActividadForm(forms.ModelForm):
         return cleaned_data
 
 
-class CompromisoForm(forms.ModelForm):
+class CompromisoForm(PersonaSolicitanteFields, forms.ModelForm):
+    persona = forms.ModelChoiceField(
+        label='Persona seleccionada', queryset=PersonaUsuaria.objects.none(),
+        required=False, widget=forms.HiddenInput,
+    )
+    nuevo_rut = forms.CharField(label='RUT', max_length=12, required=False)
+    nuevo_nombre = forms.CharField(label='Nombre completo', max_length=150, required=False)
+    nuevo_telefono = forms.CharField(label='Teléfono', max_length=20, required=False)
+
     class Meta:
         model = Compromiso
         fields = (
             "fecha_comprometida",
             "delegacion",
-            "solicitante",
+            "persona",
             "territorio",
             "observacion",
         )
         labels = {
             "fecha_comprometida": "Fecha comprometida",
             "delegacion": "Delegación",
-            "solicitante": "Solicitante (vecino/institución)",
+            "persona": "Persona solicitante",
             "territorio": "Territorio o sector",
             "observacion": "Descripción del compromiso",
         }
@@ -152,15 +260,41 @@ class CompromisoEstadoForm(forms.Form):
                 "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500",
             )
 
+    def save(self, commit=True):
+        compromiso = super().save(commit=False)
+        persona = self.obtener_persona()
+        compromiso.persona = persona
+        compromiso.solicitante = persona.nombre or persona.referencia_anonima
+        if commit:
+            compromiso.save()
+            self.save_m2m()
+        return compromiso
 
-class AtencionSocialForm(forms.Form):
-    referencia_anonima = forms.CharField(
-        label="Código anónimo de la persona",
-        max_length=40,
-        help_text="Usa el mismo código para agregar gestiones a una persona ya registrada.",
-        widget=forms.TextInput(attrs={"autocomplete": "off", "placeholder": "Ej.: CASO-001"}),
+
+class SubatencionSelect(forms.Select):
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex, attrs)
+        instance = getattr(value, 'instance', None)
+        if instance:
+            option['attrs']['data-tipo'] = str(instance.padre_id or '')
+        return option
+
+
+class AtencionSocialForm(PersonaSolicitanteFields, forms.Form):
+    persona = forms.ModelChoiceField(
+        label='Persona seleccionada', queryset=PersonaUsuaria.objects.none(),
+        required=False, widget=forms.HiddenInput,
     )
+    nuevo_rut = forms.CharField(label='RUT', max_length=12, required=False)
+    nuevo_nombre = forms.CharField(label='Nombre completo', max_length=150, required=False)
+    nuevo_telefono = forms.CharField(label='Teléfono', max_length=20, required=False)
     catalogo_tipo = forms.ModelChoiceField(label="Tipo de atención", queryset=CatalogoTipo.objects.none())
+    catalogo_subtipo = forms.ModelChoiceField(
+        label="Subatención", queryset=CatalogoTipo.objects.none(), required=False,
+        widget=SubatencionSelect,
+    )
+    delegacion = forms.ModelChoiceField(label="Delegación", queryset=Delegacion.objects.none())
+    descripcion = forms.CharField(label="Descripción", widget=forms.Textarea(attrs={"rows": 4}))
     orden_gestion = forms.TypedChoiceField(
         label="Número de gestión",
         choices=((1, "1. Primera gestión"), (2, "2. Segunda gestión"), (3, "3. Tercera gestión")),
@@ -193,32 +327,48 @@ class AtencionSocialForm(forms.Form):
                 "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500",
             )
         self.fields["catalogo_tipo"].queryset = CatalogoTipo.objects.filter(
-            estado="activo",
-            categoria__in=("atencion", "subatencion", "servicio"),
+            estado="activo", categoria="atencion", padre__isnull=True,
         ).order_by("nombre")
+        tipo_id = self.data.get('catalogo_tipo') if self.is_bound else None
+        subtipos = CatalogoTipo.objects.filter(estado='activo', categoria='subatencion')
+        if tipo_id:
+            subtipos = subtipos.filter(padre_id=tipo_id)
+        self.fields['catalogo_subtipo'].queryset = subtipos.order_by('nombre')
+        delegaciones = Delegacion.objects.filter(estado='activa')
+        if funcionario:
+            alcance = Q(pk=getattr(funcionario, 'delegacion_id', None)) if getattr(funcionario, 'delegacion_id', None) else Q()
+            autorizadas = getattr(funcionario, 'delegaciones_autorizadas', None)
+            if autorizadas:
+                alcance |= Q(pk__in=autorizadas.values('pk'))
+            delegaciones = delegaciones.filter(alcance) if alcance.children else delegaciones.none()
+        self.fields['delegacion'].queryset = delegaciones.order_by('nombre')
         self.fields["actividad"].queryset = Actividad.objects.filter(
             funcionario=funcionario,
         ).order_by("-fecha_actividad") if funcionario else Actividad.objects.none()
 
     def clean(self):
         cleaned_data = super().clean()
-        referencia = cleaned_data.get("referencia_anonima", "").strip()
+        persona = cleaned_data.get('persona')
         orden = cleaned_data.get("orden_gestion")
-        if referencia and orden:
-            persona = PersonaUsuaria.objects.filter(referencia_anonima=referencia).first()
-            if persona and AtencionSocial.objects.filter(persona=persona, orden_gestion=orden).exists():
-                self.add_error("orden_gestion", "Esta persona ya tiene registrada esa gestión.")
+        if persona and orden and AtencionSocial.objects.filter(persona=persona, orden_gestion=orden).exists():
+            self.add_error("orden_gestion", "Esta persona ya tiene registrada esa gestión.")
         if not self.funcionario:
             self.add_error(None, "No hay un funcionario activo para registrar la atención.")
+        tipo = cleaned_data.get('catalogo_tipo')
+        subtipo = cleaned_data.get('catalogo_subtipo')
+        if subtipo and tipo and subtipo.padre_id != tipo.pk:
+            self.add_error('catalogo_subtipo', 'La subatención debe corresponder al tipo seleccionado.')
         return cleaned_data
 
     def save(self):
-        persona, _ = PersonaUsuaria.objects.get_or_create(
-            referencia_anonima=self.cleaned_data["referencia_anonima"].strip(),
-        )
+        persona = self.obtener_persona()
         return AtencionSocial.objects.create(
             persona=persona,
+            solicitante=persona.nombre or persona.referencia_anonima,
+            descripcion=self.cleaned_data['descripcion'],
+            delegacion=self.cleaned_data['delegacion'],
             catalogo_tipo=self.cleaned_data["catalogo_tipo"],
+            catalogo_subtipo=self.cleaned_data['catalogo_subtipo'],
             funcionario=self.funcionario,
             orden_gestion=self.cleaned_data["orden_gestion"],
             fecha=self.cleaned_data["fecha"],

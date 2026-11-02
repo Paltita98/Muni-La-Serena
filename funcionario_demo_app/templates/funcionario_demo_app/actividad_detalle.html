@@ -15,14 +15,11 @@
                 <p class="text-sm text-gray-500">Actividad {{ actividad.codigo_evidencia }}</p>
                 <h1 class="text-2xl font-bold text-gray-900">{{ actividad.descripcion }}</h1>
             </div>
-            <a href="{% url 'actividades_view' %}" class="text-blue-600 hover:underline">Volver a actividades</a>
+            <div class="flex items-center gap-4">
+                {% include 'main/_notification_bell.html' %}
+                <a href="{% url 'actividades_view' %}" class="text-blue-600 hover:underline">Volver a actividades</a>
+            </div>
         </div>
-
-        {% if messages %}
-            {% for message in messages %}
-                <div class="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
 
         <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><p class="text-xs text-gray-500">Fecha</p><p class="font-medium">{{ actividad.fecha_actividad|date:"d/m/Y" }}</p></div>
@@ -34,6 +31,7 @@
             {% if actividad.contacto_nombre %}<div><p class="text-xs text-gray-500">Contacto</p><p class="font-medium">{{ actividad.contacto_nombre }}{% if actividad.contacto_telefono %} · {{ actividad.contacto_telefono }}{% endif %}</p></div>{% endif %}
         </section>
 
+<<<<<<< HEAD
         {% if puede_adjuntar %}
             <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                 <h2 class="text-lg font-bold text-gray-900 mb-4">Agregar evidencia</h2>
@@ -48,6 +46,22 @@
                 </form>
             </section>
         {% endif %}
+=======
+        <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-4">{% if puede_subir_evidencia %}Enviar o reenviar evidencia{% else %}Evidencia en revisión{% endif %}</h2>
+            {% if puede_subir_evidencia %}
+            <form method="post" enctype="multipart/form-data" class="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+                {% csrf_token %}
+                <div class="flex-1 w-full">
+                    <label for="{{ form.archivo.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Archivo</label>
+                    {{ form.archivo }}
+                    {% for error in form.archivo.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                </div>
+                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg">Enviar evidencia</button>
+            </form>
+            {% else %}<p class="text-sm text-gray-600">Espera la decisión del verificador. Si solicita correcciones, aquí podrás enviar una nueva versión.</p>{% endif %}
+        </section>
+>>>>>>> bf8a9b678a7b37f45b69949e9c5e318cd3552a68
 
         <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
             <h2 class="text-lg font-bold text-gray-900 mb-4">Evidencias incorporadas</h2>
@@ -55,10 +69,20 @@
                 {% for evidencia in evidencias %}
                     <div class="flex items-center justify-between border-b border-gray-100 pb-3">
                         <div>
-                            <a href="{{ evidencia.archivo.url }}" target="_blank" class="text-blue-600 hover:underline">{{ evidencia.archivo.name }}</a>
+                            <a href="{% url 'evidencia_archivo_view' evidencia.id %}" class="text-blue-600 hover:underline">Descargar {{ evidencia.archivo.name }}</a>
                             <p class="text-xs text-gray-500">{{ evidencia.formato|upper }} · {{ evidencia.tamanio_bytes }} bytes · {{ evidencia.fecha_carga|date:"d/m/Y H:i" }}</p>
                         </div>
-                        <span class="text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-700">{{ evidencia.get_estado_display }}</span>
+                        {% if evidencia.es_imagen %}
+                            <button type="button" data-preview-src="{{ evidencia.url_previsualizacion }}" data-preview-alt="{{ actividad.descripcion }}" class="group shrink-0 overflow-hidden rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-700" aria-haspopup="dialog" aria-label="Ampliar evidencia de {{ actividad.codigo_evidencia }}">
+                                <img src="{{ evidencia.url_previsualizacion }}" alt="Miniatura de evidencia" loading="lazy" class="h-20 w-28 object-cover transition group-hover:scale-105">
+                            </button>
+                        {% endif %}
+                        <div class="text-right">
+                            <span class="text-xs px-2 py-1 rounded {% if evidencia.estado == 'aprobada' %}bg-green-100 text-green-800{% elif evidencia.estado == 'en_correccion' or evidencia.estado == 'rechazada' %}bg-red-100 text-red-800{% else %}bg-yellow-100 text-yellow-800{% endif %}">{{ evidencia.get_estado_display }}</span>
+                            {% with ultima_validacion=evidencia.validaciones.all.0 %}
+                                {% if ultima_validacion and ultima_validacion.observacion %}<p class="mt-2 max-w-md text-left text-sm text-red-800">{{ ultima_validacion.observacion }}</p>{% endif %}
+                            {% endwith %}
+                        </div>
                     </div>
                 {% empty %}
                     <p class="text-sm text-gray-500">Esta actividad todavía no tiene evidencias.</p>
@@ -66,5 +90,7 @@
             </div>
         </section>
     </main>
+    {% include 'main/_image_preview_dialog.html' %}
+    {% include 'main/_sweetalerts.html' %}
 </body>
 </html>

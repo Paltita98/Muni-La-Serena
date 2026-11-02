@@ -1,0 +1,21 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error del servidor</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="page-shell flex min-h-screen items-center justify-center p-6">
+    <main class="max-w-lg text-center">
+        <h1 class="text-2xl font-bold text-gray-900">No pudimos completar la solicitud</h1>
+        <p class="mt-3 text-sm text-gray-600">Ocurrió un error procesando la solicitud. Revisa el estado antes de intentarlo nuevamente.</p>
+        <a href="/" class="mt-6 inline-flex rounded bg-red-700 px-4 py-2 text-sm font-medium text-white">Volver al inicio</a>
+    </main>
+    <script>
+        Swal.fire({icon: 'error', title: 'Error del servidor', text: 'Revisa el estado de la operación antes de volver a intentarlo.', confirmButtonText: 'Entendido'});
+    </script>
+</body>
+</html>
