@@ -15,9 +15,8 @@
                 <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo">
             </div>
             <nav class="flex-1 px-4 py-6 space-y-2">
-                {% if request.session.user_role == 'FUNCIONARIO' %}
-                <a href="{% url 'funcionario_demo_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
-                    <span>📊</span><span class="ml-3 font-medium">Mi Tablero</span>
+                <a href="{{ panel_url }}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
+                    <span>📊</span><span class="ml-3 font-medium">{% if is_delegado %}Panel Delegado{% else %}Mi Tablero{% endif %}</span>
                 </a>
                 <a href="{% url 'actividades_view' %}" class="flex items-center px-4 py-3 bg-white/10 text-white rounded-lg">
                     <span>📝</span><span class="ml-3 font-medium">Actividades</span>
@@ -31,9 +30,7 @@
                 <a href="{% url 'mis_evidencias_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
                     <span>📎</span><span class="ml-3 font-medium">Mis Evidencias</span>
                 </a>
-                {% elif request.session.user_role == 'VERIFICADOR' %}
-                    <a href="{% url 'verificador_evidencias_view' %}" class="flex items-center px-4 py-3 text-white hover:bg-white/10 rounded-lg">Bandeja de evidencias</a>
-                {% endif %}
+                {% if request.session.user_role == 'VERIFICADOR' %}<a href="{% url 'verificador_evidencias_view' %}" class="flex items-center px-4 py-3 text-white hover:bg-white/10 rounded-lg">Bandeja de evidencias</a>{% endif %}
             </nav>
             {% include 'main/_logout_button.html' %}
         </aside>
@@ -46,7 +43,9 @@
                 </div>
                 <div class="flex items-center space-x-6">
                     {% include 'main/_notification_bell.html' %}
+                    {% if not is_delegado %}
                     <a href="{% url 'registrar_actividad_view' %}" class="brand-button px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm inline-flex items-center">+ Registrar Actividad</a>
+                    {% endif %}
                 </div>
             </header>
 
@@ -54,7 +53,7 @@
                 <div class="section-header">
                     <div>
                         <h1>Actividades</h1>
-                        <p>Historial, estado y seguimiento de cada actividad registrada.</p>
+                        <p>{% if is_delegado %}Actividades registradas por el equipo de tu delegación.{% else %}Historial, estado y seguimiento de tus actividades.{% endif %}</p>
                     </div>
                 </div>
 
@@ -112,27 +111,43 @@
             });
 
             resultCount.textContent = `${filtered.length} resultado${filtered.length === 1 ? '' : 's'}`;
+            list.replaceChildren();
 
             if (!filtered.length) {
-                list.innerHTML = '<div class="empty-state">No se encontraron actividades con ese criterio.</div>';
+                const emptyState = document.createElement('div');
+                emptyState.className = 'empty-state';
+                emptyState.textContent = 'No se encontraron actividades con ese criterio.';
+                list.appendChild(emptyState);
                 return;
             }
 
-            list.innerHTML = filtered.map(item => {
+            filtered.forEach(item => {
                 const estado = stateLabels[item.estado] || { label: item.estado, className: 'info' };
-                return `
-                    <div class="activity-item">
-                        <div class="activity-main">
-                            <p class="activity-title">${item.titulo}</p>
-                            <p class="activity-meta">Código: ${item.codigo} | ${item.fecha}</p>
-                        </div>
-                        <div class="activity-actions">
-                            <span class="badge ${estado.className}">${estado.label}</span>
-                            <a href="${item.url}" class="link-btn">Ver detalle</a>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                const row = document.createElement('article');
+                row.className = 'activity-item';
+                const main = document.createElement('div');
+                main.className = 'activity-main';
+                const title = document.createElement('p');
+                title.className = 'activity-title';
+                title.textContent = item.titulo;
+                const metadata = document.createElement('p');
+                metadata.className = 'activity-meta';
+                metadata.textContent = `Código: ${item.codigo} | ${item.fecha}`;
+                main.append(title, metadata);
+
+                const actions = document.createElement('div');
+                actions.className = 'activity-actions';
+                const badge = document.createElement('span');
+                badge.className = `badge ${estado.className}`;
+                badge.textContent = estado.label;
+                const detailLink = document.createElement('a');
+                detailLink.href = item.url;
+                detailLink.className = 'link-btn';
+                detailLink.textContent = 'Ver detalle';
+                actions.append(badge, detailLink);
+                row.append(main, actions);
+                list.appendChild(row);
+            });
         }
 
         [searchInput, searchInputMobile].forEach(input => input.addEventListener('input', () => {

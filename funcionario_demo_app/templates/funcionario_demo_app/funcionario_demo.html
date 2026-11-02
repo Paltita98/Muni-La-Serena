@@ -121,12 +121,15 @@
                         </div>
                         <div class="p-4 space-y-3">
                             {% for compromiso in compromisos_proximos %}
-                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-lg">
                                     <div>
                                         <p class="text-sm font-bold text-gray-900">{{ compromiso.observacion|default:compromiso.solicitante }}</p>
                                         <p class="text-xs text-gray-500 mt-0.5">Vence: {{ compromiso.fecha_comprometida|date:"d/m/Y" }} | Solicitante: {{ compromiso.solicitante }}</p>
                                     </div>
-                                    <span class="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-1 rounded">{{ compromiso.get_estado_display }}</span>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <span class="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-1 rounded">{{ compromiso.get_estado_display }}</span>
+                                        <a href="{% url 'funcionario_compromiso_view' compromiso.id %}" class="text-xs font-semibold text-blue-700 hover:text-blue-900">Actualizar</a>
+                                    </div>
                                 </div>
                             {% empty %}<p class="p-3 text-sm text-gray-500">No hay compromisos registrados.</p>{% endfor %}
                         </div>

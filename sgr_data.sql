@@ -449,5 +449,3 @@ CREATE TABLE auditoria (
 
 CREATE INDEX idx_auditoria_entidad ON auditoria (entidad, id_entidad);
 CREATE INDEX idx_auditoria_usuario_fecha ON auditoria (id_usuario, fecha);
-
-todas esas?

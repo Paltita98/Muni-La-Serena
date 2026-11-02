@@ -65,12 +65,12 @@ def login_view(request):
                 role = 'ADMIN'
             elif password_valid and any('verificador' in role_name for role_name in role_names):
                 role = 'VERIFICADOR'
+            elif password_valid and any('delegado' in role_name or 'jefatura' in role_name for role_name in role_names):
+                role = 'DELEGADO'
             elif password_valid and any('funcion' in role_name for role_name in role_names):
                 role = 'FUNCIONARIO'
             elif password_valid and any('coordinador' in role_name for role_name in role_names):
                 role = 'COORDINADOR'
-            elif password_valid and any('delegado' in role_name or 'jefatura' in role_name for role_name in role_names):
-                role = 'DELEGADO'
             elif password_valid and any('consulta' in role_name for role_name in role_names):
                 role = 'CONSULTA'
             else:
@@ -92,7 +92,7 @@ def login_view(request):
                     'FUNCIONARIO': 'funcionario_demo_view',
                     'VERIFICADOR': 'verificador_evidencias_view',
                     'COORDINADOR': 'main:role_dashboard_view',
-                    'DELEGADO': 'main:role_dashboard_view',
+                    'DELEGADO': 'delegado_demo_view',
                     'CONSULTA': 'main:role_dashboard_view',
                 }
                 destination = destinations[role]
@@ -136,7 +136,7 @@ def primer_cambio_password(request):
                     'FUNCIONARIO': 'funcionario_demo_view',
                     'VERIFICADOR': 'verificador_evidencias_view',
                     'COORDINADOR': 'main:role_dashboard_view',
-                    'DELEGADO': 'main:role_dashboard_view',
+                    'DELEGADO': 'delegado_demo_view',
                     'CONSULTA': 'main:role_dashboard_view',
                 }
                 return redirect(destinations.get(request.session.get('user_role'), 'main:login_view'))

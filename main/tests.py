@@ -84,6 +84,12 @@ class LoginViewTests(SimpleTestCase):
         self.assertEqual(response.url, '/funcionario/panel/')
         self.assertEqual(session['user_role'], 'FUNCIONARIO')
 
+    def test_delegate_login_redirects_to_delegate_panel(self):
+        response, session = self._login('Delegado')
+
+        self.assertEqual(response.url, '/funcionario/delegado/panel/')
+        self.assertEqual(session['user_role'], 'DELEGADO')
+
     def test_verifier_login_redirects_to_evidence_review(self):
         response, session = self._login('Verificador')
 

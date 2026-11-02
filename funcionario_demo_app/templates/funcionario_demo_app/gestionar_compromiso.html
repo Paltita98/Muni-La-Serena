@@ -1,0 +1,97 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if compromiso %}Gestionar compromiso{% else %}Asignar compromiso{% endif %} - SGR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body class="bg-gray-50 text-gray-800 page-shell">
+    <main class="min-h-screen max-w-5xl mx-auto px-4 py-8 md:px-8">
+        <a href="{% url 'delegado_demo_view' %}" class="text-sm font-semibold text-blue-700 hover:text-blue-900">&larr; Volver al panel</a>
+        <header class="mt-5 mb-7">
+            <p class="text-sm font-semibold text-blue-700">{{ delegacion.nombre }}</p>
+            <h1 class="text-2xl font-bold text-gray-900 mt-1">{% if compromiso %}Gestionar compromiso{% else %}Asignar un compromiso{% endif %}</h1>
+            <p class="text-sm text-gray-500 mt-1">Asigna una persona responsable y acompaña el avance hasta validar su cumplimiento.</p>
+        </header>
+
+        {% if messages %}
+            <div class="space-y-2 mb-5">
+                {% for message in messages %}<p class="rounded-lg px-4 py-3 text-sm bg-blue-50 text-blue-800">{{ message }}</p>{% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+            <section class="bg-white border border-gray-200 rounded-lg shadow-sm p-5 md:p-6 lg:col-span-3">
+                <h2 class="text-lg font-bold text-gray-900">Datos y asignación</h2>
+                <form method="post" class="mt-5 space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="guardar">
+                    {% if form.non_field_errors %}<div class="text-sm text-red-700">{{ form.non_field_errors }}</div>{% endif %}
+                    {% if compromiso %}
+                        <div class="border-b border-gray-100 pb-4">
+                            <p class="block text-sm font-medium text-gray-700">Fecha comprometida</p>
+                            <p class="mt-1 text-sm text-gray-900">{{ compromiso.fecha_comprometida|date:"d/m/Y" }}</p>
+                        </div>
+                    {% endif %}
+                    {% for field in form %}
+                        <div>
+                            <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}<p class="text-xs text-gray-500 mt-1">{{ field.help_text }}</p>{% endif %}
+                            {% for error in field.errors %}<p class="text-xs text-red-700 mt-1">{{ error }}</p>{% endfor %}
+                        </div>
+                    {% endfor %}
+                    <button type="submit" class="w-full sm:w-auto bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition">
+                        {% if compromiso %}Guardar cambios{% else %}Asignar compromiso{% endif %}
+                    </button>
+                </form>
+            </section>
+
+            <div class="space-y-6 lg:col-span-2 w-full min-w-0">
+                {% if compromiso %}
+                    <section class="bg-white border border-gray-200 rounded-lg shadow-sm p-5 md:p-6">
+                        <h2 class="text-lg font-bold text-gray-900">Revisión del cumplimiento</h2>
+                        <p class="text-sm text-gray-500 mt-1">Estado actual: <span class="font-semibold text-gray-700">{{ compromiso.get_estado_display }}</span></p>
+                        {% if estados_permitidos %}
+                            <form method="post" class="mt-4 space-y-4">
+                                {% csrf_token %}
+                                <input type="hidden" name="accion" value="estado">
+                                {% for field in estado_form %}
+                                    <div>
+                                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
+                                        {{ field }}
+                                        {% for error in field.errors %}<p class="text-xs text-red-700 mt-1">{{ error }}</p>{% endfor %}
+                                    </div>
+                                {% endfor %}
+                                <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition">Guardar revisión</button>
+                            </form>
+                        {% elif compromiso.estado == 'en_proceso' %}
+                            <p class="text-sm text-gray-500 mt-3">El responsable debe enviar el compromiso a revisión para que puedas validarlo.</p>
+                        {% else %}
+                            <p class="text-sm text-gray-500 mt-3">No hay una acción de revisión pendiente.</p>
+                        {% endif %}
+                    </section>
+
+                    <section class="bg-white border border-gray-200 rounded-lg shadow-sm p-5 md:p-6">
+                        <h2 class="text-lg font-bold text-gray-900">Historial de seguimiento</h2>
+                        <div class="mt-4 space-y-4">
+                            {% for cambio in historial %}
+                                <div class="border-l-2 border-blue-200 pl-4">
+                                    <p class="text-sm font-semibold text-gray-900">{% if cambio.estado_anterior %}{{ cambio.get_estado_anterior_display }} &rarr; {% endif %}{{ cambio.get_estado_nuevo_display }}</p>
+                                    <p class="text-xs text-gray-500 mt-1">{{ cambio.autor.nombres }} {{ cambio.autor.apellidos }} &middot; {{ cambio.fecha|date:"d/m/Y H:i" }}</p>
+                                    {% if cambio.observacion %}<p class="text-sm text-gray-600 mt-1">{{ cambio.observacion }}</p>{% endif %}
+                                </div>
+                            {% empty %}
+                                <p class="text-sm text-gray-500">Sin movimientos registrados.</p>
+                            {% endfor %}
+                        </div>
+                    </section>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+</body>
+</html>
