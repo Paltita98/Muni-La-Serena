@@ -300,6 +300,8 @@ class FlujoCompromisosTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Operativo comunitario Centro')
+        self.assertContains(response, 'aria-current="page"')
+        self.assertContains(response, 'Actividades')
         self.assertNotContains(response, 'Agregar evidencia')
 
         response = self.client.get(reverse('actividad_detalle_view', args=[self.actividad_ajena.pk]))
@@ -327,6 +329,41 @@ class FlujoCompromisosTests(TestCase):
         self.assertContains(response, 'Junta de Centro')
         self.assertNotContains(response, 'Junta del Norte')
         self.assertContains(response, reverse('delegado_compromiso_view', args=[local_commitment.pk]))
+
+    def test_delegate_compromise_date_is_read_only_in_list_and_edit(self):
+        compromiso = Compromiso.objects.create(
+            delegacion=self.delegacion,
+            responsable=self.funcionario,
+            solicitante='Junta de Centro',
+            territorio='Centro',
+            fecha_comprometida=date(2026, 12, 15),
+            observacion='Mantener fecha comprometida',
+        )
+        self.iniciar_sesion_rol('DELEGADO', self.delegado)
+        list_url = reverse('delegado_compromisos_view')
+        detail_url = reverse('delegado_compromiso_view', args=[compromiso.pk])
+
+        list_response = self.client.get(list_url)
+        self.assertEqual(list_response.status_code, 200)
+        self.assertContains(list_response, '15/12/2026')
+        self.assertNotContains(list_response, 'name="fecha_comprometida"')
+
+        detail_response = self.client.get(detail_url)
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertContains(detail_response, '15/12/2026')
+        self.assertNotContains(detail_response, 'name="fecha_comprometida"')
+
+        response = self.client.post(detail_url, {
+            'accion': 'guardar',
+            'fecha_comprometida': '2027-01-20',
+            'responsable': self.funcionario.pk,
+            'solicitante': compromiso.solicitante,
+            'territorio': compromiso.territorio,
+            'observacion': compromiso.observacion,
+        })
+        compromiso.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(compromiso.fecha_comprometida, date(2026, 12, 15))
 
     def test_delegate_evidence_endpoint_returns_only_delegation_files(self):
         Evidencia.objects.create(

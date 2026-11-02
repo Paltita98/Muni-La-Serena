@@ -101,7 +101,7 @@
                                 <h2 class="text-lg font-bold text-gray-900">Compromisos de la delegación</h2>
                                 <p class="text-xs text-gray-500 mt-1">Ordenados por fecha comprometida</p>
                             </div>
-                            <span class="text-sm text-gray-500">{{ compromisos_total }} en total</span>
+                            <a href="{% url 'delegado_compromisos_view' %}" class="text-sm font-semibold text-blue-700 hover:text-blue-900">Ver todos ({{ compromisos_total }})</a>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left min-w-[760px]">

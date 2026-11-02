@@ -1,0 +1,85 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compromisos de la delegación - SGR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body class="bg-gray-50 text-gray-800 page-shell">
+    <div class="flex h-screen overflow-hidden">
+        <aside class="sidebar w-64 shrink-0 text-white flex flex-col">
+            <div class="h-16 flex items-center px-5 border-b border-white/15">
+                <span class="text-lg font-bold tracking-wide">SGR <span class="font-normal text-slate-300">/ Delegado</span></span>
+            </div>
+            <nav class="flex-1 px-4 py-6 space-y-2">
+                <a href="{% url 'delegado_demo_view' %}" class="block px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg">Resumen</a>
+                <a href="{% url 'actividades_view' %}" class="block px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg">Actividades</a>
+                <a href="{% url 'atenciones_sociales_view' %}" class="block px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg">Atención Social</a>
+                <a href="{% url 'agenda_colectiva_view' %}" class="block px-4 py-3 bg-blue-600 text-white rounded-lg">Agenda Colectiva</a>
+            </nav>
+            <div class="px-6 py-5 border-t border-white/15">
+                <p class="text-xs uppercase tracking-wider text-slate-400">Delegación a cargo</p>
+                <p class="mt-1 text-sm font-semibold text-white">{{ delegacion.nombre|default:"Sin delegación asignada" }}</p>
+            </div>
+        </aside>
+
+        <main class="min-w-0 flex-1 flex flex-col h-screen overflow-y-auto">
+            <header class="min-h-16 bg-white shadow-sm flex items-center justify-between gap-4 px-5 md:px-8 py-3 border-b border-gray-100">
+                <div>
+                    <p class="text-xs text-gray-500">Gestión territorial / Agenda Colectiva</p>
+                    <h1 class="text-lg font-bold text-gray-900 mt-1">Compromisos de la delegación</h1>
+                </div>
+                <a href="{% url 'delegado_compromiso_nuevo_view' %}" class="inline-flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition">
+                    <span aria-hidden="true">+</span> Asignar compromiso
+                </a>
+            </header>
+
+            <div class="p-5 md:p-8 space-y-5">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-sm text-gray-500">{{ compromisos|length }} compromiso{{ compromisos|length|pluralize:"s" }} registrados</p>
+                    <a href="{% url 'delegado_demo_view' %}" class="text-sm font-semibold text-blue-700 hover:text-blue-900">Volver al panel</a>
+                </div>
+
+                <section class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[760px] text-left">
+                            <thead>
+                                <tr class="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                                    <th class="px-5 py-3 font-medium">Compromiso</th>
+                                    <th class="px-5 py-3 font-medium">Responsable</th>
+                                    <th class="px-5 py-3 font-medium">Territorio</th>
+                                    <th class="px-5 py-3 font-medium">Fecha comprometida</th>
+                                    <th class="px-5 py-3 font-medium">Estado</th>
+                                    <th class="px-5 py-3 font-medium">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 text-sm">
+                                {% for compromiso in compromisos %}
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-5 py-4">
+                                            <p class="font-semibold text-gray-900">{{ compromiso.observacion|default:compromiso.solicitante }}</p>
+                                            <p class="mt-1 text-xs text-gray-500">Solicitante: {{ compromiso.solicitante }}</p>
+                                        </td>
+                                        <td class="px-5 py-4 text-gray-700">{{ compromiso.responsable.nombres }} {{ compromiso.responsable.apellidos }}</td>
+                                        <td class="px-5 py-4 text-gray-600">{{ compromiso.territorio|default:"Sin territorio" }}</td>
+                                        <td class="px-5 py-4 text-gray-700">{{ compromiso.fecha_comprometida|date:"d/m/Y" }}</td>
+                                        <td class="px-5 py-4">
+                                            <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium {% if compromiso.estado == 'realizado' %}bg-green-100 text-green-800{% elif compromiso.estado == 'revision' %}bg-amber-100 text-amber-800{% elif compromiso.estado == 'en_proceso' %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-700{% endif %}">{{ compromiso.get_estado_display }}</span>
+                                        </td>
+                                        <td class="px-5 py-4"><a href="{% url 'delegado_compromiso_view' compromiso.id %}" class="font-semibold text-blue-700 hover:text-blue-900">{% if compromiso.estado == 'revision' %}Revisar{% else %}Gestionar{% endif %}</a></td>
+                                    </tr>
+                                {% empty %}
+                                    <tr><td colspan="6" class="px-5 py-12 text-center text-gray-500">No hay compromisos registrados para esta delegación.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

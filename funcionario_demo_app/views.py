@@ -104,6 +104,24 @@ def delegado_demo_view(request):
     })
 
 
+def delegado_compromisos_view(request):
+    delegado = _delegado_actual(request)
+    if delegado is None:
+        return redirect('main:login_view')
+    delegacion = _delegacion_del_delegado(delegado)
+    compromisos = (
+        Compromiso.objects.filter(delegacion=delegacion)
+        .select_related('responsable')
+        .order_by('fecha_comprometida')
+        if delegacion else Compromiso.objects.none()
+    )
+    return render(request, 'funcionario_demo_app/delegado_compromisos.html', {
+        'delegado': delegado,
+        'delegacion': delegacion,
+        'compromisos': compromisos,
+    })
+
+
 def delegado_compromiso_view(request, compromiso_id=None):
     delegado = _delegado_actual(request)
     if delegado is None:
@@ -555,6 +573,8 @@ def actividad_detalle_view(request, actividad_id):
         'form': form,
         'puede_adjuntar': puede_adjuntar,
         'puede_subir_evidencia': puede_subir_evidencia,
+        'is_delegado': delegado is not None,
+        'panel_url': reverse('delegado_demo_view' if delegado else 'funcionario_demo_view'),
     })
 
 

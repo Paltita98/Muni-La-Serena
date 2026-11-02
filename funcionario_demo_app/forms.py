@@ -227,6 +227,8 @@ class DelegadoCompromisoForm(forms.ModelForm):
     def __init__(self, *args, delegacion=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.delegacion = delegacion
+        if self.instance.pk:
+            self.fields.pop("fecha_comprometida")
         self.fields["responsable"].queryset = (
             Usuario.objects.filter(delegacion=delegacion, estado="activo")
             .order_by("apellidos", "nombres")
