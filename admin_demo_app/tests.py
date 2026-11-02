@@ -5,12 +5,13 @@ from unittest.mock import Mock, patch
 from django import forms
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.db.models.deletion import ProtectedError
 from django.test import RequestFactory, SimpleTestCase
 
 from .forms import DelegacionForm, MetaForm, UsuarioForm
-from .models import Alerta, Auditoria, Cargo, Compromiso, Delegacion, Periodo, Usuario
+from .models import Alerta, Auditoria, Cargo, Compromiso, Delegacion, Periodo, Rol, Usuario
 from .validators import validate_chilean_rut
-from .views import admin_dashboard_view, eliminar_delegacion_view, gestionar_meta_view
+from .views import admin_dashboard_view, admin_usuarios_view, eliminar_delegacion_view, eliminar_usuario_permanente_view, gestionar_meta_view
 
 
 class AdminDashboardTests(SimpleTestCase):
@@ -79,6 +80,91 @@ class DelegacionDeletionTests(SimpleTestCase):
             request,
             'No se puede eliminar la delegación porque tiene funcionarios asignados o autorizados.',
         )
+
+
+class UsuarioHardDeleteTests(SimpleTestCase):
+    def setUp(self):
+        self.request = RequestFactory().post(
+            '/administrador/usuarios/eliminar-permanente/', {'record_id': 7},
+        )
+        self.request.session = {'user_role': 'ADMIN', 'user_id': 1}
+        self.usuario = SimpleNamespace(
+            pk=7, nombres='Ana', apellidos='Pérez', delete=Mock(),
+        )
+
+    def test_deletes_user_without_protected_records(self):
+        with (
+            patch('admin_demo_app.views.get_object_or_404', return_value=self.usuario),
+            patch('admin_demo_app.views.notificar_administradores'),
+            patch('admin_demo_app.views.messages.success') as success,
+            patch('admin_demo_app.views.redirect', return_value='redirect'),
+        ):
+            response = eliminar_usuario_permanente_view(self.request)
+
+        self.assertEqual(response, 'redirect')
+        self.usuario.delete.assert_called_once_with()
+        success.assert_called_once_with(self.request, 'Usuario eliminado permanentemente.')
+
+    def test_protected_user_is_not_deleted(self):
+        self.usuario.delete.side_effect = ProtectedError('protected', [])
+        with (
+            patch('admin_demo_app.views.get_object_or_404', return_value=self.usuario),
+            patch('admin_demo_app.views.messages.error') as error,
+            patch('admin_demo_app.views.redirect', return_value='redirect'),
+        ):
+            response = eliminar_usuario_permanente_view(self.request)
+
+        self.assertEqual(response, 'redirect')
+        error.assert_called_once()
+
+    def test_current_admin_cannot_delete_own_account(self):
+        self.usuario.pk = 1
+        with (
+            patch('admin_demo_app.views.get_object_or_404', return_value=self.usuario),
+            patch('admin_demo_app.views.messages.error') as error,
+            patch('admin_demo_app.views.redirect', return_value='redirect'),
+        ):
+            response = eliminar_usuario_permanente_view(self.request)
+
+        self.assertEqual(response, 'redirect')
+        self.usuario.delete.assert_not_called()
+        error.assert_called_once_with(
+            self.request, 'No puedes eliminar la cuenta con la que iniciaste sesión.',
+        )
+
+    def test_user_listing_includes_permanent_delete_action(self):
+        usuario = SimpleNamespace(
+            pk=7,
+            nombres='Ana',
+            apellidos='Pérez',
+            identificador_inst='19864005-0',
+            email='ana@example.test',
+            roles=SimpleNamespace(values_list=Mock(return_value=['FUNCIONARIO'])),
+            delegacion_id=None,
+            delegacion=None,
+            estado='inactivo',
+            get_estado_display=lambda: 'Inactivo',
+        )
+        usuarios = Mock()
+        usuarios.prefetch_related.return_value.select_related.return_value.order_by.return_value = [usuario]
+        roles = Mock()
+        roles.order_by.return_value = []
+        delegaciones = Mock()
+        delegaciones.order_by.return_value = []
+        request = RequestFactory().get('/administrador/usuarios/')
+        request.session = {'user_role': 'ADMIN'}
+
+        with (
+            patch.object(Usuario, 'objects', usuarios),
+            patch.object(Rol, 'objects', roles),
+            patch.object(Delegacion, 'objects', delegaciones),
+            patch('admin_demo_app.views.render', return_value='rendered') as render,
+        ):
+            response = admin_usuarios_view(request)
+
+        self.assertEqual(response, 'rendered')
+        row = render.call_args.args[2]['secciones'][0]['filas'][0]
+        self.assertEqual(row['permanent_delete_url'], '/administrador/usuarios/eliminar-permanente/')
 
 
 class UserInputValidationTests(SimpleTestCase):

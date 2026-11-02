@@ -14,6 +14,54 @@ from admin_demo_app.models import (
     PersonaUsuaria,
     Validacion,
 )
+from admin_demo_app.validators import validate_chilean_rut
+
+
+class PersonaSolicitanteFields:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['persona'].queryset = PersonaUsuaria.objects.all()
+        for field_name in ('nuevo_rut', 'nuevo_nombre', 'nuevo_telefono'):
+            self.fields[field_name].widget.attrs['class'] = (
+                'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm '
+                'focus:outline-none focus:ring-2 focus:ring-red-500'
+            )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get('persona'):
+            return cleaned_data
+
+        rut = cleaned_data.get('nuevo_rut', '').strip().replace('.', '').upper()
+        nombre = cleaned_data.get('nuevo_nombre', '').strip()
+        telefono = cleaned_data.get('nuevo_telefono', '').strip()
+        if not rut:
+            self.add_error('nuevo_rut', 'Ingresa el RUT o selecciona una persona existente.')
+        else:
+            try:
+                validate_chilean_rut(rut)
+            except forms.ValidationError as error:
+                self.add_error('nuevo_rut', error)
+            if PersonaUsuaria.objects.filter(rut=rut).exists():
+                self.add_error('nuevo_rut', 'Este RUT ya está registrado. Búscalo y selecciónalo.')
+        if not nombre:
+            self.add_error('nuevo_nombre', 'Ingresa el nombre de la persona.')
+        if not telefono:
+            self.add_error('nuevo_telefono', 'Ingresa el teléfono de la persona.')
+        cleaned_data['nuevo_rut'] = rut
+        cleaned_data['nuevo_nombre'] = nombre
+        cleaned_data['nuevo_telefono'] = telefono
+        return cleaned_data
+
+    def obtener_persona(self):
+        persona = self.cleaned_data.get('persona')
+        if persona:
+            return persona
+        return PersonaUsuaria.crear_con_referencia_incremental(
+            rut=self.cleaned_data['nuevo_rut'],
+            nombre=self.cleaned_data['nuevo_nombre'],
+            telefono=self.cleaned_data['nuevo_telefono'],
+        )
 
 
 class ImageEvidenceField(forms.FileField):
@@ -113,20 +161,28 @@ class ActividadForm(forms.ModelForm):
         return cleaned_data
 
 
-class CompromisoForm(forms.ModelForm):
+class CompromisoForm(PersonaSolicitanteFields, forms.ModelForm):
+    persona = forms.ModelChoiceField(
+        label='Persona seleccionada', queryset=PersonaUsuaria.objects.none(),
+        required=False, widget=forms.HiddenInput,
+    )
+    nuevo_rut = forms.CharField(label='RUT', max_length=12, required=False)
+    nuevo_nombre = forms.CharField(label='Nombre completo', max_length=150, required=False)
+    nuevo_telefono = forms.CharField(label='Teléfono', max_length=20, required=False)
+
     class Meta:
         model = Compromiso
         fields = (
             "fecha_comprometida",
             "delegacion",
-            "solicitante",
+            "persona",
             "territorio",
             "observacion",
         )
         labels = {
             "fecha_comprometida": "Fecha comprometida",
             "delegacion": "Delegación",
-            "solicitante": "Solicitante (vecino/institución)",
+            "persona": "Persona solicitante",
             "territorio": "Territorio o sector",
             "observacion": "Descripción del compromiso",
         }
@@ -139,6 +195,16 @@ class CompromisoForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["delegacion"].queryset = Delegacion.objects.filter(estado="activa").order_by("nombre")
 
+    def save(self, commit=True):
+        compromiso = super().save(commit=False)
+        persona = self.obtener_persona()
+        compromiso.persona = persona
+        compromiso.solicitante = persona.nombre or persona.referencia_anonima
+        if commit:
+            compromiso.save()
+            self.save_m2m()
+        return compromiso
+
 
 class SubatencionSelect(forms.Select):
     def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
@@ -149,14 +215,14 @@ class SubatencionSelect(forms.Select):
         return option
 
 
-class AtencionSocialForm(forms.Form):
-    solicitante = forms.CharField(label="Solicitante", max_length=150)
-    referencia_anonima = forms.CharField(
-        label="Código anónimo de la persona",
-        max_length=40,
-        help_text="Usa el mismo código para agregar gestiones a una persona ya registrada.",
-        widget=forms.TextInput(attrs={"autocomplete": "off", "placeholder": "Ej.: CASO-001"}),
+class AtencionSocialForm(PersonaSolicitanteFields, forms.Form):
+    persona = forms.ModelChoiceField(
+        label='Persona seleccionada', queryset=PersonaUsuaria.objects.none(),
+        required=False, widget=forms.HiddenInput,
     )
+    nuevo_rut = forms.CharField(label='RUT', max_length=12, required=False)
+    nuevo_nombre = forms.CharField(label='Nombre completo', max_length=150, required=False)
+    nuevo_telefono = forms.CharField(label='Teléfono', max_length=20, required=False)
     catalogo_tipo = forms.ModelChoiceField(label="Tipo de atención", queryset=CatalogoTipo.objects.none())
     catalogo_subtipo = forms.ModelChoiceField(
         label="Subatención", queryset=CatalogoTipo.objects.none(), required=False,
@@ -217,12 +283,10 @@ class AtencionSocialForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
-        referencia = cleaned_data.get("referencia_anonima", "").strip()
+        persona = cleaned_data.get('persona')
         orden = cleaned_data.get("orden_gestion")
-        if referencia and orden:
-            persona = PersonaUsuaria.objects.filter(referencia_anonima=referencia).first()
-            if persona and AtencionSocial.objects.filter(persona=persona, orden_gestion=orden).exists():
-                self.add_error("orden_gestion", "Esta persona ya tiene registrada esa gestión.")
+        if persona and orden and AtencionSocial.objects.filter(persona=persona, orden_gestion=orden).exists():
+            self.add_error("orden_gestion", "Esta persona ya tiene registrada esa gestión.")
         if not self.funcionario:
             self.add_error(None, "No hay un funcionario activo para registrar la atención.")
         tipo = cleaned_data.get('catalogo_tipo')
@@ -232,12 +296,10 @@ class AtencionSocialForm(forms.Form):
         return cleaned_data
 
     def save(self):
-        persona, _ = PersonaUsuaria.objects.get_or_create(
-            referencia_anonima=self.cleaned_data["referencia_anonima"].strip(),
-        )
+        persona = self.obtener_persona()
         return AtencionSocial.objects.create(
             persona=persona,
-            solicitante=self.cleaned_data['solicitante'],
+            solicitante=persona.nombre or persona.referencia_anonima,
             descripcion=self.cleaned_data['descripcion'],
             delegacion=self.cleaned_data['delegacion'],
             catalogo_tipo=self.cleaned_data["catalogo_tipo"],

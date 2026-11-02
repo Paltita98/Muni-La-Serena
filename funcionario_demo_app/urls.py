@@ -9,6 +9,7 @@ urlpatterns = [
     path('actividades/<int:actividad_id>/', views.actividad_detalle_view, name='actividad_detalle_view'),
     path('atencion-social/', views.atenciones_sociales_view, name='atenciones_sociales_view'),
     path('atencion-social/nueva/', views.nueva_atencion_social_view, name='nueva_atencion_social_view'),
+    path('personas/buscar/', views.buscar_personas_view, name='buscar_personas_view'),
     path('agenda-colectiva/', views.agenda_colectiva_view, name='agenda_colectiva_view'),
     path('evidencias/', views.mis_evidencias_view, name='mis_evidencias_view'),
     path('verificador/evidencias/', views.verificador_evidencias_view, name='verificador_evidencias_view'),

@@ -12,7 +12,7 @@ from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
-from admin_demo_app.models import AtencionSocial, Actividad, Compromiso, Evidencia, Meta, Periodo, Usuario, Validacion
+from admin_demo_app.models import AtencionSocial, Actividad, Compromiso, Evidencia, Meta, Periodo, PersonaUsuaria, Usuario, Validacion
 from main.notifications import notificar, notificar_accion_funcionario, notificar_administradores
 
 from .forms import AtencionSocialForm, ActividadForm, CompromisoForm, EvidenciaForm, VerificacionEvidenciaForm
@@ -177,6 +177,27 @@ def nueva_atencion_social_view(request):
         'form': form,
         'funcionario': funcionario,
     })
+
+
+def buscar_personas_view(request):
+    funcionario = _funcionario_actual(request)
+    if funcionario is None:
+        return JsonResponse({'results': []}, status=403)
+    query = request.GET.get('q', '').strip()
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+    personas = PersonaUsuaria.objects.filter(
+        Q(nombre__icontains=query)
+        | Q(rut__icontains=query)
+        | Q(referencia_anonima__icontains=query)
+    ).order_by('nombre', 'rut')[:10]
+    return JsonResponse({'results': [{
+        'id': persona.pk,
+        'nombre': persona.nombre or 'Persona sin nombre',
+        'rut': persona.rut or '',
+        'telefono': persona.telefono or '',
+        'referencia': persona.referencia_anonima,
+    } for persona in personas]})
 
 
 def agenda_colectiva_view(request):
@@ -457,9 +478,10 @@ def nuevo_compromiso_view(request):
     if request.method == 'POST':
         form = CompromisoForm(request.POST)
         if form.is_valid() and funcionario:
-            compromiso = form.save(commit=False)
-            compromiso.responsable = funcionario
-            compromiso.save()
+            with transaction.atomic():
+                compromiso = form.save(commit=False)
+                compromiso.responsable = funcionario
+                compromiso.save()
             notificar_accion_funcionario(
                 funcionario.pk,
                 f'Registraste un compromiso para {compromiso.solicitante}.',

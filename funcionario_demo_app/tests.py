@@ -1,3 +1,4 @@
+import json
 from datetime import date
 from decimal import Decimal
 from io import BytesIO
@@ -14,7 +15,7 @@ from PIL import Image
 
 from admin_demo_app.models import Actividad, AtencionSocial, CatalogoTipo, Evidencia, Meta, PersonaUsuaria, Usuario, Validacion
 from .forms import ActividadForm, AtencionSocialForm, EvidenciaForm, ImageEvidenceField, VerificacionEvidenciaForm
-from .views import _calcular_metricas_funcionario, _es_imagen_previsualizable, actividades_view, agenda_colectiva_view, atenciones_sociales_view, evidencia_previsualizacion_view, nueva_atencion_social_view, validar_evidencia_view, verificador_evidencias_view
+from .views import _calcular_metricas_funcionario, _es_imagen_previsualizable, actividades_view, agenda_colectiva_view, atenciones_sociales_view, buscar_personas_view, evidencia_previsualizacion_view, nueva_atencion_social_view, validar_evidencia_view, verificador_evidencias_view
 
 
 class MetricasFuncionarioTests(SimpleTestCase):
@@ -231,8 +232,8 @@ class AtencionesSocialesViewTests(SimpleTestCase):
         notify.assert_called_once()
         redirect.assert_called_once_with('atenciones_sociales_view')
 
-    def test_form_save_reuses_anonymous_person_and_creates_attention(self):
-        persona = SimpleNamespace(pk=9)
+    def test_form_save_reuses_selected_person_and_creates_attention(self):
+        persona = SimpleNamespace(pk=9, nombre='María Pérez', referencia_anonima='CASO-001')
         funcionario = SimpleNamespace(pk=4)
         tipo = SimpleNamespace(pk=3)
         actividad = SimpleNamespace(pk=12)
@@ -249,7 +250,10 @@ class AtencionesSocialesViewTests(SimpleTestCase):
             form = AtencionSocialForm(funcionario=funcionario)
         form.cleaned_data = {
             'solicitante': 'María Pérez',
-            'referencia_anonima': ' CASO-001 ',
+            'persona': persona,
+            'nuevo_rut': '',
+            'nuevo_nombre': '',
+            'nuevo_telefono': '',
             'catalogo_tipo': tipo,
             'catalogo_subtipo': None,
             'delegacion': SimpleNamespace(pk=8),
@@ -271,7 +275,7 @@ class AtencionesSocialesViewTests(SimpleTestCase):
             saved = form.save()
 
         self.assertEqual(saved, 'saved-attention')
-        person_manager.get_or_create.assert_called_once_with(referencia_anonima='CASO-001')
+        person_manager.create.assert_not_called()
         attention_manager.create.assert_called_once_with(
             persona=persona,
             solicitante='María Pérez',
@@ -286,6 +290,67 @@ class AtencionesSocialesViewTests(SimpleTestCase):
             actividad=actividad,
         )
 
+    def test_form_save_generates_code_for_new_person(self):
+        persona = SimpleNamespace(pk=9, nombre='María Pérez', referencia_anonima='CASO-004')
+        funcionario = SimpleNamespace(pk=4)
+        tipo = SimpleNamespace(pk=3)
+        with (
+            patch.object(Actividad, 'objects', Mock()),
+            patch.object(CatalogoTipo, 'objects', Mock()),
+        ):
+            form = AtencionSocialForm(funcionario=funcionario)
+        form.cleaned_data = {
+            'solicitante': 'María Pérez',
+            'persona': None,
+            'nuevo_rut': '19864005-0',
+            'nuevo_nombre': 'María Pérez',
+            'nuevo_telefono': '+56912345678',
+            'catalogo_tipo': tipo,
+            'catalogo_subtipo': None,
+            'delegacion': SimpleNamespace(pk=8),
+            'descripcion': 'Primera consulta',
+            'orden_gestion': 1,
+            'fecha': date(2026, 9, 25),
+            'resultado': '',
+            'actividad': None,
+        }
+        person_manager = Mock()
+        person_manager.create.return_value = persona
+        attention_manager = Mock()
+        attention_manager.create.return_value = 'saved-attention'
+
+        with (
+            patch.object(PersonaUsuaria, 'crear_con_referencia_incremental', return_value=persona) as create_person,
+            patch.object(PersonaUsuaria, 'objects', person_manager),
+            patch.object(AtencionSocial, 'objects', attention_manager),
+        ):
+            saved = form.save()
+
+        self.assertEqual(saved, 'saved-attention')
+        create_person.assert_called_once_with(
+            rut='19864005-0', nombre='María Pérez', telefono='+56912345678',
+        )
+        person_manager.create.assert_not_called()
+
+    def test_persona_creation_increments_after_highest_existing_case(self):
+        manager = Mock()
+        manager.select_for_update.return_value.values_list.return_value = [
+            'CASO-001', 'CASO-008', 'LEGADO-42', 'CASO-X',
+        ]
+        persona = SimpleNamespace(pk=11)
+        manager.create.return_value = persona
+
+        with (
+            patch('admin_demo_app.models.transaction.atomic'),
+            patch.object(PersonaUsuaria, 'objects', manager),
+        ):
+            created = PersonaUsuaria.crear_con_referencia_incremental()
+
+        self.assertIs(created, persona)
+        manager.create.assert_called_once_with(
+            referencia_anonima='CASO-009', rut=None, nombre='', telefono='',
+        )
+
 
 class EvidenciasJsonTests(SimpleTestCase):
     def test_evidencias_json_endpoint_returns_data(self):
@@ -294,6 +359,38 @@ class EvidenciasJsonTests(SimpleTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIsInstance(response.json(), list)
         self.assertGreater(len(response.json()), 0)
+
+
+class BuscarPersonasTests(SimpleTestCase):
+    def test_search_requires_an_active_staff_member(self):
+        request = RequestFactory().get('/funcionario/personas/buscar/?q=Maria')
+        with patch('funcionario_demo_app.views._funcionario_actual', return_value=None):
+            response = buscar_personas_view(request)
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_search_returns_matching_person_contact(self):
+        request = RequestFactory().get('/funcionario/personas/buscar/?q=Maria')
+        persona = SimpleNamespace(
+            pk=7,
+            nombre='María Pérez',
+            rut='19864005-0',
+            telefono='+56912345678',
+            referencia_anonima='CASO-007',
+        )
+        people_query = Mock()
+        people_query.order_by.return_value = [persona]
+        manager = Mock(filter=Mock(return_value=people_query))
+        with (
+            patch('funcionario_demo_app.views._funcionario_actual', return_value=SimpleNamespace(pk=4)),
+            patch.object(PersonaUsuaria, 'objects', manager),
+        ):
+            response = buscar_personas_view(request)
+
+        self.assertEqual(response.status_code, 200)
+        results = json.loads(response.content)['results']
+        self.assertEqual(results[0]['rut'], '19864005-0')
+        self.assertEqual(results[0]['telefono'], '+56912345678')
 
 
 class AdminDemoTests(SimpleTestCase):

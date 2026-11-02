@@ -15,6 +15,7 @@ urlpatterns = [
     path('usuarios/nuevo/', views.nuevo_usuario_view, name='nuevo_usuario_view'),
     path('usuarios/<int:usuario_id>/editar/', views.editar_usuario_view, name='editar_usuario_view'),
     path('usuarios/desactivar/', views.eliminar_usuario_view, name='eliminar_usuario_view'),
+    path('usuarios/eliminar-permanente/', views.eliminar_usuario_permanente_view, name='eliminar_usuario_permanente_view'),
     path('delegaciones/', views.admin_delegaciones_view, name='admin_delegaciones_view'),
     path('delegaciones/nueva/', views.nueva_delegacion_view, name='nueva_delegacion_view'),
     path('delegaciones/<int:delegacion_id>/editar/', views.editar_delegacion_view, name='editar_delegacion_view'),

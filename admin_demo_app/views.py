@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.core.mail import send_mail
 from django.db import transaction
-from django.db.models.deletion import ProtectedError
+from django.db.models.deletion import ProtectedError, RestrictedError
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -167,13 +167,16 @@ def admin_usuarios_view(request):
     for usuario in usuarios:
         nombres_roles = list(usuario.roles.values_list('nombre', flat=True))
         delegacion = usuario.delegacion.nombre if usuario.delegacion_id else 'Sin delegación'
-        rows.append(_listing_row(
+        row = _listing_row(
             [f'{usuario.nombres} {usuario.apellidos}', usuario.identificador_inst, usuario.email,
              ', '.join(nombres_roles) or 'Sin rol', delegacion, usuario.get_estado_display()],
             f'{usuario.nombres} {usuario.apellidos} {usuario.identificador_inst} {usuario.email} {" ".join(nombres_roles)} {delegacion} {usuario.estado}',
             {'estado': usuario.estado, 'delegacion': delegacion.casefold(), 'rol': '|'.join(r.casefold() for r in nombres_roles)},
             reverse('editar_usuario_view', args=[usuario.pk]), reverse('eliminar_usuario_view'), usuario.pk,
-        ))
+        )
+        row['permanent_delete_url'] = reverse('eliminar_usuario_permanente_view')
+        row['permanent_delete_text'] = 'Eliminar'
+        rows.append(row)
     return _render_admin_listing(request, 'Usuarios', 'usuarios', [{
         'titulo': 'Usuarios registrados',
         'columnas': ['Nombre', 'Identificador', 'Correo', 'Rol', 'Delegación', 'Estado'],
@@ -580,4 +583,30 @@ def eliminar_usuario_view(request):
             f'La cuenta de {usuario.nombres} {usuario.apellidos} fue desactivada.',
         )
         messages.success(request, 'Usuario desactivado. Su historial se conservó.')
+    return redirect('admin_usuarios_view')
+
+
+def eliminar_usuario_permanente_view(request):
+    denied = _admin_access(request)
+    if denied:
+        return denied
+    if request.method == 'POST':
+        usuario = get_object_or_404(Usuario, pk=request.POST.get('record_id'))
+        if str(usuario.pk) == str(request.session.get('user_id')):
+            messages.error(request, 'No puedes eliminar la cuenta con la que iniciaste sesión.')
+            return redirect('admin_usuarios_view')
+        descripcion = f'{usuario.nombres} {usuario.apellidos}'
+        try:
+            usuario.delete()
+        except (ProtectedError, RestrictedError):
+            messages.error(
+                request,
+                'No se puede eliminar este usuario porque tiene registros asociados. Puedes desactivarlo para conservar su historial.',
+            )
+        else:
+            notificar_administradores(
+                request.session.get('user_id'),
+                f'Se eliminó permanentemente la cuenta de {descripcion}.',
+            )
+            messages.success(request, 'Usuario eliminado permanentemente.')
     return redirect('admin_usuarios_view')
