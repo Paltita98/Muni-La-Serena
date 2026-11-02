@@ -7,7 +7,7 @@ from django.contrib.auth.hashers import make_password
 from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models.deletion import ProtectedError, RestrictedError
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
@@ -20,7 +20,7 @@ from main.notifications import (
     notificar_usuarios_rol,
 )
 from .forms import CatalogoTipoForm, DelegacionForm, ItemMedicionForm, MetaForm, RolForm, UsuarioForm
-from .models import AtencionSocial, Auditoria, CatalogoTipo, Compromiso, Delegacion, ItemMedicion, Meta, Periodo, Rol, Usuario, Alerta
+from .models import AtencionSocial, Auditoria, CatalogoTipo, Compromiso, Delegacion, ItemMedicion, Meta, Periodo, PersonaUsuaria, Rol, Usuario, Alerta
 
 
 def _admin_access(request):
@@ -191,6 +191,28 @@ def admin_usuarios_view(request):
         'editar': True,
         'eliminar': True,
         'eliminar_texto': 'Desactivar',
+    }])
+
+
+def admin_solicitantes_view(request):
+    denied = _admin_access(request)
+    if denied:
+        return denied
+    solicitantes = PersonaUsuaria.objects.annotate(
+        atenciones_count=Count('atenciones', distinct=True),
+        compromisos_count=Count('compromisos', distinct=True),
+    ).order_by('nombre', 'referencia_anonima')
+    rows = [_listing_row(
+        [persona.referencia_anonima, persona.rut or '-', persona.nombre or 'Sin datos personales',
+         persona.telefono or '-', str(persona.atenciones_count), str(persona.compromisos_count),
+         persona.fecha_registro.strftime('%d/%m/%Y')],
+        f'{persona.referencia_anonima} {persona.rut or ""} {persona.nombre} {persona.telefono}',
+    ) for persona in solicitantes]
+    return _render_admin_listing(request, 'Solicitantes', 'solicitantes', [{
+        'titulo': 'Personas solicitantes registradas',
+        'columnas': ['Código', 'RUT', 'Nombre', 'Teléfono', 'Atenciones', 'Compromisos', 'Fecha de registro'],
+        'filas': rows,
+        'solo_lectura': True,
     }])
 
 

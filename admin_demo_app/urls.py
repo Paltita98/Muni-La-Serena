@@ -6,6 +6,7 @@ urlpatterns = [
     path('panel/', views.admin_demo_view, name='admin_demo'),
     path('panel/', views.admin_demo_view, name='admin_dashboard_view'),
     path('usuarios/', views.admin_usuarios_view, name='admin_usuarios_view'),
+    path('solicitantes/', views.admin_solicitantes_view, name='admin_solicitantes_view'),
     path('roles/', views.admin_roles_view, name='admin_roles_view'),
     path('items-metas/', views.admin_items_metas_view, name='admin_items_metas_view'),
     path('tipos-atencion/', views.admin_tipos_atencion_view, name='admin_tipos_atencion_view'),

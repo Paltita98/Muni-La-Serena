@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -9,9 +10,9 @@ from django.db.models.deletion import ProtectedError
 from django.test import RequestFactory, SimpleTestCase
 
 from .forms import DelegacionForm, MetaForm, UsuarioForm
-from .models import Alerta, Auditoria, Cargo, Compromiso, Delegacion, Periodo, Rol, Usuario
+from .models import Alerta, Auditoria, Cargo, Compromiso, Delegacion, Periodo, PersonaUsuaria, Rol, Usuario
 from .validators import validate_chilean_rut
-from .views import admin_dashboard_view, admin_usuarios_view, eliminar_delegacion_view, eliminar_usuario_permanente_view, gestionar_meta_view
+from .views import admin_dashboard_view, admin_solicitantes_view, admin_usuarios_view, eliminar_delegacion_view, eliminar_usuario_permanente_view, gestionar_meta_view
 
 
 class AdminDashboardTests(SimpleTestCase):
@@ -165,6 +166,48 @@ class UsuarioHardDeleteTests(SimpleTestCase):
         self.assertEqual(response, 'rendered')
         row = render.call_args.args[2]['secciones'][0]['filas'][0]
         self.assertEqual(row['permanent_delete_url'], '/administrador/usuarios/eliminar-permanente/')
+
+
+class AdminSolicitantesTests(SimpleTestCase):
+    def test_solicitantes_section_requires_admin_role(self):
+        request = RequestFactory().get('/administrador/solicitantes/')
+        request.session = {'user_role': 'FUNCIONARIO'}
+
+        with patch('admin_demo_app.views.redirect', return_value='login') as redirect:
+            response = admin_solicitantes_view(request)
+
+        self.assertEqual(response, 'login')
+        redirect.assert_called_once_with('main:login_view')
+
+    def test_solicitantes_list_reads_person_table_and_shows_contacts(self):
+        persona = SimpleNamespace(
+            pk=12,
+            referencia_anonima='CASO-012',
+            rut='19864005-0',
+            nombre='Ana Pérez',
+            telefono='+56912345678',
+            atenciones_count=2,
+            compromisos_count=1,
+            fecha_registro=datetime(2026, 11, 2),
+        )
+        manager = Mock()
+        manager.annotate.return_value.order_by.return_value = [persona]
+        request = RequestFactory().get('/administrador/solicitantes/')
+        request.session = {'user_role': 'ADMIN'}
+
+        with (
+            patch.object(PersonaUsuaria, 'objects', manager),
+            patch('admin_demo_app.views.render', return_value='rendered') as render,
+        ):
+            response = admin_solicitantes_view(request)
+
+        self.assertEqual(response, 'rendered')
+        manager.annotate.assert_called_once()
+        section = render.call_args.args[2]['secciones'][0]
+        self.assertEqual(section['titulo'], 'Personas solicitantes registradas')
+        self.assertEqual(section['filas'][0]['cells'][:6], [
+            'CASO-012', '19864005-0', 'Ana Pérez', '+56912345678', '2', '1',
+        ])
 
 
 class UserInputValidationTests(SimpleTestCase):
