@@ -7,11 +7,21 @@ from django.test import RequestFactory, SimpleTestCase
 from django.utils import timezone
 
 from admin_demo_app import views as admin_views
-from admin_demo_app.models import CodigoRecuperacion, Notificacion, Usuario
+from admin_demo_app.models import (
+    Actividad,
+    AtencionSocial,
+    CodigoRecuperacion,
+    Compromiso,
+    Evidencia,
+    Meta,
+    Notificacion,
+    Periodo,
+    Usuario,
+)
 from funcionario_demo_app import views as funcionario_views
 from .context_processors import user_notifications
 from .middleware import ForceInitialPasswordChangeMiddleware
-from .views import login_view, marcar_notificacion_leida, nueva_password, primer_cambio_password, recuperar_password
+from .views import login_view, marcar_notificacion_leida, nueva_password, primer_cambio_password, recuperar_password, role_dashboard_view
 
 
 class LoginSession(dict):
@@ -80,6 +90,12 @@ class LoginViewTests(SimpleTestCase):
         self.assertEqual(response.url, '/funcionario/verificador/evidencias/')
         self.assertEqual(session['user_role'], 'VERIFICADOR')
 
+    def test_coordinator_login_redirects_to_role_dashboard(self):
+        response, session = self._login('Coordinador')
+
+        self.assertEqual(response.url, '/panel-rol/')
+        self.assertEqual(session['user_role'], 'COORDINADOR')
+
     def test_login_accepts_institutional_identifier(self):
         user = SimpleNamespace(
             pk=29,
@@ -142,6 +158,95 @@ class LoginViewTests(SimpleTestCase):
         response = self.client.get('/cerrar-sesion/')
 
         self.assertEqual(response.status_code, 405)
+
+
+class CoordinatorDashboardTests(SimpleTestCase):
+    def test_coordinator_receives_cross_functional_metrics_and_goal_progress(self):
+        request = RequestFactory().get('/panel-rol/')
+        request.session = LoginSession(user_role='COORDINADOR', user_id=17)
+        user = SimpleNamespace(nombres='Ana', apellidos='Pérez')
+        active_period = SimpleNamespace(
+            fecha_inicio=timezone.localdate().replace(day=1),
+            fecha_termino=timezone.localdate(),
+        )
+        item = SimpleNamespace(
+            nombre='Casos sociales',
+            unidad='casos',
+            cargo=SimpleNamespace(nombre='Atención Social'),
+        )
+        meta = SimpleNamespace(
+            item_id=3,
+            item=item,
+            valor_objetivo=10,
+            ponderador_pct=40,
+        )
+
+        user_lookup = Mock()
+        user_lookup.first.return_value = user
+        active_staff = Mock()
+        active_staff.count.return_value = 12
+        user_manager = Mock()
+        user_manager.filter.side_effect = [user_lookup, active_staff]
+
+        period_manager = Mock()
+        period_manager.filter.return_value.order_by.return_value.first.return_value = active_period
+
+        activities_for_period = Mock()
+        activities_for_period.count.return_value = 8
+        activities_for_period.filter.return_value.count.return_value = 2
+        validated_activities = Mock()
+        validated_activities.values.return_value.annotate.return_value.values_list.return_value = [(3, 6)]
+        activity_manager = Mock()
+        activity_manager.filter.side_effect = [activities_for_period, validated_activities]
+
+        attention_manager = Mock()
+        attention_manager.filter.return_value.count.return_value = 5
+
+        open_commitments = Mock()
+        open_commitments.count.return_value = 4
+        overdue = Mock(count=Mock(return_value=1))
+        due_soon = Mock(count=Mock(return_value=2))
+        open_commitments.filter.side_effect = [overdue, due_soon]
+        commitment_manager = Mock()
+        commitment_manager.all.return_value.exclude.return_value = open_commitments
+
+        evidence_manager = Mock()
+        evidence_manager.filter.return_value.count.return_value = 3
+
+        metas_query = Mock()
+        metas_query.select_related.return_value.order_by.return_value = [meta]
+        meta_manager = Mock()
+        meta_manager.filter.return_value = metas_query
+
+        with (
+            patch.object(Usuario, 'objects', user_manager),
+            patch.object(Periodo, 'objects', period_manager),
+            patch.object(Actividad, 'objects', activity_manager),
+            patch.object(AtencionSocial, 'objects', attention_manager),
+            patch.object(Compromiso, 'objects', commitment_manager),
+            patch.object(Evidencia, 'objects', evidence_manager),
+            patch.object(Meta, 'objects', meta_manager),
+            patch('main.views.render', return_value='rendered') as render,
+        ):
+            response = role_dashboard_view(request)
+
+        self.assertEqual(response, 'rendered')
+        self.assertEqual(render.call_args.args[1], 'main/coordinador_dashboard.html')
+        context = render.call_args.args[2]
+        self.assertEqual(context['active_staff'], 12)
+        self.assertEqual(context['activity_total'], 8)
+        self.assertEqual(context['attention_total'], 5)
+        self.assertEqual(context['commitment_overdue'], 1)
+        self.assertEqual(context['evidence_pending'], 3)
+        self.assertEqual(context['indicator_rows'][0]['progress_label'], '60%')
+
+    def test_other_roles_cannot_open_coordinator_dashboard(self):
+        request = RequestFactory().get('/panel-rol/')
+        request.session = LoginSession(user_role='FUNCIONARIO', user_id=17)
+
+        response = role_dashboard_view(request)
+
+        self.assertEqual(response.url, '/login/')
 
 
 class FuncionarioPanelTests(SimpleTestCase):

@@ -13,8 +13,19 @@ from django.utils.crypto import constant_time_compare
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.db.models import Count
 
-from admin_demo_app.models import CodigoRecuperacion, Notificacion, Usuario
+from admin_demo_app.models import (
+    Actividad,
+    AtencionSocial,
+    CodigoRecuperacion,
+    Compromiso,
+    Evidencia,
+    Meta,
+    Notificacion,
+    Periodo,
+    Usuario,
+)
 
 # --- Vistas Originales ---
 def funcionario_demo(request):
@@ -80,9 +91,9 @@ def login_view(request):
                     'ADMIN': 'admin_dashboard_view',
                     'FUNCIONARIO': 'funcionario_demo_view',
                     'VERIFICADOR': 'verificador_evidencias_view',
-                    'COORDINADOR': 'role_dashboard_view',
-                    'DELEGADO': 'role_dashboard_view',
-                    'CONSULTA': 'role_dashboard_view',
+                    'COORDINADOR': 'main:role_dashboard_view',
+                    'DELEGADO': 'main:role_dashboard_view',
+                    'CONSULTA': 'main:role_dashboard_view',
                 }
                 destination = destinations[role]
                 return redirect(destination)
@@ -124,9 +135,9 @@ def primer_cambio_password(request):
                     'ADMIN': 'admin_dashboard_view',
                     'FUNCIONARIO': 'funcionario_demo_view',
                     'VERIFICADOR': 'verificador_evidencias_view',
-                    'COORDINADOR': 'role_dashboard_view',
-                    'DELEGADO': 'role_dashboard_view',
-                    'CONSULTA': 'role_dashboard_view',
+                    'COORDINADOR': 'main:role_dashboard_view',
+                    'DELEGADO': 'main:role_dashboard_view',
+                    'CONSULTA': 'main:role_dashboard_view',
                 }
                 return redirect(destinations.get(request.session.get('user_role'), 'main:login_view'))
 
@@ -137,7 +148,117 @@ def role_dashboard_view(request):
     role = request.session.get('user_role')
     if role not in {'COORDINADOR', 'DELEGADO', 'CONSULTA'}:
         return redirect('main:login_view')
+    if role == 'COORDINADOR':
+        return _coordinator_dashboard(request)
     return render(request, 'main/role_dashboard.html', {'role': role})
+
+
+def _coordinator_dashboard(request):
+    user = Usuario.objects.filter(
+        pk=request.session.get('user_id'),
+        estado='activo',
+    ).first()
+    if user is None:
+        return redirect('main:login_view')
+
+    today = timezone.localdate()
+    period = Periodo.objects.filter(estado='abierto').order_by('-fecha_inicio').first()
+    period_start = period.fecha_inicio if period else today.replace(day=1)
+    period_end = period.fecha_termino if period else today
+    range_label = (
+        f'{period_start:%d/%m/%Y} al {period_end:%d/%m/%Y}'
+        if period else f'Mes actual, hasta {today:%d/%m/%Y}'
+    )
+
+    activities = Actividad.objects.filter(fecha_actividad__range=(period_start, period_end))
+    attentions = AtencionSocial.objects.filter(fecha__range=(period_start, period_end))
+    commitments = Compromiso.objects.all()
+    open_commitments = commitments.exclude(estado='realizado')
+    overdue_commitments = open_commitments.filter(fecha_comprometida__lt=today).count()
+    due_soon_commitments = open_commitments.filter(
+        fecha_comprometida__range=(today, today + timedelta(days=7)),
+    ).count()
+    pending_activities = activities.filter(estado__in=('pendiente', 'en_correccion')).count()
+    pending_evidence = Evidencia.objects.filter(
+        actividad__fecha_actividad__range=(period_start, period_end),
+        estado='pendiente',
+    ).count()
+
+    metas = list(
+        Meta.objects.filter(periodo=period, vigente=True)
+        .select_related('item', 'item__cargo', 'cargo', 'funcionario')
+        .order_by('item__nombre', 'funcionario__apellidos')
+    ) if period else []
+    validated_counts = dict(
+        Actividad.objects.filter(
+            periodo=period,
+            estado='validada',
+        ).values('item_id').annotate(total=Count('pk')).values_list('item_id', 'total')
+    ) if period else {}
+
+    indicator_rows = []
+    seen_items = set()
+    for meta in metas:
+        if meta.item_id in seen_items:
+            continue
+        seen_items.add(meta.item_id)
+        actual = validated_counts.get(meta.item_id, 0)
+        target = float(meta.valor_objetivo)
+        progress = round(actual * 100 / target, 1) if target else 0
+        indicator_rows.append({
+            'name': meta.item.nombre,
+            'cargo': meta.item.cargo.nombre,
+            'actual': actual,
+            'target': target,
+            'unit': meta.item.unidad or 'registros',
+            'weight': meta.ponderador_pct,
+            'progress': min(progress, 100),
+            'progress_label': f'{progress:g}%',
+        })
+
+    alerts = []
+    if overdue_commitments:
+        alerts.append({
+            'title': 'Compromisos vencidos',
+            'detail': f'{overdue_commitments} compromiso(s) siguen abiertos después de su fecha comprometida.',
+            'tone': 'urgent',
+        })
+    if pending_activities:
+        alerts.append({
+            'title': 'Actividades por revisar',
+            'detail': f'{pending_activities} actividad(es) están pendientes o en corrección.',
+            'tone': 'attention',
+        })
+    if pending_evidence:
+        alerts.append({
+            'title': 'Evidencias pendientes',
+            'detail': f'{pending_evidence} evidencia(s) esperan revisión.',
+            'tone': 'attention',
+        })
+    if not alerts:
+        alerts.append({
+            'title': 'Sin alertas operativas',
+            'detail': 'No hay pendientes de revisión ni compromisos vencidos en los registros consultados.',
+            'tone': 'clear',
+        })
+
+    return render(request, 'main/coordinador_dashboard.html', {
+        'role': 'COORDINADOR',
+        'user': user,
+        'period': period,
+        'range_label': range_label,
+        'today': today,
+        'active_staff': Usuario.objects.filter(estado='activo').count(),
+        'activity_total': activities.count(),
+        'activity_pending': pending_activities,
+        'attention_total': attentions.count(),
+        'commitment_open': open_commitments.count(),
+        'commitment_overdue': overdue_commitments,
+        'commitment_due_soon': due_soon_commitments,
+        'evidence_pending': pending_evidence,
+        'indicator_rows': indicator_rows,
+        'alerts': alerts,
+    })
 
 
 @require_POST

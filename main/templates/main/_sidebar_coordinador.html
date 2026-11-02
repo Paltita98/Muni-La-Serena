@@ -1,0 +1,28 @@
+{% load static %}
+<aside class="sidebar flex w-64 shrink-0 flex-col text-white">
+    <div class="flex min-h-20 shrink-0 items-center gap-3 border-b border-white/15 px-4 py-3">
+        <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo">
+        <div>
+            <p class="text-xs font-bold uppercase">Coordinación</p>
+            <p class="mt-0.5 text-xs text-white/65">Operación transversal</p>
+        </div>
+    </div>
+    <nav class="flex-1 space-y-1 px-3 py-5" aria-label="Navegación de coordinación">
+        <a href="#resumen" class="flex items-center gap-3 rounded px-3 py-2.5 text-sm text-white hover:bg-white/10">
+            <span class="w-5 text-center" aria-hidden="true">▦</span> Resumen
+        </a>
+        <a href="#operacion" class="flex items-center gap-3 rounded px-3 py-2.5 text-sm text-white hover:bg-white/10">
+            <span class="w-5 text-center" aria-hidden="true">↗</span> Supervisión transversal
+        </a>
+        <a href="#indicadores" class="flex items-center gap-3 rounded px-3 py-2.5 text-sm text-white hover:bg-white/10">
+            <span class="w-5 text-center" aria-hidden="true">▤</span> Indicadores
+        </a>
+        <a href="#criterios" class="flex items-center gap-3 rounded px-3 py-2.5 text-sm text-white hover:bg-white/10">
+            <span class="w-5 text-center" aria-hidden="true">!</span> Criterios por resolver
+        </a>
+        <a href="#mejoras" class="flex items-center gap-3 rounded px-3 py-2.5 text-sm text-white hover:bg-white/10">
+            <span class="w-5 text-center" aria-hidden="true">+</span> Coordinación de mejoras
+        </a>
+    </nav>
+    {% include 'main/_logout_button.html' %}
+</aside>
