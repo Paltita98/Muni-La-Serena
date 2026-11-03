@@ -88,7 +88,7 @@ def delegado_demo_view(request):
     return render(request, 'funcionario_demo_app/delegado_demo.html', {
         'delegado': delegado,
         'delegacion': delegacion,
-        'compromisos': compromisos[:10],
+        'compromisos': compromisos[:3],
         'compromisos_total': compromisos.count(),
         'compromisos_en_proceso': compromisos.filter(estado='en_proceso').count(),
         'compromisos_revision': compromisos.filter(estado='revision').count(),
@@ -96,11 +96,74 @@ def delegado_demo_view(request):
         'compromisos_vencidos': compromisos_pendientes.filter(fecha_comprometida__lt=fecha_actual).count(),
         'equipo': equipo[:5],
         'equipo_total': equipo.count(),
-        'actividades_recientes': actividades[:5],
+        'actividades_recientes': actividades[:3],
         'actividades_total': actividades.count(),
-        'atenciones_recientes': atenciones[:5],
+        'atenciones_recientes': atenciones[:3],
         'atenciones_total': atenciones.count(),
         'fecha_actual': fecha_actual,
+    })
+
+
+def delegado_actividades_view(request):
+    delegado = _delegado_actual(request)
+    if delegado is None:
+        return redirect('main:login_view')
+    delegacion = _delegacion_del_delegado(delegado)
+    actividades = (
+        Actividad.objects.filter(funcionario__delegacion=delegacion)
+        .select_related('funcionario', 'item')
+        .order_by('-fecha_actividad')
+        if delegacion else Actividad.objects.none()
+    )
+    return render(request, 'funcionario_demo_app/delegado_actividades.html', {
+        'delegado': delegado,
+        'delegacion': delegacion,
+        'actividades': actividades,
+        'active_section': 'actividades',
+        'page_title': 'Actividades de la delegación',
+        'page_description': 'Consulta las actividades registradas por el equipo de tu delegación.',
+    })
+
+
+def delegado_atenciones_view(request):
+    delegado = _delegado_actual(request)
+    if delegado is None:
+        return redirect('main:login_view')
+    delegacion = _delegacion_del_delegado(delegado)
+    atenciones = (
+        AtencionSocial.objects.filter(funcionario__delegacion=delegacion)
+        .select_related('persona', 'catalogo_tipo', 'catalogo_subtipo', 'funcionario')
+        .order_by('-fecha', '-id')
+        if delegacion else AtencionSocial.objects.none()
+    )
+    return render(request, 'funcionario_demo_app/delegado_atenciones.html', {
+        'delegado': delegado,
+        'delegacion': delegacion,
+        'atenciones': atenciones,
+        'active_section': 'atenciones',
+        'page_title': 'Atención Social',
+        'page_description': 'Revisa las gestiones sociales registradas en tu delegación.',
+    })
+
+
+def delegado_equipo_view(request):
+    delegado = _delegado_actual(request)
+    if delegado is None:
+        return redirect('main:login_view')
+    delegacion = _delegacion_del_delegado(delegado)
+    equipo = (
+        Usuario.objects.filter(delegacion=delegacion, estado='activo')
+        .select_related('cargo')
+        .order_by('apellidos', 'nombres')
+        if delegacion else Usuario.objects.none()
+    )
+    return render(request, 'funcionario_demo_app/delegado_equipo.html', {
+        'delegado': delegado,
+        'delegacion': delegacion,
+        'equipo': equipo,
+        'active_section': 'equipo',
+        'page_title': 'Equipo activo',
+        'page_description': 'Personas activas asignadas a tu delegación.',
     })
 
 
@@ -119,6 +182,7 @@ def delegado_compromisos_view(request):
         'delegado': delegado,
         'delegacion': delegacion,
         'compromisos': compromisos,
+        'active_section': 'compromisos',
     })
 
 

@@ -10,6 +10,7 @@ from admin_demo_app.models import (
     Compromiso,
     Delegacion,
     ItemMedicion,
+    OrganizacionJJVV,
     Periodo,
     PersonaUsuaria,
     Usuario,
@@ -94,6 +95,57 @@ class ImageEvidenceField(forms.FileField):
 
 class EvidenciaForm(forms.Form):
     archivo = ImageEvidenceField(label="Imagen de evidencia")
+
+
+class OrganizacionJJVVForm(forms.ModelForm):
+    class Meta:
+        model = OrganizacionJJVV
+        fields = (
+            'organizaciones',
+            'domicilio_legal',
+            'territorio_deleg',
+            'socios_activos',
+            'fecha_constitucion',
+            'n_reg_pj',
+            'fecha_inscripcion_reg',
+            'reg_dir_n',
+        )
+        labels = {
+            'organizaciones': 'Nombre de la organización',
+            'domicilio_legal': 'Domicilio legal',
+            'territorio_deleg': 'Territorio o delegación',
+            'socios_activos': 'Socios activos',
+            'fecha_constitucion': 'Fecha de constitución',
+            'n_reg_pj': 'Número de registro de personalidad jurídica',
+            'fecha_inscripcion_reg': 'Fecha de inscripción en el registro',
+            'reg_dir_n': 'Número de registro de directorio',
+        }
+        widgets = {
+            'organizaciones': forms.TextInput(attrs={'autocomplete': 'organization'}),
+            'domicilio_legal': forms.TextInput(),
+            'territorio_deleg': forms.TextInput(),
+            'socios_activos': forms.NumberInput(attrs={'min': 0, 'step': 1}),
+            'fecha_constitucion': forms.DateInput(attrs={'type': 'date'}),
+            'n_reg_pj': forms.TextInput(),
+            'fecha_inscripcion_reg': forms.DateInput(attrs={'type': 'date'}),
+            'reg_dir_n': forms.TextInput(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs['class'] = (
+                'w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm '
+                'focus:border-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-100'
+            )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        fecha_constitucion = cleaned_data.get('fecha_constitucion')
+        fecha_inscripcion = cleaned_data.get('fecha_inscripcion_reg')
+        if fecha_constitucion and fecha_inscripcion and fecha_inscripcion < fecha_constitucion:
+            self.add_error('fecha_inscripcion_reg', 'La inscripción no puede ser anterior a la constitución.')
+        return cleaned_data
 
 
 class VerificacionEvidenciaForm(forms.Form):

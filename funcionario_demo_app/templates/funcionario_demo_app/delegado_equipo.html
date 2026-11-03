@@ -1,0 +1,16 @@
+{% extends 'funcionario_demo_app/delegado_seccion_base.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block section_content %}
+    <p class="text-sm text-gray-500">{{ equipo|length }} integrante{{ equipo|length|pluralize:"s" }} activo{{ equipo|length|pluralize:"s" }} en la delegación.</p>
+    <section class="overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <div class="divide-y divide-gray-100">
+            {% for persona in equipo %}
+                <article class="flex items-center gap-4 px-5 py-4">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-sm font-bold text-gray-700">{{ persona.nombres|first|upper }}{{ persona.apellidos|first|upper }}</div>
+                    <div class="min-w-0"><p class="font-semibold text-gray-900">{{ persona.nombres }} {{ persona.apellidos }}</p><p class="mt-1 text-sm text-gray-500">{{ persona.cargo|default:'Sin cargo asignado' }}</p></div>
+                    <span class="ml-auto text-xs font-medium text-teal-800">Activo</span>
+                </article>
+            {% empty %}<p class="px-5 py-10 text-center text-gray-500">No hay integrantes activos en esta delegación.</p>{% endfor %}
+        </div>
+    </section>
+{% endblock %}

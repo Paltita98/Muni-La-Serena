@@ -1,0 +1,37 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ page_title }} - SGR{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body class="bg-gray-50 text-gray-800 page-shell">
+    <div class="flex h-screen overflow-hidden">
+        {% include 'funcionario_demo_app/_delegado_sidebar.html' %}
+        <main class="min-w-0 flex-1 flex flex-col h-screen overflow-y-auto">
+            <header class="min-h-16 bg-white shadow-sm flex items-center justify-between gap-4 px-5 md:px-8 py-3 border-b border-gray-100">
+                <div>
+                    <p class="text-xs text-gray-500">Gestión territorial / {{ delegacion.nombre|default:'Delegación' }}</p>
+                    <h1 class="mt-1 text-lg font-bold text-gray-900">{{ page_title }}</h1>
+                </div>
+                <div class="flex items-center border-l border-gray-200 pl-4 md:pl-6 shrink-0">
+                    <div class="hidden sm:block text-right">
+                        <p class="text-sm font-semibold text-gray-900">{{ delegado.nombres }} {{ delegado.apellidos }}</p>
+                        <p class="text-xs text-gray-500">Delegado</p>
+                    </div>
+                </div>
+            </header>
+            <div class="p-5 md:p-8 space-y-5">
+                <section>
+                    <h2 class="text-xl font-bold text-gray-900">{{ page_title }}</h2>
+                    <p class="mt-1 text-sm text-gray-500">{{ page_description }}</p>
+                </section>
+                {% block section_content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+</body>
+</html>

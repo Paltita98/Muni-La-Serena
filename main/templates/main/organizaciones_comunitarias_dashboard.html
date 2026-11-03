@@ -22,7 +22,7 @@
                 <a href="#inicio" class="flex items-center gap-3 px-3 py-3 rounded-md bg-emerald-700 text-white font-semibold">
                     <span aria-hidden="true">⌂</span> Resumen
                 </a>
-                <a href="#registro" class="flex items-center gap-3 px-3 py-3 rounded-md text-slate-200 hover:bg-white/10">▤ <span>Registro OROC</span></a>
+                <a href="{% url 'main:organizaciones_jjvv_list_view' %}" class="flex items-center gap-3 px-3 py-3 rounded-md text-slate-200 hover:bg-white/10">▤ <span>Registro OROC</span></a>
                 <a href="#acompanamiento" class="flex items-center gap-3 px-3 py-3 rounded-md text-slate-200 hover:bg-white/10">♧ <span>Asesoría y formación</span></a>
                 <a href="#territorio" class="flex items-center gap-3 px-3 py-3 rounded-md text-slate-200 hover:bg-white/10">⌖ <span>Trabajo territorial</span></a>
                 <a href="#convocatorias" class="flex items-center gap-3 px-3 py-3 rounded-md text-slate-200 hover:bg-white/10">▦ <span>Convocatorias</span></a>
@@ -52,25 +52,25 @@
                         <p class="text-sm font-semibold text-emerald-200">OROC <span class="mx-2 text-emerald-500">/</span> Gestión comunitaria</p>
                         <h1 class="mt-2 text-2xl sm:text-3xl font-bold">Organizaciones Comunitarias</h1>
                         <p class="mt-3 text-sm sm:text-base leading-6 text-emerald-50">Fortalecimiento, legalización y acompañamiento de Juntas de Vecinos y agrupaciones funcionales en los territorios costeros.</p>
-                        <a href="#registro" class="mt-5 inline-flex items-center gap-2 rounded-md bg-white px-4 py-2.5 text-sm font-semibold text-emerald-950 hover:bg-emerald-50">Ir al registro <span aria-hidden="true">→</span></a>
+                        <a href="{% url 'main:nueva_organizacion_jjvv_view' %}" class="mt-5 inline-flex items-center gap-2 rounded-md bg-white px-4 py-2.5 text-sm font-semibold text-emerald-950 hover:bg-emerald-50">Registrar organización <span aria-hidden="true">→</span></a>
                     </div>
                 </section>
 
                 <section aria-label="Indicadores del registro" class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                     <article class="bg-white border border-gray-200 border-t-4 border-t-emerald-700 rounded-md p-4 sm:p-5">
-                        <p class="text-sm font-medium text-gray-600">Organizaciones vigentes</p>
-                        <p class="mt-3 text-xl font-bold text-gray-900">Sin datos</p>
-                        <p class="mt-1 text-xs text-gray-500">Indicador sujeto a conexión con OROC</p>
+                        <p class="text-sm font-medium text-gray-600">Organizaciones registradas</p>
+                        <p class="mt-3 text-3xl font-bold text-gray-900">{{ organizaciones_total }}</p>
+                        <p class="mt-1 text-xs text-gray-500">En el registro comunitario</p>
                     </article>
                     <article class="bg-white border border-gray-200 border-t-4 border-t-amber-500 rounded-md p-4 sm:p-5">
-                        <p class="text-sm font-medium text-gray-600">Vigencias por revisar</p>
-                        <p class="mt-3 text-xl font-bold text-gray-900">Sin datos</p>
-                        <p class="mt-1 text-xs text-gray-500">Alertas pendientes de integración</p>
+                        <p class="text-sm font-medium text-gray-600">Socios activos registrados</p>
+                        <p class="mt-3 text-3xl font-bold text-gray-900">{{ socios_activos_total }}</p>
+                        <p class="mt-1 text-xs text-gray-500">Suma informada por las organizaciones</p>
                     </article>
                     <article class="bg-white border border-gray-200 border-t-4 border-t-sky-700 rounded-md p-4 sm:p-5">
-                        <p class="text-sm font-medium text-gray-600">Necesidades territoriales</p>
-                        <p class="mt-3 text-xl font-bold text-gray-900">Sin datos</p>
-                        <p class="mt-1 text-xs text-gray-500">Requerimientos levantados en visitas</p>
+                        <p class="text-sm font-medium text-gray-600">Territorios representados</p>
+                        <p class="mt-3 text-3xl font-bold text-gray-900">{{ territorios_total }}</p>
+                        <p class="mt-1 text-xs text-gray-500">Con organizaciones registradas</p>
                     </article>
                 </section>
 
@@ -96,6 +96,28 @@
                                 <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sm font-bold text-sky-900">03</span>
                                 <span><strong class="block text-sm text-gray-900">Cierre de organizaciones inactivas</strong><span class="mt-1 block text-sm text-gray-600">Asesoría en los pasos administrativos para regularizar su situación.</span></span>
                             </a>
+                        </div>
+                        <div class="mt-4 bg-white border border-gray-200 rounded-md overflow-hidden">
+                            <div class="px-4 py-3 border-b border-gray-100 flex flex-wrap justify-between items-center gap-2">
+                                <div>
+                                    <h3 class="text-sm font-bold text-gray-900">Organizaciones recientes</h3>
+                                    <p class="text-xs text-gray-500 mt-1">{{ organizaciones_total }} en el registro</p>
+                                </div>
+                                <a href="{% url 'main:organizaciones_jjvv_list_view' %}" class="text-sm font-semibold text-emerald-800 hover:text-emerald-950">Ver registro</a>
+                            </div>
+                            <div class="divide-y divide-gray-100">
+                                {% for organizacion in organizaciones_recientes %}
+                                    <div class="px-4 py-3 flex flex-wrap justify-between items-center gap-2">
+                                        <div class="min-w-0">
+                                            <p class="text-sm font-semibold text-gray-900 truncate">{{ organizacion.organizaciones }}</p>
+                                            <p class="text-xs text-gray-500 mt-1">{{ organizacion.territorio_deleg|default:"Territorio no indicado" }} · {{ organizacion.socios_activos|default:"0" }} socios</p>
+                                        </div>
+                                        <a href="{% url 'main:editar_organizacion_jjvv_view' organizacion.pk %}" class="text-xs font-semibold text-emerald-800 hover:text-emerald-950">Editar</a>
+                                    </div>
+                                {% empty %}
+                                    <div class="px-4 py-5 text-sm text-gray-500">Todavía no hay organizaciones registradas. <a class="font-semibold text-emerald-800" href="{% url 'main:nueva_organizacion_jjvv_view' %}">Agregar la primera</a>.</div>
+                                {% endfor %}
+                            </div>
                         </div>
                     </div>
 

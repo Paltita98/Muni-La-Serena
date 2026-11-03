@@ -1,0 +1,55 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if organizacion %}Editar{% else %}Nueva{% endif %} organización - OROC</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body class="page-shell bg-gray-50 text-gray-800">
+    <div class="flex h-screen overflow-hidden">
+        <aside class="sidebar w-56 sm:w-64 shrink-0 text-white flex flex-col">
+            <div class="min-h-16 flex items-center px-4 border-b border-white/15">
+                <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo">
+                <div class="ml-3 min-w-0"><p class="font-bold truncate">{{ request.session.user_name }}</p><p class="text-xs text-slate-300">Organizaciones Comunitarias</p></div>
+            </div>
+            <nav aria-label="Navegación principal" class="flex-1 px-3 py-5 space-y-1">
+                <a href="{% url 'main:organizaciones_comunitarias_dashboard_view' %}" class="flex gap-3 px-3 py-3 rounded-md text-slate-200 hover:bg-white/10">⌂ <span>Resumen</span></a>
+                <a href="{% url 'main:organizaciones_jjvv_list_view' %}" class="flex gap-3 px-3 py-3 rounded-md bg-emerald-700 text-white font-semibold">▤ <span>Registro OROC</span></a>
+            </nav>
+            <div class="px-4 py-4 border-t border-white/15"><p class="text-xs uppercase tracking-wide text-slate-400">Marco normativo</p><p class="mt-1 text-sm font-medium">Leyes 19.418 y 20.500</p></div>
+            {% include 'main/_logout_button.html' %}
+        </aside>
+        <main class="flex-1 min-w-0 h-screen overflow-y-auto">
+            <header class="min-h-16 bg-white border-b border-gray-200 flex items-center gap-4 px-4 sm:px-7 py-3">
+                <div><p class="text-xs text-gray-500">OROC <span class="mx-1">/</span> <a href="{% url 'main:organizaciones_jjvv_list_view' %}" class="hover:underline">Organizaciones</a> <span class="mx-1">/</span> {% if organizacion %}Editar{% else %}Nuevo registro{% endif %}</p><p class="mt-1 text-sm font-semibold text-gray-900">{% if organizacion %}Editar organización{% else %}Registrar organización{% endif %}</p></div>
+                <div class="ml-auto shrink-0">{% include 'main/_notification_bell.html' %}</div>
+            </header>
+            <div class="p-4 sm:p-7 max-w-4xl mx-auto space-y-5">
+                <section><p class="text-sm font-semibold text-emerald-800">Registro OROC</p><h1 class="mt-1 text-2xl font-bold text-gray-900">{% if organizacion %}{{ organizacion.organizaciones }}{% else %}Nueva organización comunitaria{% endif %}</h1><p class="mt-1 text-sm text-gray-500">Ingresa los antecedentes disponibles de la organización.</p></section>
+                <form method="post" class="bg-white border border-gray-200 rounded-md p-4 sm:p-6 space-y-5">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}<div role="alert" class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ form.non_field_errors }}</div>{% endif %}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {% for field in form %}
+                            <div class="{% if field.name == 'organizaciones' or field.name == 'domicilio_legal' %}sm:col-span-2{% endif %}">
+                                <label for="{{ field.id_for_label }}" class="mb-1.5 block text-sm font-semibold text-gray-800">{{ field.label }}{% if field.field.required %}<span class="text-red-700"> *</span>{% endif %}</label>
+                                {{ field }}
+                                {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                                {% for error in field.errors %}<p class="mt-1 text-xs font-medium text-red-700">{{ error }}</p>{% endfor %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 border-t border-gray-100 pt-4">
+                        <a href="{% url 'main:organizaciones_jjvv_list_view' %}" class="rounded-md border border-gray-300 px-4 py-2.5 text-center text-sm font-semibold text-gray-700 hover:bg-gray-50">Cancelar</a>
+                        <button type="submit" class="rounded-md bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900">{% if organizacion %}Guardar cambios{% else %}Registrar organización{% endif %}</button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+    {% include 'main/_sweetalerts.html' %}
+</body>
+</html>

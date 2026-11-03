@@ -449,3 +449,15 @@ CREATE TABLE auditoria (
 
 CREATE INDEX idx_auditoria_entidad ON auditoria (entidad, id_entidad);
 CREATE INDEX idx_auditoria_usuario_fecha ON auditoria (id_usuario, fecha);
+
+CREATE TABLE organizaciones_jjvv (
+    id SERIAL PRIMARY KEY, -- O usar AUTO_INCREMENT en MySQL
+    organizaciones VARCHAR(255),
+    domicilio_legal VARCHAR(255),
+    territorio_deleg VARCHAR(100),
+    socios_activos INT,
+    fecha_constitucion DATE,
+    n_reg_pj VARCHAR(50),
+    fecha_inscripcion_reg DATE,
+    reg_dir_n VARCHAR(50)
+);

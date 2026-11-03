@@ -1,0 +1,159 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGR - Coordinación transversal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body class="page-shell bg-gray-50 text-gray-800">
+    <div class="flex h-screen overflow-hidden">
+        {% include 'main/_sidebar_coordinador.html' %}
+        <main class="min-w-0 flex-1 overflow-y-auto">
+            <header class="sticky top-0 z-10 flex min-h-16 flex-wrap items-center gap-4 border-b border-gray-200 bg-white px-5 py-3 md:px-8">
+                <div>
+                    <p class="text-xs font-semibold uppercase text-red-800">Sistema de Gestión y Resultados</p>
+                    <p class="mt-0.5 text-sm font-medium text-gray-900">Coordinador · {{ user.nombres }} {{ user.apellidos }}</p>
+                </div>
+                <div class="ml-auto flex items-center gap-4">
+                    <span class="hidden text-sm text-gray-500 sm:inline">{{ range_label }}</span>
+                    {% include 'main/_notification_bell.html' %}
+                </div>
+            </header>
+
+            <div class="mx-auto max-w-screen-2xl space-y-7 p-5 md:p-8">
+                <section id="resumen" class="flex flex-wrap items-end justify-between gap-4 border-b border-gray-200 pb-5">
+                    <div>
+                        <p class="text-sm font-semibold text-red-800">Centro de coordinación</p>
+                        <h1 class="mt-1 text-2xl font-bold text-gray-950">Operación transversal</h1>
+                        <p class="mt-2 max-w-3xl text-sm text-gray-600">Supervisa la actividad municipal, revisa el avance de metas y prioriza criterios y mejoras entre áreas.</p>
+                    </div>
+                    <div class="rounded border border-gray-200 bg-white px-3 py-2 text-sm">
+                        <span class="text-gray-500">Período de medición</span>
+                        <p class="mt-0.5 font-semibold text-gray-900">{% if period %}{{ period.fecha_inicio|date:'d/m/Y' }} – {{ period.fecha_termino|date:'d/m/Y' }}{% else %}Mes actual{% endif %}</p>
+                    </div>
+                </section>
+
+                <section id="operacion" aria-labelledby="operation-heading">
+                    <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
+                        <div>
+                            <h2 id="operation-heading" class="text-lg font-bold text-gray-950">Supervisión transversal</h2>
+                            <p class="mt-1 text-sm text-gray-500">Volumen y pendientes del período consultado.</p>
+                        </div>
+                        <span class="text-xs text-gray-500">Actualizado {{ today|date:'d/m/Y' }}</span>
+                    </div>
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        <article class="rounded border border-gray-200 border-t-2 border-t-red-800 bg-white p-4">
+                            <p class="text-sm text-gray-500">Funcionarios activos</p>
+                            <p class="mt-2 text-3xl font-bold text-gray-950">{{ active_staff }}</p>
+                            <p class="mt-1 text-xs text-gray-500">Cobertura de la operación</p>
+                        </article>
+                        <article class="rounded border border-gray-200 border-t-2 border-t-teal-700 bg-white p-4">
+                            <p class="text-sm text-gray-500">Actividades registradas</p>
+                            <p class="mt-2 text-3xl font-bold text-gray-950">{{ activity_total }}</p>
+                            <p class="mt-1 text-xs text-gray-500">{{ activity_pending }} pendientes o en corrección</p>
+                        </article>
+                        <article class="rounded border border-gray-200 border-t-2 border-t-blue-700 bg-white p-4">
+                            <p class="text-sm text-gray-500">Atenciones sociales</p>
+                            <p class="mt-2 text-3xl font-bold text-gray-950">{{ attention_total }}</p>
+                            <p class="mt-1 text-xs text-gray-500">Registradas en el período</p>
+                        </article>
+                        <article class="rounded border border-gray-200 border-t-2 {% if commitment_overdue %}border-t-red-700{% else %}border-t-amber-600{% endif %} bg-white p-4">
+                            <p class="text-sm text-gray-500">Compromisos abiertos</p>
+                            <p class="mt-2 text-3xl font-bold text-gray-950">{{ commitment_open }}</p>
+                            <p class="mt-1 text-xs {% if commitment_overdue %}font-semibold text-red-700{% else %}text-gray-500{% endif %}">{{ commitment_overdue }} vencidos · {{ commitment_due_soon }} vencen en 7 días</p>
+                        </article>
+                    </div>
+                </section>
+
+                <section id="indicadores" class="border-y border-gray-200 py-6" aria-labelledby="indicators-heading">
+                    <div class="mb-4 flex flex-wrap items-end justify-between gap-2">
+                        <div>
+                            <h2 id="indicators-heading" class="text-lg font-bold text-gray-950">Indicadores de gestión</h2>
+                            <p class="mt-1 text-sm text-gray-500">Avance calculado con actividades validadas frente a metas vigentes.</p>
+                        </div>
+                        <span class="text-sm text-gray-500">{{ indicator_rows|length }} indicadores</span>
+                    </div>
+                    <div class="overflow-x-auto rounded border border-gray-200 bg-white">
+                        <table class="w-full min-w-[700px] text-left text-sm">
+                            <thead class="bg-gray-100 text-xs uppercase text-gray-600">
+                                <tr>
+                                    <th class="px-4 py-3 font-semibold">Ítem / área</th>
+                                    <th class="px-4 py-3 font-semibold">Avance</th>
+                                    <th class="px-4 py-3 font-semibold">Meta del período</th>
+                                    <th class="px-4 py-3 font-semibold">Ponderación</th>
+                                    <th class="px-4 py-3 font-semibold">Cumplimiento</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                {% for indicator in indicator_rows %}
+                                    <tr>
+                                        <td class="px-4 py-3">
+                                            <p class="font-semibold text-gray-900">{{ indicator.name }}</p>
+                                            <p class="mt-0.5 text-xs text-gray-500">{{ indicator.cargo }}</p>
+                                        </td>
+                                        <td class="px-4 py-3 text-gray-700">{{ indicator.actual }} {{ indicator.unit }}</td>
+                                        <td class="px-4 py-3 text-gray-700">{{ indicator.target|floatformat:'-2' }} {{ indicator.unit }}</td>
+                                        <td class="px-4 py-3 text-gray-700">{{ indicator.weight|floatformat:'-2' }}%</td>
+                                        <td class="px-4 py-3">
+                                            <div class="flex min-w-32 items-center gap-2">
+                                                <div class="h-2 flex-1 overflow-hidden rounded-full bg-gray-200">
+                                                    <div class="h-full rounded-full {% if indicator.progress >= 100 %}bg-teal-700{% elif indicator.progress >= 70 %}bg-amber-500{% else %}bg-red-700{% endif %}" style="width: {{ indicator.progress }}%"></div>
+                                                </div>
+                                                <span class="w-12 text-right text-xs font-semibold text-gray-700">{{ indicator.progress_label }}</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">No hay metas vigentes asociadas al período actual.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="mt-2 text-xs text-gray-500">Evidencias pendientes de revisión: <strong class="text-gray-700">{{ evidence_pending }}</strong></p>
+                </section>
+
+                <section id="criterios" aria-labelledby="criteria-heading">
+                    <div class="mb-3">
+                        <h2 id="criteria-heading" class="text-lg font-bold text-gray-950">Criterios por resolver</h2>
+                        <p class="mt-1 text-sm text-gray-500">Puntos de coordinación identificados automáticamente en los registros.</p>
+                    </div>
+                    <div class="divide-y divide-gray-200 border-y border-gray-200 bg-white">
+                        {% for alert in alerts %}
+                            <article class="flex flex-wrap items-start gap-3 px-4 py-4">
+                                <span class="mt-0.5 inline-flex h-6 min-w-6 items-center justify-center rounded-full px-2 text-xs font-bold {% if alert.tone == 'urgent' %}bg-red-100 text-red-800{% elif alert.tone == 'attention' %}bg-amber-100 text-amber-900{% else %}bg-teal-100 text-teal-900{% endif %}" aria-hidden="true">{% if alert.tone == 'clear' %}✓{% else %}!{% endif %}</span>
+                                <div>
+                                    <h3 class="text-sm font-semibold text-gray-900">{{ alert.title }}</h3>
+                                    <p class="mt-1 text-sm text-gray-600">{{ alert.detail }}</p>
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section id="mejoras" class="border-t border-gray-200 pt-6" aria-labelledby="improvements-heading">
+                    <h2 id="improvements-heading" class="text-lg font-bold text-gray-950">Coordinación de mejoras</h2>
+                    <p class="mt-1 text-sm text-gray-500">Líneas para la revisión transversal a partir de los datos disponibles.</p>
+                    <div class="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
+                        <article class="border-l-2 border-red-700 bg-white px-4 py-3">
+                            <h3 class="text-sm font-semibold text-gray-900">Plazos y responsables</h3>
+                            <p class="mt-1 text-sm text-gray-600">Prioriza la revisión de compromisos vencidos y confirma responsables y fechas de resolución.</p>
+                        </article>
+                        <article class="border-l-2 border-amber-500 bg-white px-4 py-3">
+                            <h3 class="text-sm font-semibold text-gray-900">Criterios de validación</h3>
+                            <p class="mt-1 text-sm text-gray-600">Alinea los criterios de evidencia y cierre para reducir devoluciones y actividades en corrección.</p>
+                        </article>
+                        <article class="border-l-2 border-teal-700 bg-white px-4 py-3">
+                            <h3 class="text-sm font-semibold text-gray-900">Mejora continua</h3>
+                            <p class="mt-1 text-sm text-gray-600">Revisa periódicamente el avance por área y acuerda acciones cuando el indicador se aparte de su meta.</p>
+                        </article>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+    {% include 'main/_sweetalerts.html' %}
+</body>
+</html>

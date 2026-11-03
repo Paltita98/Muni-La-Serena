@@ -1,0 +1,17 @@
+{% extends 'funcionario_demo_app/delegado_seccion_base.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block section_content %}
+    <p class="text-sm text-gray-500">{{ atenciones|length }} atención{{ atenciones|length|pluralize:"es" }} social{{ atenciones|length|pluralize:"es" }} en la delegación.</p>
+    <section class="overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[760px] text-left text-sm">
+                <thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr><th class="px-5 py-3">Persona / caso</th><th class="px-5 py-3">Tipo de atención</th><th class="px-5 py-3">Gestión</th><th class="px-5 py-3">Funcionario</th><th class="px-5 py-3">Fecha</th></tr></thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for atencion in atenciones %}
+                        <tr><td class="px-5 py-4"><p class="font-semibold text-gray-900">{{ atencion.persona.nombre|default:atencion.persona.referencia_anonima }}</p><p class="mt-1 text-xs text-gray-500">{{ atencion.persona.referencia_anonima }}</p></td><td class="px-5 py-4">{{ atencion.catalogo_tipo.nombre }}{% if atencion.catalogo_subtipo_id %}<p class="mt-1 text-xs text-gray-500">{{ atencion.catalogo_subtipo.nombre }}</p>{% endif %}</td><td class="px-5 py-4">{{ atencion.orden_gestion }}</td><td class="px-5 py-4">{{ atencion.funcionario.nombres }} {{ atencion.funcionario.apellidos }}</td><td class="px-5 py-4">{{ atencion.fecha|date:'d/m/Y' }}</td></tr>
+                    {% empty %}<tr><td colspan="5" class="px-5 py-10 text-center text-gray-500">No hay atenciones sociales para esta delegación.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+{% endblock %}

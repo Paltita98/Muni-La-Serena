@@ -509,3 +509,23 @@ class Auditoria(models.Model):
         verbose_name = 'Auditoría'
         verbose_name_plural = 'Auditorías'
         indexes = [models.Index(fields=('entidad', 'id_entidad'))]
+
+
+class OrganizacionJJVV(models.Model):
+    organizaciones = models.CharField(max_length=255, verbose_name='Nombre de la organización')
+    domicilio_legal = models.CharField(max_length=255, null=True, blank=True)
+    territorio_deleg = models.CharField(max_length=100, null=True, blank=True)
+    socios_activos = models.PositiveIntegerField(null=True, blank=True)
+    fecha_constitucion = models.DateField(null=True, blank=True)
+    n_reg_pj = models.CharField(max_length=50, null=True, blank=True)
+    fecha_inscripcion_reg = models.DateField(null=True, blank=True)
+    reg_dir_n = models.CharField(max_length=50, null=True, blank=True)
+
+    class Meta:
+        db_table = 'organizaciones_jjvv'
+        verbose_name = 'Organización comunitaria'
+        verbose_name_plural = 'Organizaciones comunitarias'
+        ordering = ('organizaciones',)
+
+    def __str__(self):
+        return self.organizaciones

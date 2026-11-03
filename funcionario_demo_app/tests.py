@@ -6,6 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+from django.conf import settings
 from django.test import RequestFactory, SimpleTestCase, TestCase
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -24,6 +25,7 @@ from admin_demo_app.models import (
     Evidencia,
     ItemMedicion,
     Meta,
+    OrganizacionJJVV,
     PersonaUsuaria,
     Periodo,
     Usuario,
@@ -285,13 +287,21 @@ class FlujoCompromisosTests(TestCase):
         self.assertNotContains(response, 'Operativo comunitario Norte')
         self.assertNotContains(response, 'CASO-NORTE')
 
-        response = self.client.get(reverse('actividades_view'))
+        response = self.client.get(reverse('delegado_actividades_view'))
         self.assertContains(response, 'Operativo comunitario Centro')
         self.assertNotContains(response, 'Operativo comunitario Norte')
 
-        response = self.client.get(reverse('atenciones_sociales_view'))
+        response = self.client.get(reverse('delegado_atenciones_view'))
         self.assertContains(response, 'CASO-CENTRO')
         self.assertNotContains(response, 'CASO-NORTE')
+
+        response = self.client.get(reverse('delegado_equipo_view'))
+        self.assertContains(response, 'funcionario Prueba')
+        self.assertNotContains(response, 'otro Prueba')
+        self.assertContains(response, reverse('delegado_actividades_view'))
+        self.assertContains(response, reverse('delegado_atenciones_view'))
+        self.assertContains(response, reverse('delegado_compromisos_view'))
+        self.assertContains(response, reverse('delegado_equipo_view'))
 
     def test_delegate_can_read_own_activity_but_cannot_upload_evidence_as_staff(self):
         self.iniciar_sesion_rol('DELEGADO', self.delegado)
@@ -888,3 +898,81 @@ class EvidenceImagePreviewTests(SimpleTestCase):
             self.assertRaises(Http404),
         ):
             evidencia_previsualizacion_view(request, 5)
+
+
+class OrganizacionesJJVVCrudTests(TestCase):
+    def iniciar_sesion_organizaciones(self):
+        session = self.client.session
+        session['user_role'] = 'ORGANIZACIONES_COMUNITARIAS'
+        session['user_id'] = 1
+        session['user_name'] = 'Ana Pérez'
+        session.save()
+        self.client.cookies[settings.SESSION_COOKIE_NAME] = session.session_key
+
+    def test_create_search_update_and_delete_organization(self):
+        self.iniciar_sesion_organizaciones()
+        datos = {
+            'organizaciones': 'Junta de Vecinos El Faro',
+            'domicilio_legal': 'Av. del Mar 100',
+            'territorio_deleg': 'Las Compañías',
+            'socios_activos': '35',
+            'fecha_constitucion': '2020-05-10',
+            'n_reg_pj': 'PJ-104',
+            'fecha_inscripcion_reg': '2020-05-20',
+            'reg_dir_n': 'DIR-31',
+        }
+
+        response = self.client.post(reverse('main:nueva_organizacion_jjvv_view'), datos)
+        self.assertRedirects(response, reverse('main:organizaciones_jjvv_list_view'))
+        organizacion = OrganizacionJJVV.objects.get(organizaciones='Junta de Vecinos El Faro')
+
+        response = self.client.get(reverse('main:organizaciones_jjvv_list_view'), {'q': 'Las Compañías'})
+        self.assertContains(response, 'Junta de Vecinos El Faro')
+        self.assertEqual(len(response.context['organizaciones']), 1)
+
+        datos['organizaciones'] = 'Junta de Vecinos El Faro Norte'
+        response = self.client.post(
+            reverse('main:editar_organizacion_jjvv_view', args=[organizacion.pk]),
+            datos,
+        )
+        self.assertRedirects(response, reverse('main:organizaciones_jjvv_list_view'))
+        organizacion.refresh_from_db()
+        self.assertEqual(organizacion.organizaciones, 'Junta de Vecinos El Faro Norte')
+
+        delete_url = reverse('main:eliminar_organizacion_jjvv_view', args=[organizacion.pk])
+        self.assertEqual(self.client.get(delete_url).status_code, 405)
+        response = self.client.post(delete_url)
+        self.assertRedirects(response, reverse('main:organizaciones_jjvv_list_view'))
+        self.assertFalse(OrganizacionJJVV.objects.filter(pk=organizacion.pk).exists())
+
+    def test_registration_date_cannot_precede_constitution(self):
+        self.iniciar_sesion_organizaciones()
+        response = self.client.post(reverse('main:nueva_organizacion_jjvv_view'), {
+            'organizaciones': 'Agrupación Costera',
+            'fecha_constitucion': '2022-05-10',
+            'fecha_inscripcion_reg': '2022-05-01',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'La inscripción no puede ser anterior a la constitución.')
+        self.assertFalse(OrganizacionJJVV.objects.exists())
+
+    def test_dashboard_uses_registered_organization_data(self):
+        self.iniciar_sesion_organizaciones()
+        OrganizacionJJVV.objects.create(
+            organizaciones='Junta Vecinal Costanera',
+            territorio_deleg='Coquimbo',
+            socios_activos=42,
+        )
+
+        response = self.client.get(reverse('main:organizaciones_comunitarias_dashboard_view'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['organizaciones_total'], 1)
+        self.assertEqual(response.context['socios_activos_total'], 42)
+        self.assertEqual(response.context['territorios_total'], 1)
+
+    def test_crud_redirects_when_role_is_not_authorized(self):
+        response = self.client.get(reverse('main:organizaciones_jjvv_list_view'))
+
+        self.assertRedirects(response, reverse('main:login_view'))
