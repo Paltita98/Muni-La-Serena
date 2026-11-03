@@ -11,7 +11,14 @@ from admin_demo_app.models import CodigoRecuperacion, Notificacion, Usuario
 from funcionario_demo_app import views as funcionario_views
 from .context_processors import user_notifications
 from .middleware import ForceInitialPasswordChangeMiddleware
-from .views import login_view, marcar_notificacion_leida, nueva_password, primer_cambio_password, recuperar_password
+from .views import (
+    login_view,
+    marcar_notificacion_leida,
+    nueva_password,
+    organizaciones_comunitarias_dashboard_view,
+    primer_cambio_password,
+    recuperar_password,
+)
 
 
 class LoginSession(dict):
@@ -79,6 +86,22 @@ class LoginViewTests(SimpleTestCase):
 
         self.assertEqual(response.url, '/funcionario/delegado/panel/')
         self.assertEqual(session['user_role'], 'DELEGADO')
+
+    def test_community_organizations_login_redirects_to_dashboard(self):
+        response, session = self._login('Organizaciones Comunitarias')
+
+        self.assertEqual(response.url, '/organizaciones-comunitarias/panel/')
+        self.assertEqual(session['user_role'], 'ORGANIZACIONES_COMUNITARIAS')
+
+    def test_community_organizations_dashboard_renders_for_role(self):
+        request = self.factory.get('/organizaciones-comunitarias/panel/')
+        request.session = LoginSession(user_role='ORGANIZACIONES_COMUNITARIAS', user_name='Ana Pérez')
+
+        response = organizaciones_comunitarias_dashboard_view(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Organizaciones Comunitarias')
+        self.assertContains(response, 'Registro y acompañamiento de OOCC')
 
     def test_verifier_login_redirects_to_evidence_review(self):
         response, session = self._login('Verificador')

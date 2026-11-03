@@ -56,6 +56,8 @@ def login_view(request):
                 role = 'VERIFICADOR'
             elif password_valid and any('delegado' in role_name or 'jefatura' in role_name for role_name in role_names):
                 role = 'DELEGADO'
+            elif password_valid and any('organizaciones comunitarias' in role_name or 'oroc' in role_name for role_name in role_names):
+                role = 'ORGANIZACIONES_COMUNITARIAS'
             elif password_valid and any('funcion' in role_name for role_name in role_names):
                 role = 'FUNCIONARIO'
             elif password_valid and any('coordinador' in role_name for role_name in role_names):
@@ -82,6 +84,7 @@ def login_view(request):
                     'VERIFICADOR': 'verificador_evidencias_view',
                     'COORDINADOR': 'role_dashboard_view',
                     'DELEGADO': 'delegado_demo_view',
+                    'ORGANIZACIONES_COMUNITARIAS': 'main:organizaciones_comunitarias_dashboard_view',
                     'CONSULTA': 'role_dashboard_view',
                 }
                 destination = destinations[role]
@@ -126,6 +129,7 @@ def primer_cambio_password(request):
                     'VERIFICADOR': 'verificador_evidencias_view',
                     'COORDINADOR': 'role_dashboard_view',
                     'DELEGADO': 'role_dashboard_view',
+                    'ORGANIZACIONES_COMUNITARIAS': 'main:organizaciones_comunitarias_dashboard_view',
                     'CONSULTA': 'role_dashboard_view',
                 }
                 return redirect(destinations.get(request.session.get('user_role'), 'main:login_view'))
@@ -138,6 +142,12 @@ def role_dashboard_view(request):
     if role not in {'COORDINADOR', 'DELEGADO', 'CONSULTA'}:
         return redirect('main:login_view')
     return render(request, 'main/role_dashboard.html', {'role': role})
+
+
+def organizaciones_comunitarias_dashboard_view(request):
+    if request.session.get('user_role') != 'ORGANIZACIONES_COMUNITARIAS':
+        return redirect('main:login_view')
+    return render(request, 'main/organizaciones_comunitarias_dashboard.html')
 
 
 @require_POST

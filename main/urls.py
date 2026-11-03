@@ -11,6 +11,7 @@ urlpatterns = [
     path('notificaciones/<int:notification_id>/leer/', views.marcar_notificacion_leida, name='marcar_notificacion_leida'),
     path('notificaciones/leer-todas/', views.marcar_todas_notificaciones_leidas, name='marcar_todas_notificaciones_leidas'),
     path('panel-rol/', views.role_dashboard_view, name='role_dashboard_view'),
+    path('organizaciones-comunitarias/panel/', views.organizaciones_comunitarias_dashboard_view, name='organizaciones_comunitarias_dashboard_view'),
     path('recuperar-password/', views.recuperar_password, name='recuperar_password'),
     path('validar-codigo/', views.validar_codigo, name='validar_codigo'),
     path('reenviar-codigo/', views.reenviar_codigo, name='reenviar_codigo'),
