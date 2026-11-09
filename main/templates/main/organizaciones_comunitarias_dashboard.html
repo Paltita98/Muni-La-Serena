@@ -10,187 +10,110 @@
 </head>
 <body class="page-shell bg-gray-50 text-gray-800">
     <div class="flex h-screen overflow-hidden">
-        <aside class="sidebar w-56 sm:w-64 shrink-0 text-white flex flex-col">
-            <div class="min-h-16 flex items-center px-4 border-b border-white/15">
-                <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo">
-                <div class="ml-3 min-w-0">
-                    <p class="font-bold truncate">{{ request.session.user_name }}</p>
-                    <p class="text-xs text-slate-300">Organizaciones Comunitarias</p>
-                </div>
+        <aside class="sidebar w-56 sm:w-64 shrink-0 text-white flex flex-col overflow-y-auto">
+            <div class="min-h-20 shrink-0 flex flex-col items-start justify-center gap-1 px-4 py-2 border-b border-white/15">
+                <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo h-8">
+                <span class="text-xs font-bold tracking-widest">OROC</span>
             </div>
-            <nav aria-label="Navegación principal" class="flex-1 px-3 py-5 space-y-1 overflow-y-auto">
-                <a href="#inicio" class="flex items-center gap-3 px-3 py-3 rounded-md bg-emerald-700 text-white font-semibold">
-                    <span aria-hidden="true">⌂</span> Resumen
-                </a>
-                <a href="{% url 'main:organizaciones_jjvv_list_view' %}" class="flex items-center gap-3 px-3 py-3 rounded-md text-slate-200 hover:bg-white/10">▤ <span>Registro OROC</span></a>
-                <a href="#acompanamiento" class="flex items-center gap-3 px-3 py-3 rounded-md text-slate-200 hover:bg-white/10">♧ <span>Asesoría y formación</span></a>
-                <a href="#territorio" class="flex items-center gap-3 px-3 py-3 rounded-md text-slate-200 hover:bg-white/10">⌖ <span>Trabajo territorial</span></a>
-                <a href="#convocatorias" class="flex items-center gap-3 px-3 py-3 rounded-md text-slate-200 hover:bg-white/10">▦ <span>Convocatorias</span></a>
-                <a href="#articulacion" class="flex items-center gap-3 px-3 py-3 rounded-md text-slate-200 hover:bg-white/10">⇄ <span>Articulación municipal</span></a>
+            <nav aria-label="Navegación de organizaciones comunitarias" class="flex-1 px-3 py-4 space-y-1">
+                <button type="button" data-dashboard-target="resumen" aria-controls="panel-resumen" aria-pressed="true" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition bg-red-900 text-white font-semibold">Resumen</button>
+                <button type="button" data-dashboard-target="registro" aria-controls="panel-registro" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Registro OROC</button>
+                <button type="button" data-dashboard-target="formacion" aria-controls="panel-formacion" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Asesoría y formación</button>
+                <button type="button" data-dashboard-target="territorio" aria-controls="panel-territorio" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Trabajo territorial</button>
+                <button type="button" data-dashboard-target="convocatorias" aria-controls="panel-convocatorias" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Convocatorias</button>
+                <button type="button" data-dashboard-target="articulacion" aria-controls="panel-articulacion" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Articulación municipal</button>
+                <button type="button" data-dashboard-target="normativa" aria-controls="panel-normativa" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Marco normativo</button>
             </nav>
-            <div class="px-4 py-4 border-t border-white/15">
-                <p class="text-xs uppercase tracking-wide text-slate-400">Marco normativo</p>
-                <p class="mt-1 text-sm font-medium">Leyes 19.418 y 20.500</p>
-            </div>
             {% include 'main/_logout_button.html' %}
         </aside>
 
-        <main id="inicio" class="flex-1 min-w-0 h-screen overflow-y-auto">
+        <main class="flex-1 min-w-0 h-screen overflow-y-auto">
             <header class="min-h-16 bg-white border-b border-gray-200 flex items-center gap-4 px-4 sm:px-7 py-3">
                 <div class="min-w-0">
                     <p class="text-xs text-gray-500">Gestión territorial <span class="mx-1">/</span> Organizaciones Comunitarias</p>
                     <p class="text-sm font-semibold text-gray-900 mt-1">Registro y acompañamiento de OOCC</p>
                 </div>
-                <div class="ml-auto"><span class="hidden sm:inline-flex items-center gap-2 text-xs font-medium text-emerald-800 bg-emerald-50 px-3 py-2 rounded-md">● La Serena</span></div>
-                <div class="shrink-0">{% include 'main/_notification_bell.html' %}</div>
+                <div class="ml-auto shrink-0">{% include 'main/_notification_bell.html' %}</div>
             </header>
 
             <div class="p-4 sm:p-7 space-y-6 max-w-screen-2xl mx-auto">
-                <section class="relative overflow-hidden bg-emerald-950 text-white rounded-lg px-5 py-6 sm:px-8 sm:py-8">
-                    <div class="absolute inset-y-0 right-0 w-1/3 opacity-20" aria-hidden="true" style="background-image: radial-gradient(circle at 2px 2px, #a7f3d0 1px, transparent 0); background-size: 18px 18px;"></div>
-                    <div class="relative max-w-3xl">
-                        <p class="text-sm font-semibold text-emerald-200">OROC <span class="mx-2 text-emerald-500">/</span> Gestión comunitaria</p>
-                        <h1 class="mt-2 text-2xl sm:text-3xl font-bold">Organizaciones Comunitarias</h1>
-                        <p class="mt-3 text-sm sm:text-base leading-6 text-emerald-50">Fortalecimiento, legalización y acompañamiento de Juntas de Vecinos y agrupaciones funcionales en los territorios costeros.</p>
-                        <a href="{% url 'main:nueva_organizacion_jjvv_view' %}" class="mt-5 inline-flex items-center gap-2 rounded-md bg-white px-4 py-2.5 text-sm font-semibold text-emerald-950 hover:bg-emerald-50">Registrar organización <span aria-hidden="true">→</span></a>
+                <section id="panel-resumen" data-dashboard-panel="resumen" aria-labelledby="titulo-resumen" class="space-y-6">
+                    <div class="relative overflow-hidden bg-[#d61600] text-white rounded-md px-5 py-6 sm:px-8 sm:py-8">
+                        <div class="absolute inset-y-0 right-0 w-1/3 opacity-20" aria-hidden="true" style="background-image: radial-gradient(circle at 2px 2px, #fecaca 1px, transparent 0); background-size: 18px 18px;"></div>
+                        <div class="relative max-w-3xl">
+                            <p class="text-sm font-semibold text-red-100">OROC <span class="mx-2 text-red-300">/</span> Gestión comunitaria</p>
+                            <h1 id="titulo-resumen" class="mt-2 text-2xl sm:text-3xl font-bold">Organizaciones Comunitarias</h1>
+                            <p class="mt-3 text-sm sm:text-base leading-6 text-red-50">Resumen del registro, las organizaciones y el trabajo comunitario en los territorios.</p>
+                            <a href="{% url 'main:nueva_organizacion_jjvv_view' %}" class="mt-5 inline-flex items-center gap-2 rounded-md bg-white px-4 py-2.5 text-sm font-semibold text-red-900 hover:bg-red-50">Registrar organización <span aria-hidden="true">→</span></a>
+                        </div>
                     </div>
+                    <section aria-label="Indicadores del registro" class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                        <article class="bg-white border border-gray-200 border-t-4 border-t-red-800 rounded-md p-4 sm:p-5"><p class="text-sm font-medium text-gray-600">Organizaciones registradas</p><p class="mt-3 text-3xl font-bold text-gray-900">{{ organizaciones_total }}</p><p class="mt-1 text-xs text-gray-500">En el registro comunitario</p></article>
+                        <article class="bg-white border border-gray-200 border-t-4 border-t-amber-500 rounded-md p-4 sm:p-5"><p class="text-sm font-medium text-gray-600">Socios activos registrados</p><p class="mt-3 text-3xl font-bold text-gray-900">{{ socios_activos_total }}</p><p class="mt-1 text-xs text-gray-500">Suma informada por las organizaciones</p></article>
+                        <article class="bg-white border border-gray-200 border-t-4 border-t-sky-700 rounded-md p-4 sm:p-5"><p class="text-sm font-medium text-gray-600">Territorios representados</p><p class="mt-3 text-3xl font-bold text-gray-900">{{ territorios_total }}</p><p class="mt-1 text-xs text-gray-500">Con organizaciones registradas</p></article>
+                    </section>
+                    <section class="bg-white border border-gray-200 rounded-md overflow-hidden">
+                        <div class="px-4 py-3 border-b border-gray-100 flex flex-wrap justify-between items-center gap-2"><div><h2 class="text-sm font-bold text-gray-900">Organizaciones recientes</h2><p class="text-xs text-gray-500 mt-1">{{ organizaciones_total }} en el registro</p></div><a href="{% url 'main:organizaciones_jjvv_list_view' %}" class="text-sm font-semibold text-red-800 hover:text-red-950">Ver registro</a></div>
+                        <div class="divide-y divide-gray-100">
+                            {% for organizacion in organizaciones_recientes %}<div class="px-4 py-3 flex flex-wrap justify-between items-center gap-2"><div class="min-w-0"><p class="text-sm font-semibold text-gray-900 truncate">{{ organizacion.organizaciones }}</p><p class="text-xs text-gray-500 mt-1">{{ organizacion.territorio_deleg|default:"Territorio no indicado" }} · {{ organizacion.socios_activos|default:"0" }} socios</p></div><a href="{% url 'main:editar_organizacion_jjvv_view' organizacion.pk %}" class="text-xs font-semibold text-red-800 hover:text-red-950">Editar</a></div>
+                            {% empty %}<div class="px-4 py-5 text-sm text-gray-500">Todavía no hay organizaciones registradas. <a class="font-semibold text-red-800" href="{% url 'main:nueva_organizacion_jjvv_view' %}">Agregar la primera</a>.</div>{% endfor %}
+                        </div>
+                    </section>
                 </section>
 
-                <section aria-label="Indicadores del registro" class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                    <article class="bg-white border border-gray-200 border-t-4 border-t-emerald-700 rounded-md p-4 sm:p-5">
-                        <p class="text-sm font-medium text-gray-600">Organizaciones registradas</p>
-                        <p class="mt-3 text-3xl font-bold text-gray-900">{{ organizaciones_total }}</p>
-                        <p class="mt-1 text-xs text-gray-500">En el registro comunitario</p>
-                    </article>
-                    <article class="bg-white border border-gray-200 border-t-4 border-t-amber-500 rounded-md p-4 sm:p-5">
-                        <p class="text-sm font-medium text-gray-600">Socios activos registrados</p>
-                        <p class="mt-3 text-3xl font-bold text-gray-900">{{ socios_activos_total }}</p>
-                        <p class="mt-1 text-xs text-gray-500">Suma informada por las organizaciones</p>
-                    </article>
-                    <article class="bg-white border border-gray-200 border-t-4 border-t-sky-700 rounded-md p-4 sm:p-5">
-                        <p class="text-sm font-medium text-gray-600">Territorios representados</p>
-                        <p class="mt-3 text-3xl font-bold text-gray-900">{{ territorios_total }}</p>
-                        <p class="mt-1 text-xs text-gray-500">Con organizaciones registradas</p>
-                    </article>
+                <section id="panel-registro" data-dashboard-panel="registro" aria-labelledby="titulo-registro" hidden class="bg-white border border-gray-200 rounded-md overflow-hidden">
+                    <div class="px-5 py-4 border-b border-gray-100 flex flex-wrap justify-between items-center gap-3"><div><h1 id="titulo-registro" class="text-xl font-bold text-gray-900">Registro OROC</h1><p class="mt-1 text-sm text-gray-500">Registro, vigencia y cierre responsable de organizaciones comunitarias.</p></div><a href="{% url 'main:organizaciones_jjvv_list_view' %}" class="inline-flex items-center rounded-md bg-red-800 px-4 py-2 text-sm font-semibold text-white hover:bg-red-900">Abrir registro</a></div>
+                    <div class="divide-y divide-gray-100"><div class="flex gap-4 p-4"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-50 text-sm font-bold text-red-900">01</span><div><h2 class="text-sm font-semibold text-gray-900">Constitución y legalización</h2><p class="mt-1 text-sm text-gray-600">Orientación para crear nuevas organizaciones y completar sus procesos.</p></div></div><div class="flex gap-4 p-4"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-50 text-sm font-bold text-amber-900">02</span><div><h2 class="text-sm font-semibold text-gray-900">Mantención de vigencia</h2><p class="mt-1 text-sm text-gray-600">Acompañamiento a dirigentes para mantener actualizada la organización.</p></div></div><div class="flex gap-4 p-4"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sm font-bold text-sky-900">03</span><div><h2 class="text-sm font-semibold text-gray-900">Cierre de organizaciones inactivas</h2><p class="mt-1 text-sm text-gray-600">Asesoría en los pasos administrativos para regularizar su situación.</p></div></div></div>
                 </section>
 
-                <section class="grid grid-cols-1 xl:grid-cols-5 gap-6 items-start">
-                    <div id="registro" class="xl:col-span-3 min-w-0">
-                        <div class="flex flex-wrap justify-between items-end gap-3 mb-3">
-                            <div>
-                                <h2 class="text-lg font-bold text-gray-900">Ciclo de vida de las organizaciones</h2>
-                                <p class="mt-1 text-sm text-gray-500">Registro, vigencia y cierre responsable de OOCC.</p>
-                            </div>
-                            <span class="text-xs font-medium text-gray-600 bg-gray-100 px-2.5 py-1.5 rounded">OROC</span>
-                        </div>
-                        <div class="bg-white border border-gray-200 rounded-md divide-y divide-gray-100">
-                            <a href="#acompanamiento" class="flex gap-4 p-4 hover:bg-gray-50">
-                                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-900">01</span>
-                                <span><strong class="block text-sm text-gray-900">Constitución y legalización</strong><span class="mt-1 block text-sm text-gray-600">Orientación para crear nuevas organizaciones y completar sus procesos.</span></span>
-                            </a>
-                            <a href="#territorio" class="flex gap-4 p-4 hover:bg-gray-50">
-                                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-900">02</span>
-                                <span><strong class="block text-sm text-gray-900">Mantención de vigencia</strong><span class="mt-1 block text-sm text-gray-600">Acompañamiento a dirigentes para mantener actualizada la organización.</span></span>
-                            </a>
-                            <a href="#articulacion" class="flex gap-4 p-4 hover:bg-gray-50">
-                                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sm font-bold text-sky-900">03</span>
-                                <span><strong class="block text-sm text-gray-900">Cierre de organizaciones inactivas</strong><span class="mt-1 block text-sm text-gray-600">Asesoría en los pasos administrativos para regularizar su situación.</span></span>
-                            </a>
-                        </div>
-                        <div class="mt-4 bg-white border border-gray-200 rounded-md overflow-hidden">
-                            <div class="px-4 py-3 border-b border-gray-100 flex flex-wrap justify-between items-center gap-2">
-                                <div>
-                                    <h3 class="text-sm font-bold text-gray-900">Organizaciones recientes</h3>
-                                    <p class="text-xs text-gray-500 mt-1">{{ organizaciones_total }} en el registro</p>
-                                </div>
-                                <a href="{% url 'main:organizaciones_jjvv_list_view' %}" class="text-sm font-semibold text-emerald-800 hover:text-emerald-950">Ver registro</a>
-                            </div>
-                            <div class="divide-y divide-gray-100">
-                                {% for organizacion in organizaciones_recientes %}
-                                    <div class="px-4 py-3 flex flex-wrap justify-between items-center gap-2">
-                                        <div class="min-w-0">
-                                            <p class="text-sm font-semibold text-gray-900 truncate">{{ organizacion.organizaciones }}</p>
-                                            <p class="text-xs text-gray-500 mt-1">{{ organizacion.territorio_deleg|default:"Territorio no indicado" }} · {{ organizacion.socios_activos|default:"0" }} socios</p>
-                                        </div>
-                                        <a href="{% url 'main:editar_organizacion_jjvv_view' organizacion.pk %}" class="text-xs font-semibold text-emerald-800 hover:text-emerald-950">Editar</a>
-                                    </div>
-                                {% empty %}
-                                    <div class="px-4 py-5 text-sm text-gray-500">Todavía no hay organizaciones registradas. <a class="font-semibold text-emerald-800" href="{% url 'main:nueva_organizacion_jjvv_view' %}">Agregar la primera</a>.</div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-
-                    <aside id="convocatorias" class="xl:col-span-2 bg-white border border-gray-200 rounded-md">
-                        <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center gap-3">
-                            <div>
-                                <h2 class="text-lg font-bold text-gray-900">Convocatorias y talleres</h2>
-                                <p class="mt-1 text-xs text-gray-500">Actividades municipales para las organizaciones</p>
-                            </div>
-                            <span aria-hidden="true" class="text-xl text-emerald-800">▦</span>
-                        </div>
-                        <div class="p-5">
-                            <p class="text-sm leading-6 text-gray-600">Planifica convocatorias, talleres y espacios de formación para fortalecer la participación y la educación municipal.</p>
-                            <div class="mt-4 border-l-2 border-emerald-700 pl-3">
-                                <p class="text-sm font-semibold text-gray-900">Agenda municipal</p>
-                                <p class="mt-1 text-sm text-gray-500">No hay actividades publicadas en este panel.</p>
-                            </div>
-                            <a href="#acompanamiento" class="mt-5 inline-flex text-sm font-semibold text-emerald-800 hover:text-emerald-950">Ver líneas de formación <span class="ml-2" aria-hidden="true">→</span></a>
-                        </div>
-                    </aside>
+                <section id="panel-formacion" data-dashboard-panel="formacion" aria-labelledby="titulo-formacion" hidden class="bg-white border border-gray-200 rounded-md">
+                    <div class="px-5 py-4 border-b border-gray-100"><h1 id="titulo-formacion" class="text-xl font-bold text-gray-900">Asesoría y formación</h1><p class="mt-1 text-sm text-gray-500">Acompañamiento a dirigentes y organizaciones.</p></div>
+                    <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-5"><div><p class="text-sm font-semibold text-gray-900">Orientación administrativa</p><p class="mt-1 text-sm text-gray-600">Procedimientos, documentación y cumplimiento de objetivos.</p></div><div><p class="text-sm font-semibold text-gray-900">Capacitación a dirigentes</p><p class="mt-1 text-sm text-gray-600">Temáticas de interés para juntas de vecinos y agrupaciones.</p></div><div><p class="text-sm font-semibold text-gray-900">Talleres municipales</p><p class="mt-1 text-sm text-gray-600">Instancias para fortalecer conocimientos y participación.</p></div><div><p class="text-sm font-semibold text-gray-900">Acompañamiento continuo</p><p class="mt-1 text-sm text-gray-600">Seguimiento para resolver dudas y apoyar la gestión.</p></div></div>
                 </section>
 
-                <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                    <div id="acompanamiento" class="bg-white border border-gray-200 rounded-md">
-                        <div class="px-5 py-4 border-b border-gray-100">
-                            <h2 class="text-lg font-bold text-gray-900">Asesoría y formación</h2>
-                            <p class="mt-1 text-sm text-gray-500">Acompañamiento a dirigentes y organizaciones.</p>
-                        </div>
-                        <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4">
-                            <div><p class="text-sm font-semibold text-gray-900">Orientación administrativa</p><p class="mt-1 text-sm text-gray-600">Procedimientos, documentación y cumplimiento de objetivos.</p></div>
-                            <div><p class="text-sm font-semibold text-gray-900">Capacitación a dirigentes</p><p class="mt-1 text-sm text-gray-600">Temáticas de interés para juntas de vecinos y agrupaciones.</p></div>
-                            <div><p class="text-sm font-semibold text-gray-900">Talleres municipales</p><p class="mt-1 text-sm text-gray-600">Instancias para fortalecer conocimientos y participación.</p></div>
-                            <div><p class="text-sm font-semibold text-gray-900">Acompañamiento continuo</p><p class="mt-1 text-sm text-gray-600">Seguimiento para mantener la motivación y resolver dudas.</p></div>
-                        </div>
-                    </div>
-
-                    <div id="territorio" class="bg-white border border-gray-200 rounded-md">
-                        <div class="px-5 py-4 border-b border-gray-100">
-                            <h2 class="text-lg font-bold text-gray-900">Levantamiento territorial</h2>
-                            <p class="mt-1 text-sm text-gray-500">Visitas y escucha activa junto a los dirigentes.</p>
-                        </div>
-                        <div class="p-5">
-                            <div class="flex gap-3">
-                                <span aria-hidden="true" class="text-lg text-sky-800">⌖</span>
-                                <p class="text-sm leading-6 text-gray-600">Identifica necesidades en cada territorio costero, acuerda prioridades con las organizaciones y facilita la coordinación para darles respuesta.</p>
-                            </div>
-                            <div class="mt-4 flex flex-wrap gap-2">
-                                <span class="text-xs bg-sky-50 text-sky-900 px-2.5 py-1.5 rounded">Visitas a terreno</span>
-                                <span class="text-xs bg-emerald-50 text-emerald-900 px-2.5 py-1.5 rounded">Desarrollo territorial</span>
-                                <span class="text-xs bg-amber-50 text-amber-900 px-2.5 py-1.5 rounded">Necesidades comunitarias</span>
-                            </div>
-                        </div>
-                    </div>
+                <section id="panel-territorio" data-dashboard-panel="territorio" aria-labelledby="titulo-territorio" hidden class="bg-white border border-gray-200 rounded-md">
+                    <div class="px-5 py-4 border-b border-gray-100"><h1 id="titulo-territorio" class="text-xl font-bold text-gray-900">Trabajo territorial</h1><p class="mt-1 text-sm text-gray-500">Visitas y escucha activa junto a los dirigentes.</p></div>
+                    <div class="p-5"><p class="text-sm leading-6 text-gray-600">Identifica necesidades en cada territorio, acuerda prioridades con las organizaciones y facilita la coordinación municipal para darles respuesta.</p><div class="mt-4 flex flex-wrap gap-2"><span class="text-xs bg-sky-50 text-sky-900 px-2.5 py-1.5 rounded">Visitas a terreno</span><span class="text-xs bg-red-50 text-red-900 px-2.5 py-1.5 rounded">Desarrollo territorial</span><span class="text-xs bg-amber-50 text-amber-900 px-2.5 py-1.5 rounded">Necesidades comunitarias</span></div></div>
                 </section>
 
-                <section id="articulacion" class="bg-white border border-gray-200 rounded-md overflow-hidden">
-                    <div class="px-5 py-4 border-b border-gray-100 flex flex-wrap justify-between items-center gap-2">
-                        <div>
-                            <h2 class="text-lg font-bold text-gray-900">Articulación municipal</h2>
-                            <p class="mt-1 text-sm text-gray-500">Conecta los requerimientos de las OOCC con las áreas municipales correspondientes.</p>
-                        </div>
-                        <span class="text-sm font-semibold text-emerald-800">Coordinación transversal</span>
-                    </div>
-                    <div class="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="border-l-2 border-emerald-700 pl-3"><p class="text-sm font-semibold text-gray-900">Recepción</p><p class="mt-1 text-sm text-gray-600">Comprender el requerimiento y su contexto territorial.</p></div>
-                        <div class="border-l-2 border-sky-700 pl-3"><p class="text-sm font-semibold text-gray-900">Derivación</p><p class="mt-1 text-sm text-gray-600">Vincular la necesidad con el área municipal pertinente.</p></div>
-                        <div class="border-l-2 border-amber-500 pl-3"><p class="text-sm font-semibold text-gray-900">Seguimiento</p><p class="mt-1 text-sm text-gray-600">Acompañar la respuesta y mantener informada a la organización.</p></div>
-                    </div>
+                <section id="panel-convocatorias" data-dashboard-panel="convocatorias" aria-labelledby="titulo-convocatorias" hidden class="bg-white border border-gray-200 rounded-md">
+                    <div class="px-5 py-4 border-b border-gray-100"><h1 id="titulo-convocatorias" class="text-xl font-bold text-gray-900">Convocatorias y talleres</h1><p class="mt-1 text-sm text-gray-500">Actividades municipales para las organizaciones.</p></div>
+                    <div class="p-5"><p class="text-sm leading-6 text-gray-600">Planifica convocatorias, talleres y espacios de formación para fortalecer la participación y la educación municipal.</p><div class="mt-4 border-l-2 border-red-800 pl-3"><p class="text-sm font-semibold text-gray-900">Agenda municipal</p><p class="mt-1 text-sm text-gray-500">No hay actividades publicadas en este panel.</p></div></div>
                 </section>
-                <p class="pb-2 text-xs text-gray-500">Panel de gestión comunitaria. Los indicadores y registros se mostrarán al conectar el módulo OROC.</p>
+
+                <section id="panel-articulacion" data-dashboard-panel="articulacion" aria-labelledby="titulo-articulacion" hidden class="bg-white border border-gray-200 rounded-md overflow-hidden">
+                    <div class="px-5 py-4 border-b border-gray-100"><h1 id="titulo-articulacion" class="text-xl font-bold text-gray-900">Articulación municipal</h1><p class="mt-1 text-sm text-gray-500">Conecta los requerimientos de las OOCC con las áreas municipales correspondientes.</p></div>
+                    <div class="p-5 grid grid-cols-1 md:grid-cols-3 gap-4"><div class="border-l-2 border-red-800 pl-3"><p class="text-sm font-semibold text-gray-900">Recepción</p><p class="mt-1 text-sm text-gray-600">Comprender el requerimiento y su contexto territorial.</p></div><div class="border-l-2 border-sky-700 pl-3"><p class="text-sm font-semibold text-gray-900">Derivación</p><p class="mt-1 text-sm text-gray-600">Vincular la necesidad con el área municipal pertinente.</p></div><div class="border-l-2 border-amber-500 pl-3"><p class="text-sm font-semibold text-gray-900">Seguimiento</p><p class="mt-1 text-sm text-gray-600">Acompañar la respuesta y mantener informada a la organización.</p></div></div>
+                </section>
+
+                <section id="panel-normativa" data-dashboard-panel="normativa" aria-labelledby="titulo-normativa" hidden class="bg-white border border-gray-200 rounded-md">
+                    <div class="px-5 py-4 border-b border-gray-100"><h1 id="titulo-normativa" class="text-xl font-bold text-gray-900">Marco normativo</h1><p class="mt-1 text-sm text-gray-500">Normativa aplicable a las organizaciones comunitarias.</p></div>
+                    <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4"><article class="border-l-2 border-red-800 pl-3"><h2 class="text-sm font-semibold text-gray-900">Ley 19.418</h2><p class="mt-1 text-sm text-gray-600">Establece normas sobre juntas de vecinos y demás organizaciones comunitarias.</p></article><article class="border-l-2 border-gray-400 pl-3"><h2 class="text-sm font-semibold text-gray-900">Ley 20.500</h2><p class="mt-1 text-sm text-gray-600">Regula asociaciones y participación ciudadana en la gestión pública.</p></article></div>
+                </section>
             </div>
         </main>
     </div>
+    <script>
+        const dashboardButtons = document.querySelectorAll('[data-dashboard-target]');
+        const dashboardPanels = document.querySelectorAll('[data-dashboard-panel]');
+
+        dashboardButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                const target = button.dataset.dashboardTarget;
+                dashboardButtons.forEach((item) => {
+                    const selected = item === button;
+                    item.setAttribute('aria-pressed', String(selected));
+                    item.classList.toggle('bg-red-900', selected);
+                    item.classList.toggle('font-semibold', selected);
+                    item.classList.toggle('text-white', selected);
+                    item.classList.toggle('text-red-100', !selected);
+                });
+                dashboardPanels.forEach((panel) => {
+                    panel.hidden = panel.dataset.dashboardPanel !== target;
+                });
+            });
+        });
+    </script>
     {% include 'main/_sweetalerts.html' %}
 </body>
 </html>
