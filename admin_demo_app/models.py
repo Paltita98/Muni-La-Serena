@@ -514,6 +514,14 @@ class Auditoria(models.Model):
 class OrganizacionJJVV(models.Model):
     organizaciones = models.CharField(max_length=255, verbose_name='Nombre de la organización')
     domicilio_legal = models.CharField(max_length=255, null=True, blank=True)
+    delegacion = models.ForeignKey(
+        Delegacion,
+        db_column='id_delegacion',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='organizaciones_comunitarias',
+    )
     territorio_deleg = models.CharField(max_length=100, null=True, blank=True)
     socios_activos = models.PositiveIntegerField(null=True, blank=True)
     fecha_constitucion = models.DateField(null=True, blank=True)

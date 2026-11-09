@@ -264,6 +264,34 @@ class FlujoCompromisosTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Compromiso.objects.filter(solicitante='Junta vecinal').exists())
 
+    def test_editing_commitment_keeps_original_solicitant_unchanged(self):
+        compromiso = Compromiso.objects.create(
+            delegacion=self.delegacion,
+            responsable=self.funcionario,
+            solicitante='Junta Vecinal Centro',
+            territorio='Centro',
+            observacion='Reparar luminaria',
+            fecha_comprometida=date(2026, 12, 15),
+        )
+        self.iniciar_sesion_rol('DELEGADO', self.delegado)
+        url = reverse('delegado_compromiso_view', args=[compromiso.pk])
+
+        response = self.client.get(url)
+        self.assertContains(response, 'Junta Vecinal Centro')
+        self.assertNotContains(response, 'name="solicitante"')
+
+        response = self.client.post(url, {
+            'accion': 'guardar',
+            'solicitante': 'Solicitante alterado',
+            'responsable': self.funcionario.pk,
+            'territorio': 'Centro',
+            'observacion': 'Reparación actualizada',
+        })
+
+        self.assertEqual(response.status_code, 302)
+        compromiso.refresh_from_db()
+        self.assertEqual(compromiso.solicitante, 'Junta Vecinal Centro')
+
     def test_delegate_and_staff_cannot_access_another_delegations_commitment(self):
         compromiso = Compromiso.objects.create(
             delegacion=self.otra_delegacion,
@@ -966,18 +994,35 @@ class EvidenceImagePreviewTests(SimpleTestCase):
 
 class OrganizacionesJJVVCrudTests(TestCase):
     def iniciar_sesion_organizaciones(self):
+        delegacion = Delegacion.objects.create(nombre='Delegación OROC Centro')
+        Usuario.objects.create(
+            pk=1,
+            identificador_inst='OROC-001',
+            nombres='Ana',
+            apellidos='Pérez',
+            email='oroc@muni.test',
+            password_hash='hash',
+            delegacion=delegacion,
+        )
         session = self.client.session
         session['user_role'] = 'ORGANIZACIONES_COMUNITARIAS'
         session['user_id'] = 1
         session['user_name'] = 'Ana Pérez'
         session.save()
         self.client.cookies[settings.SESSION_COOKIE_NAME] = session.session_key
+        return delegacion
 
     def test_create_search_update_and_delete_organization(self):
-        self.iniciar_sesion_organizaciones()
+        delegacion_usuario = self.iniciar_sesion_organizaciones()
+        form_response = self.client.get(reverse('main:nueva_organizacion_jjvv_view'))
+        self.assertContains(form_response, 'name="delegacion"')
+        self.assertContains(form_response, 'name="territorio_deleg"')
+        self.assertContains(form_response, 'Delegación OROC Centro')
+        self.assertContains(form_response, 'Territorio o sector')
         datos = {
             'organizaciones': 'Junta de Vecinos El Faro',
             'domicilio_legal': 'Av. del Mar 100',
+            'delegacion': '99999',
             'territorio_deleg': 'Las Compañías',
             'socios_activos': '35',
             'fecha_constitucion': '2020-05-10',
@@ -995,6 +1040,8 @@ class OrganizacionesJJVVCrudTests(TestCase):
         self.assertEqual(organizacion.presidente_n, 'María Soto')
         self.assertEqual(organizacion.tesorero_n, 'Luis Pérez')
         self.assertEqual(organizacion.secretario_n, 'Ana Díaz')
+        self.assertEqual(organizacion.delegacion, delegacion_usuario)
+        self.assertEqual(organizacion.territorio_deleg, 'Las Compañías')
         self.assertEqual(organizacion.fecha_constitucion, date(2020, 5, 10))
         self.assertEqual(organizacion.fecha_inscripcion_reg, date(2020, 5, 20))
 
@@ -1053,6 +1100,19 @@ class OrganizacionesJJVVCrudTests(TestCase):
         self.assertIsNone(organizacion.presidente_n)
         self.assertIsNone(organizacion.tesorero_n)
         self.assertIsNone(organizacion.secretario_n)
+
+    def test_registration_requires_account_delegation(self):
+        self.iniciar_sesion_organizaciones()
+        Usuario.objects.filter(pk=1).update(delegacion=None)
+
+        response = self.client.post(reverse('main:nueva_organizacion_jjvv_view'), {
+            'organizaciones': 'Agrupación sin delegación',
+            'territorio_deleg': 'Sector independiente',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Tu cuenta no tiene una delegación asignada')
+        self.assertFalse(OrganizacionJJVV.objects.filter(organizaciones='Agrupación sin delegación').exists())
 
     def test_oroc_sidebar_is_only_shown_on_list(self):
         self.iniciar_sesion_organizaciones()

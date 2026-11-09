@@ -113,10 +113,6 @@
                 });
             });
         });
-
-        const requestedPanel = new URLSearchParams(window.location.search).get('panel');
-        const requestedPanelButton = [...dashboardButtons].find((button) => button.dataset.dashboardTarget === requestedPanel);
-        requestedPanelButton?.click();
     </script>
     {% include 'main/_sweetalerts.html' %}
 </body>

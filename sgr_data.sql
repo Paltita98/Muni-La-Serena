@@ -454,6 +454,7 @@ CREATE TABLE organizaciones_jjvv (
     id SERIAL PRIMARY KEY, -- O usar AUTO_INCREMENT en MySQL
     organizaciones VARCHAR(255),
     domicilio_legal VARCHAR(255),
+    id_delegacion INT UNSIGNED NULL,
     territorio_deleg VARCHAR(100),
     socios_activos INT,
     fecha_constitucion DATE,
@@ -462,5 +463,8 @@ CREATE TABLE organizaciones_jjvv (
     reg_dir_n VARCHAR(50),
     presidente_n VARCHAR(100),
     tesorero_n VARCHAR(100),
-    secretario_n VARCHAR(100)
+    secretario_n VARCHAR(100),
+    CONSTRAINT fk_organizacion_delegacion
+        FOREIGN KEY (id_delegacion) REFERENCES delegacion (id_delegacion)
+        ON DELETE RESTRICT ON UPDATE CASCADE
 );

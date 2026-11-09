@@ -205,6 +205,11 @@ def editar_organizacion_jjvv_view(request, organizacion_id):
 def _gestionar_organizacion_jjvv(request, organizacion_id=None):
     if request.session.get('user_role') != 'ORGANIZACIONES_COMUNITARIAS':
         return redirect('main:login_view')
+    usuario = Usuario.objects.select_related('delegacion').filter(
+        pk=request.session.get('user_id'),
+        estado='activo',
+    ).first()
+    delegacion_usuario = usuario.delegacion if usuario else None
     organizacion = get_object_or_404(OrganizacionJJVV, pk=organizacion_id) if organizacion_id else None
     form_data = request.POST.copy() if request.method == 'POST' else None
     if organizacion and form_data is not None:
@@ -214,9 +219,14 @@ def _gestionar_organizacion_jjvv(request, organizacion_id=None):
     form = OrganizacionJJVVForm(
         form_data,
         instance=organizacion,
+        delegacion_usuario=delegacion_usuario,
     )
-    if request.method == 'POST' and form.is_valid():
-        organizacion = form.save()
+    if request.method == 'POST' and not delegacion_usuario:
+        form.add_error(None, 'Tu cuenta no tiene una delegación asignada. Solicita que se configure antes de registrar organizaciones.')
+    if request.method == 'POST' and delegacion_usuario and form.is_valid():
+        organizacion = form.save(commit=False)
+        organizacion.delegacion = delegacion_usuario
+        organizacion.save()
         messages.success(
             request,
             f'Organización «{organizacion.organizaciones}» '
@@ -226,6 +236,7 @@ def _gestionar_organizacion_jjvv(request, organizacion_id=None):
     return render(request, 'funcionario_demo_app/organizaciones_jjvv_formulario.html', {
         'form': form,
         'organizacion': organizacion,
+        'delegacion_usuario': delegacion_usuario,
     })
 
 

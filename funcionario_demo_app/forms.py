@@ -103,6 +103,7 @@ class OrganizacionJJVVForm(forms.ModelForm):
         fields = (
             'organizaciones',
             'domicilio_legal',
+            'delegacion',
             'territorio_deleg',
             'socios_activos',
             'fecha_constitucion',
@@ -116,7 +117,8 @@ class OrganizacionJJVVForm(forms.ModelForm):
         labels = {
             'organizaciones': 'Nombre de la organización',
             'domicilio_legal': 'Domicilio legal',
-            'territorio_deleg': 'Territorio o delegación',
+            'delegacion': 'Delegación asignada a la cuenta',
+            'territorio_deleg': 'Territorio o sector',
             'socios_activos': 'Socios activos',
             'fecha_constitucion': 'Fecha de constitución',
             'n_reg_pj': 'Número de registro de personalidad jurídica',
@@ -129,6 +131,7 @@ class OrganizacionJJVVForm(forms.ModelForm):
         widgets = {
             'organizaciones': forms.TextInput(attrs={'autocomplete': 'organization'}),
             'domicilio_legal': forms.TextInput(),
+            'delegacion': forms.Select(),
             'territorio_deleg': forms.TextInput(),
             'socios_activos': forms.NumberInput(attrs={'min': 0, 'step': 1}),
             'fecha_constitucion': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
@@ -141,7 +144,14 @@ class OrganizacionJJVVForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        delegacion_usuario = kwargs.pop('delegacion_usuario', None)
         super().__init__(*args, **kwargs)
+        self.fields['delegacion'].queryset = (
+            Delegacion.objects.filter(pk=delegacion_usuario.pk)
+            if delegacion_usuario else Delegacion.objects.none()
+        )
+        self.fields['delegacion'].initial = delegacion_usuario
+        self.fields['delegacion'].disabled = True
         for field in self.fields.values():
             field.widget.attrs['class'] = (
                 'w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm '
@@ -290,6 +300,7 @@ class DelegadoCompromisoForm(forms.ModelForm):
         self.delegacion = delegacion
         if self.instance.pk:
             self.fields.pop("fecha_comprometida")
+            self.fields.pop("solicitante")
         self.fields["responsable"].queryset = (
             Usuario.objects.filter(delegacion=delegacion, estado="activo")
             .order_by("apellidos", "nombres")

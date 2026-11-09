@@ -19,6 +19,7 @@
                 <section><p class="text-sm font-semibold text-red-800">Registro OROC</p><h1 class="mt-1 text-2xl font-bold text-gray-900">{% if organizacion %}{{ organizacion.organizaciones }}{% else %}Nueva organización comunitaria{% endif %}</h1><p class="mt-1 text-sm text-gray-500">Ingresa los antecedentes disponibles de la organización.</p></section>
                 <form method="post" class="bg-white border border-gray-200 rounded-md p-4 sm:p-6 space-y-5">
                     {% csrf_token %}
+                    {% if not delegacion_usuario %}<div role="alert" class="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">Tu cuenta no tiene una delegación asignada. Solicita que se configure antes de registrar organizaciones.</div>{% endif %}
                     {% if form.non_field_errors %}<div role="alert" class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ form.non_field_errors }}</div>{% endif %}
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {% for field in form %}
@@ -33,7 +34,7 @@
                     </div>
                     <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 border-t border-gray-100 pt-4">
                         <a href="{% url 'main:organizaciones_jjvv_list_view' %}" class="rounded-md border border-gray-300 px-4 py-2.5 text-center text-sm font-semibold text-gray-700 hover:bg-gray-50">Cancelar</a>
-                        <button type="submit" class="rounded-md bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900">{% if organizacion %}Guardar cambios{% else %}Registrar organización{% endif %}</button>
+                        <button type="submit" {% if not delegacion_usuario %}disabled{% endif %} class="rounded-md bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50">{% if organizacion %}Guardar cambios{% else %}Registrar organización{% endif %}</button>
                     </div>
                 </form>
             </div>

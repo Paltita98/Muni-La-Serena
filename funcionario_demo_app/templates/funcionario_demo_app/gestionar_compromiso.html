@@ -35,6 +35,10 @@
                             <p class="block text-sm font-medium text-gray-700">Fecha comprometida</p>
                             <p class="mt-1 text-sm text-gray-900">{{ compromiso.fecha_comprometida|date:"d/m/Y" }}</p>
                         </div>
+                        <div class="border-b border-gray-100 pb-4">
+                            <p class="block text-sm font-medium text-gray-700">Solicitante</p>
+                            <p class="mt-1 text-sm text-gray-900">{{ compromiso.solicitante }}</p>
+                        </div>
                     {% endif %}
                     {% for field in form %}
                         <div>
