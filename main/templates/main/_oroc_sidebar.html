@@ -1,0 +1,17 @@
+{% load static %}
+<aside class="sidebar w-56 sm:w-64 shrink-0 text-white flex flex-col overflow-y-auto">
+    <div class="min-h-20 shrink-0 flex flex-col items-start justify-center gap-1 px-4 py-2 border-b border-white/15">
+        <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo h-8">
+        <span class="text-xs font-bold tracking-widest">OROC</span>
+    </div>
+    <nav aria-label="Navegación de organizaciones comunitarias" class="flex-1 px-3 py-4 space-y-1">
+        <a href="{% url 'main:organizaciones_comunitarias_dashboard_view' %}?panel=resumen" class="flex items-center px-3 py-2.5 rounded-lg transition {% if active_page == 'resumen' %}bg-red-900 text-white font-semibold{% else %}text-red-100 hover:bg-red-800{% endif %}">Resumen</a>
+        <a href="{% url 'main:organizaciones_jjvv_list_view' %}" {% if active_page == 'registro' %}aria-current="page"{% endif %} class="flex items-center px-3 py-2.5 rounded-lg transition {% if active_page == 'registro' %}bg-red-900 text-white font-semibold{% else %}text-red-100 hover:bg-red-800{% endif %}">Registro OROC</a>
+        <a href="{% url 'main:organizaciones_comunitarias_dashboard_view' %}?panel=formacion" class="flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Asesoría y formación</a>
+        <a href="{% url 'main:organizaciones_comunitarias_dashboard_view' %}?panel=territorio" class="flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Trabajo territorial</a>
+        <a href="{% url 'main:organizaciones_comunitarias_dashboard_view' %}?panel=convocatorias" class="flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Convocatorias</a>
+        <a href="{% url 'main:organizaciones_comunitarias_dashboard_view' %}?panel=articulacion" class="flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Articulación municipal</a>
+        <a href="{% url 'main:organizaciones_comunitarias_dashboard_view' %}?panel=normativa" class="flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Marco normativo</a>
+    </nav>
+    {% include 'main/_logout_button.html' %}
+</aside>

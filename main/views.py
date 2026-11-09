@@ -16,6 +16,7 @@ from django.views.decorators.http import require_POST
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.db.models import Count, Q, Sum
 
+from .backlog_filters import filter_by_local_dates
 from admin_demo_app.models import (
     Actividad,
     AtencionSocial,
@@ -394,10 +395,7 @@ def _coordinator_dashboard(request):
                 'realizado': ('realizado',),
             }
             commitment_rows = commitment_rows.filter(estado__in=state_map[selected_state])
-        if date_from:
-            commitment_rows = commitment_rows.filter(fecha_registro__date__gte=date_from)
-        if date_to:
-            commitment_rows = commitment_rows.filter(fecha_registro__date__lte=date_to)
+        commitment_rows = filter_by_local_dates(commitment_rows, 'fecha_registro', date_from, date_to)
         commitment_rows = commitment_rows.select_related(
             'delegacion', 'persona', 'responsable', 'actividad_origen',
         ).order_by('-fecha_registro')
@@ -426,10 +424,7 @@ def _coordinator_dashboard(request):
                 'realizado': ('validada',),
             }
             activity_rows = activity_rows.filter(estado__in=state_map[selected_state])
-        if date_from:
-            activity_rows = activity_rows.filter(fecha_registro__date__gte=date_from)
-        if date_to:
-            activity_rows = activity_rows.filter(fecha_registro__date__lte=date_to)
+        activity_rows = filter_by_local_dates(activity_rows, 'fecha_registro', date_from, date_to)
         activity_rows = activity_rows.select_related(
             'funcionario', 'funcionario__delegacion', 'item', 'catalogo_tipo',
         ).order_by('-fecha_registro')
@@ -458,10 +453,7 @@ def _coordinator_dashboard(request):
             attention_rows = attention_rows.filter(resultado__gt='')
         elif selected_state:
             attention_rows = AtencionSocial.objects.none()
-        if date_from:
-            attention_rows = attention_rows.filter(fecha_registro__date__gte=date_from)
-        if date_to:
-            attention_rows = attention_rows.filter(fecha_registro__date__lte=date_to)
+        attention_rows = filter_by_local_dates(attention_rows, 'fecha_registro', date_from, date_to)
         attention_rows = attention_rows.select_related(
             'persona', 'delegacion', 'funcionario', 'funcionario__delegacion',
             'catalogo_tipo', 'catalogo_subtipo', 'actividad',

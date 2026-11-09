@@ -1,5 +1,5 @@
 import json
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from io import BytesIO
 from pathlib import Path
@@ -12,6 +12,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.http import Http404
 from django.urls import reverse
+from django.utils import timezone
 from PIL import Image
 
 from admin_demo_app.models import (
@@ -202,6 +203,7 @@ class FlujoCompromisosTests(TestCase):
         session['user_role'] = rol
         session['user_id'] = usuario.pk
         session.save()
+        self.client.cookies[settings.SESSION_COOKIE_NAME] = session.session_key
 
     def test_delegate_assigns_staff_tracks_and_approves_commitment(self):
         self.iniciar_sesion_rol('DELEGADO', self.delegado)
@@ -339,6 +341,31 @@ class FlujoCompromisosTests(TestCase):
         })
         self.assertEqual(filtered_response.context['backlog_total'], 0)
         self.assertNotContains(filtered_response, 'Solicitud externa del TUBO')
+
+    def test_delegate_tube_includes_records_from_selected_local_date(self):
+        registration_time = timezone.make_aware(datetime(2026, 10, 1, 0, 30))
+        Actividad.objects.filter(pk=self.actividad.pk).update(fecha_registro=registration_time)
+        AtencionSocial.objects.filter(actividad=self.actividad).update(fecha_registro=registration_time)
+        compromiso = Compromiso.objects.create(
+            delegacion=self.delegacion,
+            responsable=self.funcionario,
+            solicitante='Junta local',
+            territorio='Centro',
+            observacion='Compromiso del TUBO por fecha',
+            fecha_comprometida=date(2026, 12, 15),
+        )
+        Compromiso.objects.filter(pk=compromiso.pk).update(fecha_registro=registration_time)
+        self.iniciar_sesion_rol('DELEGADO', self.delegado)
+
+        response = self.client.get(reverse('delegado_demo_view'), {
+            'panel': 'tubo',
+            'desde': '2026-10-01',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Operativo comunitario Centro')
+        self.assertContains(response, 'CASO-CENTRO')
+        self.assertContains(response, 'Compromiso del TUBO por fecha')
 
     def test_delegate_can_read_own_activity_but_cannot_upload_evidence_as_staff(self):
         self.iniciar_sesion_rol('DELEGADO', self.delegado)
@@ -993,6 +1020,21 @@ class OrganizacionesJJVVCrudTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'La inscripción no puede ser anterior a la constitución.')
         self.assertFalse(OrganizacionJJVV.objects.exists())
+
+    def test_oroc_sidebar_stays_on_list_and_edit_but_not_new_form(self):
+        self.iniciar_sesion_organizaciones()
+
+        new_response = self.client.get(reverse('main:nueva_organizacion_jjvv_view'))
+        self.assertNotContains(new_response, 'Navegación de organizaciones comunitarias')
+
+        organizacion = OrganizacionJJVV.objects.create(organizaciones='Junta de Vecinos El Faro')
+        list_response = self.client.get(reverse('main:organizaciones_jjvv_list_view'))
+        edit_response = self.client.get(
+            reverse('main:editar_organizacion_jjvv_view', args=[organizacion.pk]),
+        )
+
+        self.assertContains(list_response, 'Asesoría y formación')
+        self.assertContains(edit_response, 'Asesoría y formación')
 
     def test_dashboard_uses_registered_organization_data(self):
         self.iniciar_sesion_organizaciones()

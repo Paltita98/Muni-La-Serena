@@ -9,19 +9,9 @@
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
 <body class="page-shell bg-gray-50 text-gray-800">
-    <div class="flex h-screen overflow-hidden">
-        <aside class="sidebar w-56 sm:w-64 shrink-0 text-white flex flex-col">
-            <div class="min-h-16 flex items-center px-4 border-b border-white/15">
-                <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo">
-                <div class="ml-3 min-w-0"><p class="font-bold truncate">{{ request.session.user_name }}</p><p class="text-xs text-slate-300">Organizaciones Comunitarias</p></div>
-            </div>
-            <nav aria-label="Navegación principal" class="flex-1 px-3 py-5 space-y-1">
-                <a href="{% url 'main:organizaciones_comunitarias_dashboard_view' %}" class="flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Resumen</a>
-                <a href="{% url 'main:organizaciones_jjvv_list_view' %}" aria-current="page" class="flex items-center px-3 py-2.5 rounded-lg transition bg-red-900 text-white font-semibold">Registro OROC</a>
-            </nav>
-            {% include 'main/_logout_button.html' %}
-        </aside>
-        <main class="flex-1 min-w-0 h-screen overflow-y-auto">
+    <div class="{% if organizacion %}flex h-screen overflow-hidden{% else %}min-h-screen{% endif %}">
+        {% if organizacion %}{% include 'main/_oroc_sidebar.html' with active_page='registro' %}{% endif %}
+        <main class="{% if organizacion %}flex-1 min-w-0 h-screen overflow-y-auto{% else %}w-full min-h-screen{% endif %}">
             <header class="min-h-16 bg-white border-b border-gray-200 flex items-center gap-4 px-4 sm:px-7 py-3">
                 <div><p class="text-xs text-gray-500">OROC <span class="mx-1">/</span> <a href="{% url 'main:organizaciones_jjvv_list_view' %}" class="hover:underline">Organizaciones</a> <span class="mx-1">/</span> {% if organizacion %}Editar{% else %}Nuevo registro{% endif %}</p><p class="mt-1 text-sm font-semibold text-gray-900">{% if organizacion %}Editar organización{% else %}Registrar organización{% endif %}</p></div>
                 <div class="ml-auto shrink-0">{% include 'main/_notification_bell.html' %}</div>

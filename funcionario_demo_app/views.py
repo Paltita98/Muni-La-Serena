@@ -13,6 +13,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.dateparse import parse_date
 
+from main.backlog_filters import filter_by_local_dates
 from admin_demo_app.models import (
     AtencionSocial,
     Actividad,
@@ -924,10 +925,7 @@ def _datos_tubo_delegacion(request, delegacion):
                 'realizado': ('realizado',),
             }
             commitment_rows = commitment_rows.filter(estado__in=state_map[selected_state])
-        if date_from:
-            commitment_rows = commitment_rows.filter(fecha_registro__date__gte=date_from)
-        if date_to:
-            commitment_rows = commitment_rows.filter(fecha_registro__date__lte=date_to)
+        commitment_rows = filter_by_local_dates(commitment_rows, 'fecha_registro', date_from, date_to)
         commitment_rows = commitment_rows.select_related(
             'delegacion', 'persona', 'responsable', 'actividad_origen',
         ).order_by('-fecha_registro')
@@ -955,10 +953,7 @@ def _datos_tubo_delegacion(request, delegacion):
                 'realizado': ('validada',),
             }
             activity_rows = activity_rows.filter(estado__in=state_map[selected_state])
-        if date_from:
-            activity_rows = activity_rows.filter(fecha_registro__date__gte=date_from)
-        if date_to:
-            activity_rows = activity_rows.filter(fecha_registro__date__lte=date_to)
+        activity_rows = filter_by_local_dates(activity_rows, 'fecha_registro', date_from, date_to)
         activity_rows = activity_rows.select_related(
             'funcionario', 'funcionario__delegacion', 'item', 'catalogo_tipo',
         ).order_by('-fecha_registro')
@@ -987,10 +982,7 @@ def _datos_tubo_delegacion(request, delegacion):
             attention_rows = attention_rows.filter(resultado__gt='')
         elif selected_state in {'ingresado', 'en_proceso'}:
             attention_rows = AtencionSocial.objects.none()
-        if date_from:
-            attention_rows = attention_rows.filter(fecha_registro__date__gte=date_from)
-        if date_to:
-            attention_rows = attention_rows.filter(fecha_registro__date__lte=date_to)
+        attention_rows = filter_by_local_dates(attention_rows, 'fecha_registro', date_from, date_to)
         attention_rows = attention_rows.select_related(
             'persona', 'delegacion', 'funcionario', 'funcionario__delegacion',
             'catalogo_tipo', 'catalogo_subtipo', 'actividad',
