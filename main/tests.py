@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock, patch
 
@@ -231,6 +231,17 @@ class CoordinatorDashboardTests(SimpleTestCase):
         activities_for_period = Mock()
         activities_for_period.count.return_value = 8
         activities_for_period.filter.return_value.count.return_value = 2
+        activities_for_period.filter.return_value.select_related.return_value.order_by.return_value = [SimpleNamespace(
+            descripcion='Operativo de limpieza pendiente',
+            accion='Limpieza comunitaria',
+            funcionario=SimpleNamespace(
+                nombres='Ana',
+                apellidos='Soto',
+                delegacion_id=9,
+                delegacion=SimpleNamespace(nombre='Las Compañías'),
+            ),
+            fecha_registro=timezone.now(),
+        )]
         validated_activities = Mock()
         validated_activities.values.return_value.annotate.return_value.values_list.return_value = [(3, 6)]
         activity_manager = Mock()
@@ -244,6 +255,13 @@ class CoordinatorDashboardTests(SimpleTestCase):
         open_commitments = Mock()
         open_commitments.count.return_value = 4
         overdue = Mock(count=Mock(return_value=1))
+        overdue.select_related.return_value.order_by.return_value = [SimpleNamespace(
+            observacion='Reparar luminaria',
+            solicitante='Junta de Vecinos Centro',
+            delegacion=SimpleNamespace(nombre='Centro'),
+            responsable=SimpleNamespace(nombres='Luis', apellidos='Pérez'),
+            fecha_comprometida=date(2026, 11, 1),
+        )]
         due_soon = Mock(count=Mock(return_value=2))
         open_commitments.filter.side_effect = [overdue, due_soon]
         commitment_manager = Mock()
@@ -262,6 +280,15 @@ class CoordinatorDashboardTests(SimpleTestCase):
 
         evidence_manager = Mock()
         evidence_manager.filter.return_value.count.return_value = 3
+        evidence_manager.filter.return_value.select_related.return_value.order_by.return_value = [SimpleNamespace(
+            actividad=SimpleNamespace(
+                descripcion='Reunión vecinal',
+                codigo_evidencia='ACT-0001',
+                funcionario=SimpleNamespace(nombres='Ana', apellidos='Soto'),
+            ),
+            autor=SimpleNamespace(nombres='Ana', apellidos='Soto'),
+            fecha_carga=timezone.now(),
+        )]
 
         metas_query = Mock()
         metas_query.select_related.return_value.order_by.return_value = [meta]
@@ -289,6 +316,9 @@ class CoordinatorDashboardTests(SimpleTestCase):
         self.assertEqual(context['commitment_overdue'], 1)
         self.assertEqual(context['evidence_pending'], 3)
         self.assertEqual(context['indicator_rows'][0]['progress_label'], '60%')
+        self.assertEqual(context['alerts'][0]['items'][0]['name'], 'Reparar luminaria')
+        self.assertEqual(context['alerts'][1]['items'][0]['name'], 'Operativo de limpieza pendiente')
+        self.assertEqual(context['alerts'][2]['items'][0]['name'], 'Reunión vecinal')
         self.assertEqual(context['backlog_total'], 0)
         self.assertEqual(context['backlog_summary'], {
             'realizado': 7,

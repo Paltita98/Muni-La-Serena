@@ -255,15 +255,27 @@ def _coordinator_dashboard(request):
     attentions = AtencionSocial.objects.filter(fecha__range=(period_start, period_end))
     commitments = Compromiso.objects.all()
     open_commitments = commitments.exclude(estado='realizado')
-    overdue_commitments = open_commitments.filter(fecha_comprometida__lt=today).count()
+    overdue_commitments_query = open_commitments.filter(fecha_comprometida__lt=today)
+    overdue_commitments = overdue_commitments_query.count()
+    overdue_commitment_examples = overdue_commitments_query.select_related(
+        'delegacion', 'responsable',
+    ).order_by('fecha_comprometida')[:5]
     due_soon_commitments = open_commitments.filter(
         fecha_comprometida__range=(today, today + timedelta(days=7)),
     ).count()
-    pending_activities = activities.filter(estado__in=('pendiente', 'en_correccion')).count()
-    pending_evidence = Evidencia.objects.filter(
+    pending_activities_query = activities.filter(estado__in=('pendiente', 'en_correccion'))
+    pending_activities = pending_activities_query.count()
+    pending_activity_examples = pending_activities_query.select_related(
+        'funcionario', 'funcionario__delegacion', 'item',
+    ).order_by('-fecha_registro')[:5]
+    pending_evidence_query = Evidencia.objects.filter(
         actividad__fecha_actividad__range=(period_start, period_end),
         estado='pendiente',
-    ).count()
+    )
+    pending_evidence = pending_evidence_query.count()
+    pending_evidence_examples = pending_evidence_query.select_related(
+        'actividad', 'actividad__funcionario', 'actividad__funcionario__delegacion', 'autor',
+    ).order_by('-fecha_carga')[:5]
 
     metas = list(
         Meta.objects.filter(periodo=period, vigente=True)
@@ -303,18 +315,30 @@ def _coordinator_dashboard(request):
             'title': 'Compromisos vencidos',
             'detail': f'{overdue_commitments} compromiso(s) siguen abiertos después de su fecha comprometida.',
             'tone': 'urgent',
+            'items': [{
+                'name': compromiso.observacion or compromiso.solicitante,
+                'detail': f'{compromiso.solicitante} · {compromiso.delegacion.nombre} · Responsable: {compromiso.responsable.nombres} {compromiso.responsable.apellidos} · Venció {compromiso.fecha_comprometida:%d/%m/%Y}',
+            } for compromiso in overdue_commitment_examples],
         })
     if pending_activities:
         alerts.append({
             'title': 'Actividades por revisar',
             'detail': f'{pending_activities} actividad(es) están pendientes o en corrección.',
             'tone': 'attention',
+            'items': [{
+                'name': actividad.descripcion,
+                'detail': f'{actividad.accion} · {actividad.funcionario.delegacion.nombre if actividad.funcionario.delegacion_id else "Sin delegación"} · Responsable: {actividad.funcionario.nombres} {actividad.funcionario.apellidos} · Registrada {actividad.fecha_registro:%d/%m/%Y}',
+            } for actividad in pending_activity_examples],
         })
     if pending_evidence:
         alerts.append({
             'title': 'Evidencias pendientes',
             'detail': f'{pending_evidence} evidencia(s) esperan revisión.',
             'tone': 'attention',
+            'items': [{
+                'name': evidencia.actividad.descripcion,
+                'detail': f'{evidencia.actividad.codigo_evidencia} · Funcionario: {evidencia.actividad.funcionario.nombres} {evidencia.actividad.funcionario.apellidos} · Cargada por {evidencia.autor.nombres} {evidencia.autor.apellidos} el {evidencia.fecha_carga:%d/%m/%Y}',
+            } for evidencia in pending_evidence_examples],
         })
     if not alerts:
         alerts.append({
