@@ -292,6 +292,38 @@ class FlujoCompromisosTests(TestCase):
         compromiso.refresh_from_db()
         self.assertEqual(compromiso.solicitante, 'Junta Vecinal Centro')
 
+    def test_linked_solicitant_is_visible_in_agenda_and_update_screen(self):
+        persona = PersonaUsuaria.objects.create(
+            referencia_anonima='CASO-SOL-001',
+            nombre='María González',
+        )
+        compromiso = Compromiso.objects.create(
+            delegacion=self.delegacion,
+            responsable=self.funcionario,
+            persona=persona,
+            solicitante='',
+            territorio='Centro',
+            observacion='Reparar luminaria',
+            fecha_comprometida=date(2026, 12, 15),
+        )
+        self.iniciar_sesion_rol('FUNCIONARIO', self.funcionario)
+
+        agenda_response = self.client.get(reverse('agenda_colectiva_view'))
+        update_response = self.client.get(
+            reverse('funcionario_compromiso_view', args=[compromiso.pk]),
+        )
+
+        self.assertEqual(agenda_response.context['compromisos_json'][0]['solicitante'], 'María González')
+        self.assertContains(update_response, 'María González')
+        self.assertNotContains(update_response, 'name="solicitante"')
+
+        self.iniciar_sesion_rol('DELEGADO', self.delegado)
+        delegate_response = self.client.get(
+            reverse('delegado_compromiso_view', args=[compromiso.pk]),
+        )
+        self.assertContains(delegate_response, 'María González')
+        self.assertNotContains(delegate_response, 'name="solicitante"')
+
     def test_delegate_and_staff_cannot_access_another_delegations_commitment(self):
         compromiso = Compromiso.objects.create(
             delegacion=self.otra_delegacion,

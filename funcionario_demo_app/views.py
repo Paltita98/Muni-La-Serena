@@ -202,7 +202,7 @@ def delegado_compromiso_view(request, compromiso_id=None):
     compromiso = None
     if compromiso_id is not None:
         compromiso = get_object_or_404(
-            Compromiso.objects.select_related('responsable', 'delegacion'),
+            Compromiso.objects.select_related('responsable', 'delegacion', 'persona'),
             pk=compromiso_id,
             delegacion=delegacion,
         )
@@ -276,7 +276,7 @@ def funcionario_compromiso_view(request, compromiso_id):
     if funcionario is None:
         return redirect('main:login_view')
     compromiso = get_object_or_404(
-        Compromiso.objects.select_related('responsable', 'delegacion'),
+        Compromiso.objects.select_related('responsable', 'delegacion', 'persona'),
         pk=compromiso_id,
         responsable=funcionario,
     )
@@ -525,11 +525,11 @@ def agenda_colectiva_view(request):
         is_delegado = False
     else:
         return redirect('main:login_view')
-    compromisos = compromisos.select_related('responsable').order_by('fecha_comprometida')
+    compromisos = compromisos.select_related('responsable', 'persona').order_by('fecha_comprometida')
     datos = [{
         'id': compromiso.pk,
-        'titulo': compromiso.observacion or compromiso.solicitante,
-        'solicitante': compromiso.solicitante,
+        'titulo': compromiso.observacion or compromiso.solicitante_display,
+        'solicitante': compromiso.solicitante_display,
         'vence': compromiso.fecha_comprometida.strftime('%d/%m/%Y'),
         'estado': compromiso.estado,
         'url': reverse(

@@ -377,6 +377,12 @@ class Compromiso(models.Model):
     def __str__(self):
         return f'{self.solicitante} - {self.fecha_comprometida}'
 
+    @property
+    def solicitante_display(self):
+        if self.persona_id:
+            return self.persona.nombre.strip() or self.persona.referencia_anonima or self.solicitante
+        return self.solicitante
+
 
 class CompromisoEstadoHistorial(models.Model):
     ESTADO_CHOICES = Compromiso.ESTADO_CHOICES

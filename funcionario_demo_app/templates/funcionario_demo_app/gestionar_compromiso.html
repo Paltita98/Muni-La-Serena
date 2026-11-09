@@ -32,6 +32,10 @@
                     {% if form.non_field_errors %}<div class="text-sm text-red-700">{{ form.non_field_errors }}</div>{% endif %}
                     {% if compromiso %}
                         <div class="border-b border-gray-100 pb-4">
+                            <p class="block text-sm font-medium text-gray-700">Solicitante</p>
+                            <p class="mt-1 text-sm text-gray-900">{{ compromiso.solicitante_display }}</p>
+                        </div>
+                        <div class="border-b border-gray-100 pb-4">
                             <p class="block text-sm font-medium text-gray-700">Fecha comprometida</p>
                             <p class="mt-1 text-sm text-gray-900">{{ compromiso.fecha_comprometida|date:"d/m/Y" }}</p>
                         </div>
