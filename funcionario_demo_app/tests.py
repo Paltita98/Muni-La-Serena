@@ -995,12 +995,24 @@ class OrganizacionesJJVVCrudTests(TestCase):
         self.assertEqual(organizacion.presidente_n, 'María Soto')
         self.assertEqual(organizacion.tesorero_n, 'Luis Pérez')
         self.assertEqual(organizacion.secretario_n, 'Ana Díaz')
+        self.assertEqual(organizacion.fecha_constitucion, date(2020, 5, 10))
+        self.assertEqual(organizacion.fecha_inscripcion_reg, date(2020, 5, 20))
+
+        edit_response = self.client.get(
+            reverse('main:editar_organizacion_jjvv_view', args=[organizacion.pk]),
+        )
+        self.assertNotContains(edit_response, 'Navegación de organizaciones comunitarias')
+        self.assertContains(edit_response, 'type="date" name="fecha_constitucion" value="2020-05-10"')
+        self.assertContains(edit_response, 'type="date" name="fecha_inscripcion_reg" value="2020-05-20"')
 
         response = self.client.get(reverse('main:organizaciones_jjvv_list_view'), {'q': 'Las Compañías'})
         self.assertContains(response, 'Junta de Vecinos El Faro')
+        self.assertContains(response, 'María Soto')
         self.assertEqual(len(response.context['organizaciones']), 1)
 
         datos['organizaciones'] = 'Junta de Vecinos El Faro Norte'
+        datos.pop('fecha_constitucion')
+        datos.pop('fecha_inscripcion_reg')
         response = self.client.post(
             reverse('main:editar_organizacion_jjvv_view', args=[organizacion.pk]),
             datos,
@@ -1008,6 +1020,8 @@ class OrganizacionesJJVVCrudTests(TestCase):
         self.assertRedirects(response, reverse('main:organizaciones_jjvv_list_view'))
         organizacion.refresh_from_db()
         self.assertEqual(organizacion.organizaciones, 'Junta de Vecinos El Faro Norte')
+        self.assertEqual(organizacion.fecha_constitucion, date(2020, 5, 10))
+        self.assertEqual(organizacion.fecha_inscripcion_reg, date(2020, 5, 20))
 
         delete_url = reverse('main:eliminar_organizacion_jjvv_view', args=[organizacion.pk])
         self.assertEqual(self.client.get(delete_url).status_code, 405)
@@ -1040,7 +1054,7 @@ class OrganizacionesJJVVCrudTests(TestCase):
         self.assertIsNone(organizacion.tesorero_n)
         self.assertIsNone(organizacion.secretario_n)
 
-    def test_oroc_sidebar_stays_on_list_and_edit_but_not_new_form(self):
+    def test_oroc_sidebar_is_only_shown_on_list(self):
         self.iniciar_sesion_organizaciones()
 
         new_response = self.client.get(reverse('main:nueva_organizacion_jjvv_view'))
@@ -1053,7 +1067,7 @@ class OrganizacionesJJVVCrudTests(TestCase):
         )
 
         self.assertContains(list_response, 'Asesoría y formación')
-        self.assertContains(edit_response, 'Asesoría y formación')
+        self.assertNotContains(edit_response, 'Navegación de organizaciones comunitarias')
 
     def test_dashboard_uses_registered_organization_data(self):
         self.iniciar_sesion_organizaciones()

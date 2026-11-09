@@ -31,11 +31,12 @@
                     </form>
                     <div class="overflow-x-auto">
                         <table class="w-full min-w-[900px] text-left">
-                            <thead><tr class="bg-gray-50 text-xs uppercase text-gray-500"><th class="px-4 py-3 font-medium">Organización</th><th class="px-4 py-3 font-medium">Territorio</th><th class="px-4 py-3 font-medium">Socios</th><th class="px-4 py-3 font-medium">Constitución</th><th class="px-4 py-3 font-medium">Registro PJ</th><th class="px-4 py-3 text-right font-medium">Acciones</th></tr></thead>
+                            <thead><tr class="bg-gray-50 text-xs uppercase text-gray-500"><th class="px-4 py-3 font-medium">Organización</th><th class="px-4 py-3 font-medium">Presidente</th><th class="px-4 py-3 font-medium">Territorio</th><th class="px-4 py-3 font-medium">Socios</th><th class="px-4 py-3 font-medium">Constitución</th><th class="px-4 py-3 font-medium">Registro PJ</th><th class="px-4 py-3 text-right font-medium">Acciones</th></tr></thead>
                             <tbody class="divide-y divide-gray-100 text-sm">
                                 {% for organizacion in organizaciones %}
                                     <tr class="hover:bg-gray-50">
                                         <td class="px-4 py-4"><p class="font-semibold text-gray-900">{{ organizacion.organizaciones }}</p><p class="mt-1 text-xs text-gray-500">{{ organizacion.domicilio_legal|default:"Sin domicilio indicado" }}</p></td>
+                                        <td class="px-4 py-4 text-gray-700">{{ organizacion.presidente_n|default:"-" }}</td>
                                         <td class="px-4 py-4 text-gray-700">{{ organizacion.territorio_deleg|default:"-" }}</td>
                                         <td class="px-4 py-4 text-gray-700">{{ organizacion.socios_activos|default:"-" }}</td>
                                         <td class="px-4 py-4 text-gray-700">{{ organizacion.fecha_constitucion|date:"d/m/Y"|default:"-" }}</td>
@@ -43,7 +44,7 @@
                                         <td class="px-4 py-4"><div class="flex justify-end items-center gap-4"><a href="{% url 'main:editar_organizacion_jjvv_view' organizacion.pk %}" class="font-semibold text-emerald-800 hover:text-emerald-950">Editar</a><form method="post" action="{% url 'main:eliminar_organizacion_jjvv_view' organizacion.pk %}" data-swal-confirm data-confirm-title="¿Eliminar esta organización?" data-confirm-text="Se borrará del registro OROC y no se podrá recuperar.">{% csrf_token %}<button type="submit" class="font-semibold text-red-700 hover:text-red-900">Eliminar</button></form></div></td>
                                     </tr>
                                 {% empty %}
-                                    <tr><td colspan="6" class="px-4 py-12 text-center"><p class="text-sm font-semibold text-gray-800">{% if busqueda %}No se encontraron organizaciones{% else %}Aún no hay organizaciones registradas{% endif %}</p><p class="mt-1 text-sm text-gray-500">{% if busqueda %}Prueba con otro término.{% else %}Crea el primer registro para comenzar el catastro.{% endif %}</p></td></tr>
+                                    <tr><td colspan="7" class="px-4 py-12 text-center"><p class="text-sm font-semibold text-gray-800">{% if busqueda %}No se encontraron organizaciones{% else %}Aún no hay organizaciones registradas{% endif %}</p><p class="mt-1 text-sm text-gray-500">{% if busqueda %}Prueba con otro término.{% else %}Crea el primer registro para comenzar el catastro.{% endif %}</p></td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>

@@ -206,8 +206,13 @@ def _gestionar_organizacion_jjvv(request, organizacion_id=None):
     if request.session.get('user_role') != 'ORGANIZACIONES_COMUNITARIAS':
         return redirect('main:login_view')
     organizacion = get_object_or_404(OrganizacionJJVV, pk=organizacion_id) if organizacion_id else None
+    form_data = request.POST.copy() if request.method == 'POST' else None
+    if organizacion and form_data is not None:
+        for field_name in ('fecha_constitucion', 'fecha_inscripcion_reg'):
+            if field_name not in form_data:
+                form_data[field_name] = getattr(organizacion, field_name).isoformat() if getattr(organizacion, field_name) else ''
     form = OrganizacionJJVVForm(
-        request.POST if request.method == 'POST' else None,
+        form_data,
         instance=organizacion,
     )
     if request.method == 'POST' and form.is_valid():
