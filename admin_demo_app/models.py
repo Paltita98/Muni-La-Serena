@@ -520,6 +520,9 @@ class OrganizacionJJVV(models.Model):
     n_reg_pj = models.CharField(max_length=50, null=True, blank=True)
     fecha_inscripcion_reg = models.DateField(null=True, blank=True)
     reg_dir_n = models.CharField(max_length=50, null=True, blank=True)
+    presidente_n = models.CharField(max_length=100, null=True, blank=True)
+    tesorero_n = models.CharField(max_length=100, null=True, blank=True)
+    secretario_n = models.CharField(max_length=100, null=True, blank=True)
 
     class Meta:
         db_table = 'organizaciones_jjvv'

@@ -109,6 +109,9 @@ class OrganizacionJJVVForm(forms.ModelForm):
             'n_reg_pj',
             'fecha_inscripcion_reg',
             'reg_dir_n',
+            'presidente_n',
+            'tesorero_n',
+            'secretario_n',
         )
         labels = {
             'organizaciones': 'Nombre de la organización',
@@ -119,6 +122,9 @@ class OrganizacionJJVVForm(forms.ModelForm):
             'n_reg_pj': 'Número de registro de personalidad jurídica',
             'fecha_inscripcion_reg': 'Fecha de inscripción en el registro',
             'reg_dir_n': 'Número de registro de directorio',
+            'presidente_n': 'Presidente',
+            'tesorero_n': 'Tesorero',
+            'secretario_n': 'Secretario',
         }
         widgets = {
             'organizaciones': forms.TextInput(attrs={'autocomplete': 'organization'}),
@@ -129,6 +135,9 @@ class OrganizacionJJVVForm(forms.ModelForm):
             'n_reg_pj': forms.TextInput(),
             'fecha_inscripcion_reg': forms.DateInput(attrs={'type': 'date'}),
             'reg_dir_n': forms.TextInput(),
+            'presidente_n': forms.TextInput(attrs={'autocomplete': 'name'}),
+            'tesorero_n': forms.TextInput(attrs={'autocomplete': 'name'}),
+            'secretario_n': forms.TextInput(attrs={'autocomplete': 'name'}),
         }
 
     def __init__(self, *args, **kwargs):

@@ -984,11 +984,17 @@ class OrganizacionesJJVVCrudTests(TestCase):
             'n_reg_pj': 'PJ-104',
             'fecha_inscripcion_reg': '2020-05-20',
             'reg_dir_n': 'DIR-31',
+            'presidente_n': 'María Soto',
+            'tesorero_n': 'Luis Pérez',
+            'secretario_n': 'Ana Díaz',
         }
 
         response = self.client.post(reverse('main:nueva_organizacion_jjvv_view'), datos)
         self.assertRedirects(response, reverse('main:organizaciones_jjvv_list_view'))
         organizacion = OrganizacionJJVV.objects.get(organizaciones='Junta de Vecinos El Faro')
+        self.assertEqual(organizacion.presidente_n, 'María Soto')
+        self.assertEqual(organizacion.tesorero_n, 'Luis Pérez')
+        self.assertEqual(organizacion.secretario_n, 'Ana Díaz')
 
         response = self.client.get(reverse('main:organizaciones_jjvv_list_view'), {'q': 'Las Compañías'})
         self.assertContains(response, 'Junta de Vecinos El Faro')
@@ -1020,6 +1026,19 @@ class OrganizacionesJJVVCrudTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'La inscripción no puede ser anterior a la constitución.')
         self.assertFalse(OrganizacionJJVV.objects.exists())
+
+    def test_officer_names_are_optional(self):
+        self.iniciar_sesion_organizaciones()
+
+        response = self.client.post(reverse('main:nueva_organizacion_jjvv_view'), {
+            'organizaciones': 'Agrupación Comunitaria Norte',
+        })
+
+        self.assertRedirects(response, reverse('main:organizaciones_jjvv_list_view'))
+        organizacion = OrganizacionJJVV.objects.get(organizaciones='Agrupación Comunitaria Norte')
+        self.assertIsNone(organizacion.presidente_n)
+        self.assertIsNone(organizacion.tesorero_n)
+        self.assertIsNone(organizacion.secretario_n)
 
     def test_oroc_sidebar_stays_on_list_and_edit_but_not_new_form(self):
         self.iniciar_sesion_organizaciones()

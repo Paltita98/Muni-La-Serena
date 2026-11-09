@@ -459,5 +459,8 @@ CREATE TABLE organizaciones_jjvv (
     fecha_constitucion DATE,
     n_reg_pj VARCHAR(50),
     fecha_inscripcion_reg DATE,
-    reg_dir_n VARCHAR(50)
+    reg_dir_n VARCHAR(50),
+    presidente_n VARCHAR(100),
+    tesorero_n VARCHAR(100),
+    secretario_n VARCHAR(100)
 );

@@ -23,6 +23,7 @@
                     {% if form.non_field_errors %}<div role="alert" class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ form.non_field_errors }}</div>{% endif %}
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {% for field in form %}
+                            {% if field.name == 'presidente_n' %}<h2 class="sm:col-span-2 border-t border-gray-100 pt-4 text-sm font-bold text-gray-900">Directiva vigente <span class="font-normal text-gray-500">(opcional)</span></h2>{% endif %}
                             <div class="{% if field.name == 'organizaciones' or field.name == 'domicilio_legal' %}sm:col-span-2{% endif %}">
                                 <label for="{{ field.id_for_label }}" class="mb-1.5 block text-sm font-semibold text-gray-800">{{ field.label }}{% if field.field.required %}<span class="text-red-700"> *</span>{% endif %}</label>
                                 {{ field }}
