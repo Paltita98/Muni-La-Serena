@@ -1,0 +1,148 @@
+<section id="tubo" data-dashboard-panel="tubo" {% if active_dashboard_panel != 'tubo' %}hidden{% endif %} aria-labelledby="tube-heading" class="space-y-4">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+            <p class="text-sm font-semibold text-red-800">Backlog</p>
+            <h1 id="tube-heading" class="mt-1 text-2xl font-bold text-gray-950">TUBO</h1>
+            <p class="mt-1 text-sm text-gray-600">{{ backlog_scope_description|default:"Ingresos de actividades, gestiones sociales y compromisos de todas las delegaciones." }}</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <p class="text-sm text-gray-500"><strong class="text-gray-900">{{ backlog_total }}</strong> casos</p>
+            <button type="button" data-export-tube class="inline-flex items-center gap-2 rounded border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"><span aria-hidden="true">↓</span> Exportar Excel</button>
+        </div>
+    </div>
+
+    <form method="get" class="grid grid-cols-1 gap-3 rounded border border-gray-200 bg-white p-4 sm:grid-cols-2 xl:grid-cols-6" aria-label="Filtros del backlog">
+        <input type="hidden" name="panel" value="tubo">
+        <label class="text-xs font-semibold text-gray-700">Buscar
+            <input type="search" name="q" value="{{ backlog_filters.q }}" placeholder="Caso, solicitante, responsable..." class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm font-normal focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100">
+        </label>
+        <label class="text-xs font-semibold text-gray-700">Tipo
+            <select name="tipo" class="mt-1 block w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm font-normal focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100">
+                {% for value, label in backlog_type_choices %}<option value="{{ value }}" {% if backlog_filters.tipo == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+        </label>
+        <label class="text-xs font-semibold text-gray-700">Estado
+            <select name="estado" class="mt-1 block w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm font-normal focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100">
+                {% for value, label in backlog_status_choices %}<option value="{{ value }}" {% if backlog_filters.estado == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+        </label>
+        <label class="text-xs font-semibold text-gray-700">Territorio / delegación
+            <input type="search" name="territorio" value="{{ backlog_filters.territorio }}" placeholder="Filtrar territorio" class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm font-normal focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100">
+        </label>
+        <label class="text-xs font-semibold text-gray-700">Ingresado desde
+            <input type="date" name="desde" value="{{ backlog_filters.desde }}" class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm font-normal focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100">
+        </label>
+        <label class="text-xs font-semibold text-gray-700">Ingresado hasta
+            <input type="date" name="hasta" value="{{ backlog_filters.hasta }}" class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm font-normal focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100">
+        </label>
+        <div class="flex items-end gap-2 sm:col-span-2 xl:col-span-6">
+            <button type="submit" class="rounded bg-red-800 px-4 py-2 text-sm font-semibold text-white hover:bg-red-900">Filtrar</button>
+            <a href="?panel=tubo" class="rounded border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Limpiar</a>
+        </div>
+    </form>
+
+    <div class="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+        {% for column in backlog_columns %}
+            <section aria-label="{{ column.label }}: {{ column.entries|length }} casos" class="min-w-0 overflow-hidden rounded border border-gray-200 {{ column.style }}">
+                <header class="flex items-center justify-between gap-2 border-b border-black/5 px-3 py-2.5">
+                    <h2 class="text-xs font-bold uppercase text-gray-800">{{ column.label }}</h2>
+                    <span class="rounded-full bg-white/70 px-2 py-0.5 text-xs font-semibold text-gray-700">{{ column.entries|length }}</span>
+                </header>
+                <div class="max-h-[65vh] space-y-2 overflow-y-auto p-2">
+                    {% for entry in column.entries %}
+                        <button type="button" data-case-open data-tube-export-row
+                            data-case-title="{{ entry.title }}"
+                            data-case-description="{{ entry.description }}"
+                            data-case-type="{{ entry.tipo_label }}"
+                            data-case-requester="{{ entry.requester }}"
+                            data-case-territory="{{ entry.territory }}"
+                            data-case-delegation="{{ entry.delegation }}"
+                            data-case-responsible="{{ entry.responsible }}"
+                            data-case-requested="{{ entry.requested_at|date:'d/m/Y H:i' }}"
+                            data-case-event-date="{% if entry.event_date %}{{ entry.event_date|date:'d/m/Y' }}{% else %}No aplica{% endif %}"
+                            data-case-due-date="{% if entry.due_date %}{{ entry.due_date|date:'d/m/Y' }}{% else %}Sin compromiso{% endif %}"
+                            data-case-status="{{ column.label }}"
+                            data-case-original-status="{{ entry.original_status }}"
+                            data-case-detail="{{ entry.detail }}"
+                            class="block w-full rounded border border-white/80 bg-white p-2.5 text-left shadow-sm transition hover:border-gray-400 hover:shadow focus:outline-none focus:ring-2 focus:ring-red-700">
+                            <span class="flex items-start justify-between gap-2"><span class="text-[11px] font-semibold uppercase text-gray-500">{{ entry.tipo_label }} · #{{ entry.id }}</span><span class="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold {% if entry.status == 'ingresado' %}bg-gray-100 text-gray-700{% elif entry.status == 'pendiente' %}bg-amber-100 text-amber-900{% elif entry.status == 'en_proceso' %}bg-sky-100 text-sky-900{% else %}bg-emerald-100 text-emerald-900{% endif %}">{{ column.label }}</span></span>
+                            <span class="mt-1 block text-sm font-semibold leading-5 text-gray-900">{{ entry.title|truncatechars:76 }}</span>
+                            <span class="mt-1 block text-xs text-gray-600">Solicitante: {{ entry.requester|truncatechars:42 }}</span>
+                            <span class="block text-xs text-gray-600">Territorio: {{ entry.territory|truncatechars:42 }}</span>
+                            <span class="block text-xs text-gray-600">Responsable: {{ entry.responsible|truncatechars:42 }}</span>
+                            <span class="mt-1 block text-xs text-gray-600">Ingreso: {{ entry.requested_at|date:'d/m/Y' }} · Compromiso: {% if entry.due_date %}{{ entry.due_date|date:'d/m/Y' }}{% else %}No aplica{% endif %}</span>
+                        </button>
+                    {% empty %}
+                        <p class="rounded border border-dashed border-gray-300 bg-white/60 px-3 py-6 text-center text-xs text-gray-500">No hay casos en este estado.</p>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endfor %}
+    </div>
+</section>
+
+<dialog id="case-dialog" aria-labelledby="case-dialog-title" class="w-[min(42rem,calc(100%-2rem))] rounded border border-gray-200 p-0 shadow-xl backdrop:bg-gray-950/50">
+    <div class="flex items-start justify-between gap-4 border-b border-gray-200 px-5 py-4">
+        <div class="min-w-0"><p data-case-value="type" class="text-xs font-semibold uppercase text-red-800"></p><h2 id="case-dialog-title" data-case-value="title" class="mt-1 text-lg font-bold text-gray-950"></h2></div>
+        <button type="button" data-case-close aria-label="Cerrar detalle" class="rounded border border-gray-300 px-2.5 py-1 text-sm font-semibold text-gray-700 hover:bg-gray-50">Cerrar</button>
+    </div>
+    <div class="grid grid-cols-1 gap-x-6 gap-y-4 px-5 py-4 sm:grid-cols-2">
+        <div><p class="text-xs font-semibold uppercase text-gray-500">Estado en TUBO</p><p data-case-value="status" class="mt-1 text-sm font-semibold text-gray-900"></p></div>
+        <div><p class="text-xs font-semibold uppercase text-gray-500">Estado original</p><p data-case-value="original-status" class="mt-1 text-sm text-gray-800"></p></div>
+        <div><p class="text-xs font-semibold uppercase text-gray-500">Solicitante</p><p data-case-value="requester" class="mt-1 text-sm text-gray-800"></p></div>
+        <div><p class="text-xs font-semibold uppercase text-gray-500">Responsable</p><p data-case-value="responsible" class="mt-1 text-sm text-gray-800"></p></div>
+        <div><p class="text-xs font-semibold uppercase text-gray-500">Territorio</p><p data-case-value="territory" class="mt-1 text-sm text-gray-800"></p></div>
+        <div><p class="text-xs font-semibold uppercase text-gray-500">Delegación</p><p data-case-value="delegation" class="mt-1 text-sm text-gray-800"></p></div>
+        <div><p class="text-xs font-semibold uppercase text-gray-500">Fecha de solicitud</p><p data-case-value="requested" class="mt-1 text-sm text-gray-800"></p></div>
+        <div><p class="text-xs font-semibold uppercase text-gray-500">Fecha del hecho</p><p data-case-value="event-date" class="mt-1 text-sm text-gray-800"></p></div>
+        <div><p class="text-xs font-semibold uppercase text-gray-500">Fecha de compromiso</p><p data-case-value="due-date" class="mt-1 text-sm text-gray-800"></p></div>
+        <div class="sm:col-span-2"><p class="text-xs font-semibold uppercase text-gray-500">Actividad, solicitud o problema</p><p data-case-value="description" class="mt-1 whitespace-pre-wrap text-sm leading-6 text-gray-800"></p></div>
+        <div class="sm:col-span-2"><p class="text-xs font-semibold uppercase text-gray-500">Información relacionada</p><p data-case-value="detail" class="mt-1 whitespace-pre-wrap text-sm leading-6 text-gray-800"></p></div>
+    </div>
+</dialog>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+    const caseDialog = document.querySelector('#case-dialog');
+
+    document.querySelectorAll('[data-case-open]').forEach((card) => {
+        card.addEventListener('click', () => {
+            caseDialog.querySelectorAll('[data-case-value]').forEach((element) => {
+                const valueName = element.dataset.caseValue.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+                element.textContent = card.dataset[`case${valueName[0].toUpperCase()}${valueName.slice(1)}`] || 'Sin información';
+            });
+            caseDialog.showModal();
+        });
+    });
+
+    document.querySelectorAll('[data-case-close]').forEach((button) => button.addEventListener('click', () => caseDialog.close()));
+    caseDialog.addEventListener('click', (event) => {
+        if (event.target === caseDialog) caseDialog.close();
+    });
+
+    document.querySelector('[data-export-tube]').addEventListener('click', () => {
+        if (!window.XLSX) {
+            window.Swal?.fire({icon: 'error', title: 'No se pudo exportar', text: 'La herramienta de exportación no está disponible.'});
+            return;
+        }
+        const headers = ['Tipo', 'Actividad / solicitud / problema', 'Solicitante', 'Territorio', 'Delegación', 'Responsable', 'Fecha de solicitud', 'Fecha del hecho', 'Fecha de compromiso', 'Estado TUBO', 'Estado original', 'Detalle'];
+        const rows = [...document.querySelectorAll('[data-tube-export-row]')].map((card) => [
+            card.dataset.caseType,
+            card.dataset.caseTitle,
+            card.dataset.caseRequester,
+            card.dataset.caseTerritory,
+            card.dataset.caseDelegation,
+            card.dataset.caseResponsible,
+            card.dataset.caseRequested,
+            card.dataset.caseEventDate,
+            card.dataset.caseDueDate,
+            card.dataset.caseStatus,
+            card.dataset.caseOriginalStatus,
+            `${card.dataset.caseDescription || ''}${card.dataset.caseDetail ? `\n${card.dataset.caseDetail}` : ''}`,
+        ]);
+        const sheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+        sheet['!cols'] = [{wch: 18}, {wch: 38}, {wch: 26}, {wch: 24}, {wch: 24}, {wch: 26}, {wch: 20}, {wch: 18}, {wch: 20}, {wch: 16}, {wch: 24}, {wch: 60}];
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, sheet, 'TUBO');
+        XLSX.writeFile(workbook, 'tubo_coordinacion.xlsx');
+    });
+</script>

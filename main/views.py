@@ -429,9 +429,9 @@ def _coordinator_dashboard(request):
         if territory_term:
             attention_rows = attention_rows.filter(delegacion__nombre__icontains=territory_term)
         if selected_state == 'pendiente':
-            attention_rows = attention_rows.filter(resultado='')
+            attention_rows = attention_rows.filter(Q(resultado='') | Q(resultado__isnull=True))
         elif selected_state == 'realizado':
-            attention_rows = attention_rows.exclude(resultado='')
+            attention_rows = attention_rows.filter(resultado__gt='')
         elif selected_state:
             attention_rows = AtencionSocial.objects.none()
         if date_from:
@@ -535,6 +535,38 @@ def _coordinator_dashboard(request):
         }
         for status, label in status_labels.items()
     ]
+    commitment_state_counts = dict(
+        Compromiso.objects.values('estado').annotate(total=Count('pk')).values_list('estado', 'total')
+    )
+    activity_state_counts = dict(
+        Actividad.objects.values('estado').annotate(total=Count('pk')).values_list('estado', 'total')
+    )
+    attention_state_counts = AtencionSocial.objects.aggregate(
+        realizado=Count('pk', filter=Q(resultado__gt='')),
+        pendiente=Count('pk', filter=Q(resultado='') | Q(resultado__isnull=True)),
+    )
+    backlog_summary = {
+        'realizado': (
+            commitment_state_counts.get('realizado', 0)
+            + activity_state_counts.get('validada', 0)
+            + attention_state_counts['realizado']
+        ),
+        'en_proceso': (
+            commitment_state_counts.get('en_proceso', 0)
+            + activity_state_counts.get('en_correccion', 0)
+        ),
+        'pendiente': (
+            commitment_state_counts.get('pendiente', 0)
+            + commitment_state_counts.get('revision', 0)
+            + activity_state_counts.get('pendiente', 0)
+            + activity_state_counts.get('rechazada', 0)
+            + attention_state_counts['pendiente']
+        ),
+        'total': sum(commitment_state_counts.values())
+        + sum(activity_state_counts.values())
+        + attention_state_counts['realizado']
+        + attention_state_counts['pendiente'],
+    }
 
     return render(request, 'main/coordinador_dashboard.html', {
         'role': 'COORDINADOR',
@@ -554,6 +586,7 @@ def _coordinator_dashboard(request):
         'alerts': alerts,
         'backlog_columns': backlog_columns,
         'backlog_total': len(backlog_entries),
+        'backlog_summary': backlog_summary,
         'backlog_filters': backlog_filters,
         'active_dashboard_panel': active_dashboard_panel,
         'backlog_type_choices': (

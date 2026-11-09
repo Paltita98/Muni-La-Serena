@@ -6,6 +6,7 @@
     </div>
     <nav class="flex-1 px-3 py-4 space-y-1" aria-label="Navegación de delegación">
         <a href="{% url 'delegado_demo_view' %}" class="flex items-center px-3 py-2.5 rounded-lg transition {% if active_section == 'resumen' %}bg-red-900 text-white{% else %}text-red-100 hover:bg-red-800{% endif %}">Resumen</a>
+        <a href="{% url 'delegado_demo_view' %}?panel=tubo" class="flex items-center px-3 py-2.5 rounded-lg transition {% if active_section == 'tubo' %}bg-red-900 text-white{% else %}text-red-100 hover:bg-red-800{% endif %}">TUBO</a>
         <a href="{% url 'delegado_actividades_view' %}" class="flex items-center px-3 py-2.5 rounded-lg transition {% if active_section == 'actividades' %}bg-red-900 text-white{% else %}text-red-100 hover:bg-red-800{% endif %}">Actividades</a>
         <a href="{% url 'delegado_atenciones_view' %}" class="flex items-center px-3 py-2.5 rounded-lg transition {% if active_section == 'atenciones' %}bg-red-900 text-white{% else %}text-red-100 hover:bg-red-800{% endif %}">Atención Social</a>
         <a href="{% url 'delegado_compromisos_view' %}" class="flex items-center px-3 py-2.5 rounded-lg transition {% if active_section == 'compromisos' %}bg-red-900 text-white{% else %}text-red-100 hover:bg-red-800{% endif %}">Agenda Colectiva</a>

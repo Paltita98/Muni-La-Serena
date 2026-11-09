@@ -303,6 +303,43 @@ class FlujoCompromisosTests(TestCase):
         self.assertContains(response, reverse('delegado_compromisos_view'))
         self.assertContains(response, reverse('delegado_equipo_view'))
 
+    def test_delegate_tube_and_filters_are_limited_to_own_delegation(self):
+        Compromiso.objects.create(
+            delegacion=self.delegacion,
+            responsable=self.funcionario,
+            solicitante='Junta local',
+            territorio='Centro',
+            observacion='Solicitud local del TUBO',
+            fecha_comprometida=date(2026, 12, 15),
+        )
+        Compromiso.objects.create(
+            delegacion=self.otra_delegacion,
+            responsable=self.otro_funcionario,
+            solicitante='Junta del Norte',
+            territorio='Norte',
+            observacion='Solicitud externa del TUBO',
+            fecha_comprometida=date(2026, 12, 15),
+        )
+        self.iniciar_sesion_rol('DELEGADO', self.delegado)
+
+        response = self.client.get(reverse('delegado_demo_view'), {'panel': 'tubo'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Solicitud local del TUBO')
+        self.assertContains(response, 'Operativo comunitario Centro')
+        self.assertContains(response, 'CASO-CENTRO')
+        self.assertNotContains(response, 'Solicitud externa del TUBO')
+        self.assertNotContains(response, 'Operativo comunitario Norte')
+        self.assertNotContains(response, 'CASO-NORTE')
+        self.assertEqual(response.context['backlog_summary']['total'], 3)
+
+        filtered_response = self.client.get(reverse('delegado_demo_view'), {
+            'panel': 'tubo',
+            'q': 'Norte',
+        })
+        self.assertEqual(filtered_response.context['backlog_total'], 0)
+        self.assertNotContains(filtered_response, 'Solicitud externa del TUBO')
+
     def test_delegate_can_read_own_activity_but_cannot_upload_evidence_as_staff(self):
         self.iniciar_sesion_rol('DELEGADO', self.delegado)
         url = reverse('actividad_detalle_view', args=[self.actividad.pk])
