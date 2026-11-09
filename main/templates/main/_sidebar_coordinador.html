@@ -5,21 +5,12 @@
         <span class="text-xs font-bold tracking-widest">COORDINADOR</span>
     </div>
     <nav class="flex-1 px-3 py-4 space-y-1" aria-label="Navegación de coordinación">
-        <a href="#resumen" class="flex items-center px-3 py-2.5 rounded-lg transition bg-red-900 text-white">
-            Resumen
-        </a>
-        <a href="#operacion" class="flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">
-            Supervisión transversal
-        </a>
-        <a href="#indicadores" class="flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">
-            Indicadores
-        </a>
-        <a href="#criterios" class="flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">
-            Criterios por resolver
-        </a>
-        <a href="#mejoras" class="flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">
-            Coordinación de mejoras
-        </a>
+        <button type="button" data-dashboard-target="resumen" aria-controls="resumen" aria-pressed="true" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition bg-red-900 text-white font-semibold">Resumen</button>
+        <button type="button" data-dashboard-target="operacion" aria-controls="operacion" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Supervisión transversal</button>
+        <button type="button" data-dashboard-target="indicadores" aria-controls="indicadores" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Indicadores</button>
+        <button type="button" data-dashboard-target="criterios" aria-controls="criterios" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Criterios por resolver</button>
+        <button type="button" data-dashboard-target="mejoras" aria-controls="mejoras" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Coordinación de mejoras</button>
+        <button type="button" data-dashboard-target="tubo" aria-controls="tubo" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">TUBO</button>
     </nav>
     {% include 'main/_logout_button.html' %}
 </aside>

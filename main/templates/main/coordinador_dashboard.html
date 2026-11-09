@@ -24,19 +24,29 @@
             </header>
 
             <div class="mx-auto max-w-screen-2xl space-y-7 p-5 md:p-8">
-                <section id="resumen" class="flex flex-wrap items-end justify-between gap-4 border-b border-gray-200 pb-5">
+                <section id="resumen" data-dashboard-panel="resumen" {% if active_dashboard_panel != 'resumen' %}hidden{% endif %} class="space-y-5" aria-labelledby="summary-heading">
                     <div>
                         <p class="text-sm font-semibold text-red-800">Centro de coordinación</p>
-                        <h1 class="mt-1 text-2xl font-bold text-gray-950">Operación transversal</h1>
-                        <p class="mt-2 max-w-3xl text-sm text-gray-600">Supervisa la actividad municipal, revisa el avance de metas y prioriza criterios y mejoras entre áreas.</p>
+                        <h1 id="summary-heading" class="mt-1 text-2xl font-bold text-gray-950">Resumen de coordinación</h1>
+                        <p class="mt-2 max-w-3xl text-sm text-gray-600">Vista general del período: actividad municipal, atención social y compromisos que requieren seguimiento.</p>
                     </div>
-                    <div class="rounded border border-gray-200 bg-white px-3 py-2 text-sm">
+                    <div class="inline-block rounded border border-gray-200 bg-white px-3 py-2 text-sm">
                         <span class="text-gray-500">Período de medición</span>
                         <p class="mt-0.5 font-semibold text-gray-900">{% if period %}{{ period.fecha_inicio|date:'d/m/Y' }} – {{ period.fecha_termino|date:'d/m/Y' }}{% else %}Mes actual{% endif %}</p>
                     </div>
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Indicadores principales">
+                        <article class="rounded border border-gray-200 border-t-2 border-t-red-800 bg-white p-4"><p class="text-sm text-gray-500">Funcionarios activos</p><p class="mt-2 text-3xl font-bold text-gray-950">{{ active_staff }}</p><p class="mt-1 text-xs text-gray-500">Cobertura de la operación</p></article>
+                        <article class="rounded border border-gray-200 border-t-2 border-t-teal-700 bg-white p-4"><p class="text-sm text-gray-500">Actividades registradas</p><p class="mt-2 text-3xl font-bold text-gray-950">{{ activity_total }}</p><p class="mt-1 text-xs text-gray-500">{{ activity_pending }} pendientes o en corrección</p></article>
+                        <article class="rounded border border-gray-200 border-t-2 border-t-blue-700 bg-white p-4"><p class="text-sm text-gray-500">Atenciones sociales</p><p class="mt-2 text-3xl font-bold text-gray-950">{{ attention_total }}</p><p class="mt-1 text-xs text-gray-500">Registradas en el período</p></article>
+                        <article class="rounded border border-gray-200 border-t-2 {% if commitment_overdue %}border-t-red-700{% else %}border-t-amber-600{% endif %} bg-white p-4"><p class="text-sm text-gray-500">Compromisos abiertos</p><p class="mt-2 text-3xl font-bold text-gray-950">{{ commitment_open }}</p><p class="mt-1 text-xs {% if commitment_overdue %}font-semibold text-red-700{% else %}text-gray-500{% endif %}">{{ commitment_overdue }} vencidos · {{ commitment_due_soon }} vencen en 7 días</p></article>
+                    </div>
+                    <div class="border-y border-gray-200 bg-white">
+                        <div class="border-b border-gray-100 px-4 py-3"><h2 class="text-sm font-bold text-gray-900">Puntos de atención</h2><p class="mt-1 text-xs text-gray-500">Alertas operativas detectadas en los registros.</p></div>
+                        {% for alert in alerts %}<article class="flex items-start gap-3 px-4 py-3 {% if not forloop.first %}border-t border-gray-100{% endif %}"><span class="mt-0.5 inline-flex h-6 min-w-6 items-center justify-center rounded-full px-2 text-xs font-bold {% if alert.tone == 'urgent' %}bg-red-100 text-red-800{% elif alert.tone == 'attention' %}bg-amber-100 text-amber-900{% else %}bg-teal-100 text-teal-900{% endif %}" aria-hidden="true">{% if alert.tone == 'clear' %}✓{% else %}!{% endif %}</span><div><h3 class="text-sm font-semibold text-gray-900">{{ alert.title }}</h3><p class="mt-1 text-sm text-gray-600">{{ alert.detail }}</p></div></article>{% endfor %}
+                    </div>
                 </section>
 
-                <section id="operacion" aria-labelledby="operation-heading">
+                <section id="operacion" data-dashboard-panel="operacion" {% if active_dashboard_panel != 'operacion' %}hidden{% endif %} aria-labelledby="operation-heading">
                     <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
                         <div>
                             <h2 id="operation-heading" class="text-lg font-bold text-gray-950">Supervisión transversal</h2>
@@ -68,7 +78,7 @@
                     </div>
                 </section>
 
-                <section id="indicadores" class="border-y border-gray-200 py-6" aria-labelledby="indicators-heading">
+                <section id="indicadores" data-dashboard-panel="indicadores" {% if active_dashboard_panel != 'indicadores' %}hidden{% endif %} class="border-y border-gray-200 py-6" aria-labelledby="indicators-heading">
                     <div class="mb-4 flex flex-wrap items-end justify-between gap-2">
                         <div>
                             <h2 id="indicators-heading" class="text-lg font-bold text-gray-950">Indicadores de gestión</h2>
@@ -115,7 +125,7 @@
                     <p class="mt-2 text-xs text-gray-500">Evidencias pendientes de revisión: <strong class="text-gray-700">{{ evidence_pending }}</strong></p>
                 </section>
 
-                <section id="criterios" aria-labelledby="criteria-heading">
+                <section id="criterios" data-dashboard-panel="criterios" {% if active_dashboard_panel != 'criterios' %}hidden{% endif %} aria-labelledby="criteria-heading">
                     <div class="mb-3">
                         <h2 id="criteria-heading" class="text-lg font-bold text-gray-950">Criterios por resolver</h2>
                         <p class="mt-1 text-sm text-gray-500">Puntos de coordinación identificados automáticamente en los registros.</p>
@@ -133,7 +143,7 @@
                     </div>
                 </section>
 
-                <section id="mejoras" class="border-t border-gray-200 pt-6" aria-labelledby="improvements-heading">
+                <section id="mejoras" data-dashboard-panel="mejoras" {% if active_dashboard_panel != 'mejoras' %}hidden{% endif %} class="border-t border-gray-200 pt-6" aria-labelledby="improvements-heading">
                     <h2 id="improvements-heading" class="text-lg font-bold text-gray-950">Coordinación de mejoras</h2>
                     <p class="mt-1 text-sm text-gray-500">Líneas para la revisión transversal a partir de los datos disponibles.</p>
                     <div class="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
@@ -151,9 +161,154 @@
                         </article>
                     </div>
                 </section>
+
+                <section id="tubo" data-dashboard-panel="tubo" {% if active_dashboard_panel != 'tubo' %}hidden{% endif %} aria-labelledby="tube-heading" class="space-y-4">
+                    <div class="flex flex-wrap items-end justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-semibold text-red-800">Backlog transversal</p>
+                            <h1 id="tube-heading" class="mt-1 text-2xl font-bold text-gray-950">TUBO</h1>
+                            <p class="mt-1 text-sm text-gray-600">Ingresos de actividades, gestiones sociales y compromisos de todas las delegaciones.</p>
+                        </div>
+                        <p class="text-sm text-gray-500"><strong class="text-gray-900">{{ backlog_total }}</strong> casos</p>
+                    </div>
+
+                    <form method="get" class="grid grid-cols-1 gap-3 rounded border border-gray-200 bg-white p-4 sm:grid-cols-2 xl:grid-cols-6" aria-label="Filtros del backlog">
+                        <input type="hidden" name="panel" value="tubo">
+                        <label class="text-xs font-semibold text-gray-700">Buscar
+                            <input type="search" name="q" value="{{ backlog_filters.q }}" placeholder="Caso, solicitante, responsable..." class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm font-normal focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100">
+                        </label>
+                        <label class="text-xs font-semibold text-gray-700">Tipo
+                            <select name="tipo" class="mt-1 block w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm font-normal focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100">
+                                {% for value, label in backlog_type_choices %}<option value="{{ value }}" {% if backlog_filters.tipo == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                            </select>
+                        </label>
+                        <label class="text-xs font-semibold text-gray-700">Estado
+                            <select name="estado" class="mt-1 block w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm font-normal focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100">
+                                {% for value, label in backlog_status_choices %}<option value="{{ value }}" {% if backlog_filters.estado == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                            </select>
+                        </label>
+                        <label class="text-xs font-semibold text-gray-700">Territorio / delegación
+                            <input type="search" name="territorio" value="{{ backlog_filters.territorio }}" placeholder="Filtrar territorio" class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm font-normal focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100">
+                        </label>
+                        <label class="text-xs font-semibold text-gray-700">Ingresado desde
+                            <input type="date" name="desde" value="{{ backlog_filters.desde }}" class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm font-normal focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100">
+                        </label>
+                        <label class="text-xs font-semibold text-gray-700">Ingresado hasta
+                            <input type="date" name="hasta" value="{{ backlog_filters.hasta }}" class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm font-normal focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100">
+                        </label>
+                        <div class="flex items-end gap-2 sm:col-span-2 xl:col-span-6">
+                            <button type="submit" class="rounded bg-red-800 px-4 py-2 text-sm font-semibold text-white hover:bg-red-900">Filtrar</button>
+                            <a href="?panel=tubo" class="rounded border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Limpiar</a>
+                        </div>
+                    </form>
+
+                    <div class="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+                        {% for column in backlog_columns %}
+                            <section aria-label="{{ column.label }}: {{ column.entries|length }} casos" class="min-w-0 overflow-hidden rounded border border-gray-200 {{ column.style }}">
+                                <header class="flex items-center justify-between gap-2 border-b border-black/5 px-3 py-2.5">
+                                    <h2 class="text-xs font-bold uppercase text-gray-800">{{ column.label }}</h2>
+                                    <span class="rounded-full bg-white/70 px-2 py-0.5 text-xs font-semibold text-gray-700">{{ column.entries|length }}</span>
+                                </header>
+                                <div class="max-h-[65vh] space-y-2 overflow-y-auto p-2">
+                                    {% for entry in column.entries %}
+                                        <button type="button" data-case-open
+                                            data-case-title="{{ entry.title }}"
+                                            data-case-description="{{ entry.description }}"
+                                            data-case-type="{{ entry.tipo_label }}"
+                                            data-case-requester="{{ entry.requester }}"
+                                            data-case-territory="{{ entry.territory }}"
+                                            data-case-delegation="{{ entry.delegation }}"
+                                            data-case-responsible="{{ entry.responsible }}"
+                                            data-case-requested="{{ entry.requested_at|date:'d/m/Y H:i' }}"
+                                            data-case-event-date="{% if entry.event_date %}{{ entry.event_date|date:'d/m/Y' }}{% else %}No aplica{% endif %}"
+                                            data-case-due-date="{% if entry.due_date %}{{ entry.due_date|date:'d/m/Y' }}{% else %}Sin compromiso{% endif %}"
+                                            data-case-status="{{ column.label }}"
+                                            data-case-original-status="{{ entry.original_status }}"
+                                            data-case-detail="{{ entry.detail }}"
+                                            class="block w-full rounded border border-white/80 bg-white p-2.5 text-left shadow-sm transition hover:border-gray-400 hover:shadow focus:outline-none focus:ring-2 focus:ring-red-700">
+                                            <span class="flex items-start justify-between gap-2"><span class="text-[11px] font-semibold uppercase text-gray-500">{{ entry.tipo_label }} · #{{ entry.id }}</span><span class="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold {% if entry.status == 'ingresado' %}bg-gray-100 text-gray-700{% elif entry.status == 'pendiente' %}bg-amber-100 text-amber-900{% elif entry.status == 'en_proceso' %}bg-sky-100 text-sky-900{% else %}bg-emerald-100 text-emerald-900{% endif %}">{{ column.label }}</span></span>
+                                            <span class="mt-1 block text-sm font-semibold leading-5 text-gray-900">{{ entry.title|truncatechars:76 }}</span>
+                                            <span class="mt-1 block text-xs text-gray-600">Solicitante: {{ entry.requester|truncatechars:42 }}</span>
+                                            <span class="block text-xs text-gray-600">Territorio: {{ entry.territory|truncatechars:42 }}</span>
+                                            <span class="block text-xs text-gray-600">Responsable: {{ entry.responsible|truncatechars:42 }}</span>
+                                            <span class="mt-1 block text-xs text-gray-600">Ingreso: {{ entry.requested_at|date:'d/m/Y' }} · Compromiso: {% if entry.due_date %}{{ entry.due_date|date:'d/m/Y' }}{% else %}No aplica{% endif %}</span>
+                                        </button>
+                                    {% empty %}
+                                        <p class="rounded border border-dashed border-gray-300 bg-white/60 px-3 py-6 text-center text-xs text-gray-500">No hay casos en este estado.</p>
+                                    {% endfor %}
+                                </div>
+                            </section>
+                        {% endfor %}
+                    </div>
+                </section>
             </div>
         </main>
     </div>
+    <dialog id="case-dialog" aria-labelledby="case-dialog-title" class="w-[min(42rem,calc(100%-2rem))] rounded border border-gray-200 p-0 shadow-xl backdrop:bg-gray-950/50">
+        <div class="flex items-start justify-between gap-4 border-b border-gray-200 px-5 py-4">
+            <div class="min-w-0"><p data-case-value="type" class="text-xs font-semibold uppercase text-red-800"></p><h2 id="case-dialog-title" data-case-value="title" class="mt-1 text-lg font-bold text-gray-950"></h2></div>
+            <button type="button" data-case-close aria-label="Cerrar detalle" class="rounded border border-gray-300 px-2.5 py-1 text-sm font-semibold text-gray-700 hover:bg-gray-50">Cerrar</button>
+        </div>
+        <div class="grid grid-cols-1 gap-x-6 gap-y-4 px-5 py-4 sm:grid-cols-2">
+            <div><p class="text-xs font-semibold uppercase text-gray-500">Estado en TUBO</p><p data-case-value="status" class="mt-1 text-sm font-semibold text-gray-900"></p></div>
+            <div><p class="text-xs font-semibold uppercase text-gray-500">Estado original</p><p data-case-value="original-status" class="mt-1 text-sm text-gray-800"></p></div>
+            <div><p class="text-xs font-semibold uppercase text-gray-500">Solicitante</p><p data-case-value="requester" class="mt-1 text-sm text-gray-800"></p></div>
+            <div><p class="text-xs font-semibold uppercase text-gray-500">Responsable</p><p data-case-value="responsible" class="mt-1 text-sm text-gray-800"></p></div>
+            <div><p class="text-xs font-semibold uppercase text-gray-500">Territorio</p><p data-case-value="territory" class="mt-1 text-sm text-gray-800"></p></div>
+            <div><p class="text-xs font-semibold uppercase text-gray-500">Delegación</p><p data-case-value="delegation" class="mt-1 text-sm text-gray-800"></p></div>
+            <div><p class="text-xs font-semibold uppercase text-gray-500">Fecha de solicitud</p><p data-case-value="requested" class="mt-1 text-sm text-gray-800"></p></div>
+            <div><p class="text-xs font-semibold uppercase text-gray-500">Fecha del hecho</p><p data-case-value="event-date" class="mt-1 text-sm text-gray-800"></p></div>
+            <div><p class="text-xs font-semibold uppercase text-gray-500">Fecha de compromiso</p><p data-case-value="due-date" class="mt-1 text-sm text-gray-800"></p></div>
+            <div class="sm:col-span-2"><p class="text-xs font-semibold uppercase text-gray-500">Actividad, solicitud o problema</p><p data-case-value="description" class="mt-1 whitespace-pre-wrap text-sm leading-6 text-gray-800"></p></div>
+            <div class="sm:col-span-2"><p class="text-xs font-semibold uppercase text-gray-500">Información relacionada</p><p data-case-value="detail" class="mt-1 whitespace-pre-wrap text-sm leading-6 text-gray-800"></p></div>
+        </div>
+    </dialog>
+    <script>
+        const dashboardButtons = document.querySelectorAll('[data-dashboard-target]');
+        const dashboardPanels = document.querySelectorAll('[data-dashboard-panel]');
+        const caseDialog = document.querySelector('#case-dialog');
+
+        const activateDashboardPanel = (target, updateUrl = true) => {
+            dashboardButtons.forEach((button) => {
+                const selected = button.dataset.dashboardTarget === target;
+                button.setAttribute('aria-pressed', String(selected));
+                button.classList.toggle('bg-red-900', selected);
+                button.classList.toggle('font-semibold', selected);
+                button.classList.toggle('text-white', selected);
+                button.classList.toggle('text-red-100', !selected);
+            });
+            dashboardPanels.forEach((panel) => {
+                panel.hidden = panel.dataset.dashboardPanel !== target;
+            });
+            if (updateUrl) {
+                const url = new URL(window.location.href);
+                if (target === 'resumen') url.searchParams.delete('panel');
+                else url.searchParams.set('panel', target);
+                window.history.replaceState(null, '', url);
+            }
+        };
+
+        activateDashboardPanel('{{ active_dashboard_panel }}', false);
+
+        dashboardButtons.forEach((button) => {
+            button.addEventListener('click', () => activateDashboardPanel(button.dataset.dashboardTarget));
+        });
+
+        document.querySelectorAll('[data-case-open]').forEach((card) => {
+            card.addEventListener('click', () => {
+                caseDialog.querySelectorAll('[data-case-value]').forEach((element) => {
+                    const valueName = element.dataset.caseValue.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+                    element.textContent = card.dataset[`case${valueName[0].toUpperCase()}${valueName.slice(1)}`] || 'Sin información';
+                });
+                caseDialog.showModal();
+            });
+        });
+
+        document.querySelectorAll('[data-case-close]').forEach((button) => button.addEventListener('click', () => caseDialog.close()));
+        caseDialog.addEventListener('click', (event) => {
+            if (event.target === caseDialog) caseDialog.close();
+        });
+    </script>
     {% include 'main/_sweetalerts.html' %}
 </body>
 </html>

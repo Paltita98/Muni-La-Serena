@@ -238,6 +238,7 @@ class CoordinatorDashboardTests(SimpleTestCase):
 
         attention_manager = Mock()
         attention_manager.filter.return_value.count.return_value = 5
+        attention_manager.all.return_value.select_related.return_value.order_by.return_value = []
 
         open_commitments = Mock()
         open_commitments.count.return_value = 4
@@ -246,6 +247,11 @@ class CoordinatorDashboardTests(SimpleTestCase):
         open_commitments.filter.side_effect = [overdue, due_soon]
         commitment_manager = Mock()
         commitment_manager.all.return_value.exclude.return_value = open_commitments
+        commitment_manager.all.return_value.select_related.return_value.order_by.return_value = []
+        commitment_manager.none.return_value = []
+
+        activity_manager.all.return_value.select_related.return_value.order_by.return_value = []
+        activity_manager.none.return_value = []
 
         evidence_manager = Mock()
         evidence_manager.filter.return_value.count.return_value = 3
@@ -276,6 +282,7 @@ class CoordinatorDashboardTests(SimpleTestCase):
         self.assertEqual(context['commitment_overdue'], 1)
         self.assertEqual(context['evidence_pending'], 3)
         self.assertEqual(context['indicator_rows'][0]['progress_label'], '60%')
+        self.assertEqual(context['backlog_total'], 0)
 
     def test_other_roles_cannot_open_coordinator_dashboard(self):
         request = RequestFactory().get('/panel-rol/')

@@ -11,6 +11,7 @@ from django.core.validators import validate_email
 from django.db.models import Q
 from django.utils.crypto import constant_time_compare
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_POST
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.db.models import Count, Q, Sum
@@ -322,6 +323,219 @@ def _coordinator_dashboard(request):
             'tone': 'clear',
         })
 
+    backlog_filters = {
+        'q': request.GET.get('q', '').strip(),
+        'tipo': request.GET.get('tipo', '').strip(),
+        'estado': request.GET.get('estado', '').strip(),
+        'territorio': request.GET.get('territorio', '').strip(),
+        'desde': request.GET.get('desde', '').strip(),
+        'hasta': request.GET.get('hasta', '').strip(),
+    }
+    dashboard_panels = {'resumen', 'operacion', 'indicadores', 'criterios', 'mejoras', 'tubo'}
+    active_dashboard_panel = request.GET.get('panel', '')
+    if any(backlog_filters.values()) and not active_dashboard_panel:
+        active_dashboard_panel = 'tubo'
+    if active_dashboard_panel not in dashboard_panels:
+        active_dashboard_panel = 'resumen'
+    valid_types = {'compromiso', 'actividad', 'gestion'}
+    valid_states = {'ingresado', 'pendiente', 'en_proceso', 'realizado'}
+    selected_type = backlog_filters['tipo'] if backlog_filters['tipo'] in valid_types else ''
+    selected_state = backlog_filters['estado'] if backlog_filters['estado'] in valid_states else ''
+    date_from = parse_date(backlog_filters['desde'])
+    date_to = parse_date(backlog_filters['hasta'])
+    search_term = backlog_filters['q']
+    territory_term = backlog_filters['territorio']
+
+    commitment_rows = Compromiso.objects.all()
+    if not selected_type or selected_type == 'compromiso':
+        if search_term:
+            commitment_rows = commitment_rows.filter(
+                Q(solicitante__icontains=search_term)
+                | Q(territorio__icontains=search_term)
+                | Q(observacion__icontains=search_term)
+                | Q(responsable__nombres__icontains=search_term)
+                | Q(responsable__apellidos__icontains=search_term)
+                | Q(delegacion__nombre__icontains=search_term)
+            )
+        if territory_term:
+            commitment_rows = commitment_rows.filter(
+                Q(territorio__icontains=territory_term)
+                | Q(delegacion__nombre__icontains=territory_term)
+            )
+        if selected_state:
+            state_map = {
+                'ingresado': ('ingresado',),
+                'pendiente': ('pendiente', 'revision'),
+                'en_proceso': ('en_proceso',),
+                'realizado': ('realizado',),
+            }
+            commitment_rows = commitment_rows.filter(estado__in=state_map[selected_state])
+        if date_from:
+            commitment_rows = commitment_rows.filter(fecha_registro__date__gte=date_from)
+        if date_to:
+            commitment_rows = commitment_rows.filter(fecha_registro__date__lte=date_to)
+        commitment_rows = commitment_rows.select_related(
+            'delegacion', 'persona', 'responsable', 'actividad_origen',
+        ).order_by('-fecha_registro')
+    else:
+        commitment_rows = Compromiso.objects.none()
+
+    activity_rows = Actividad.objects.all()
+    if not selected_type or selected_type == 'actividad':
+        if search_term:
+            activity_rows = activity_rows.filter(
+                Q(descripcion__icontains=search_term)
+                | Q(accion__icontains=search_term)
+                | Q(contacto_nombre__icontains=search_term)
+                | Q(funcionario__nombres__icontains=search_term)
+                | Q(funcionario__apellidos__icontains=search_term)
+                | Q(funcionario__delegacion__nombre__icontains=search_term)
+                | Q(item__nombre__icontains=search_term)
+            )
+        if territory_term:
+            activity_rows = activity_rows.filter(funcionario__delegacion__nombre__icontains=territory_term)
+        if selected_state:
+            state_map = {
+                'ingresado': (),
+                'pendiente': ('pendiente', 'rechazada'),
+                'en_proceso': ('en_correccion',),
+                'realizado': ('validada',),
+            }
+            activity_rows = activity_rows.filter(estado__in=state_map[selected_state])
+        if date_from:
+            activity_rows = activity_rows.filter(fecha_registro__date__gte=date_from)
+        if date_to:
+            activity_rows = activity_rows.filter(fecha_registro__date__lte=date_to)
+        activity_rows = activity_rows.select_related(
+            'funcionario', 'funcionario__delegacion', 'item', 'catalogo_tipo',
+        ).order_by('-fecha_registro')
+    else:
+        activity_rows = Actividad.objects.none()
+
+    attention_rows = AtencionSocial.objects.all()
+    if not selected_type or selected_type == 'gestion':
+        if search_term:
+            attention_rows = attention_rows.filter(
+                Q(solicitante__icontains=search_term)
+                | Q(descripcion__icontains=search_term)
+                | Q(persona__nombre__icontains=search_term)
+                | Q(persona__referencia_anonima__icontains=search_term)
+                | Q(funcionario__nombres__icontains=search_term)
+                | Q(funcionario__apellidos__icontains=search_term)
+                | Q(delegacion__nombre__icontains=search_term)
+                | Q(catalogo_tipo__nombre__icontains=search_term)
+                | Q(catalogo_subtipo__nombre__icontains=search_term)
+            )
+        if territory_term:
+            attention_rows = attention_rows.filter(delegacion__nombre__icontains=territory_term)
+        if selected_state == 'pendiente':
+            attention_rows = attention_rows.filter(resultado='')
+        elif selected_state == 'realizado':
+            attention_rows = attention_rows.exclude(resultado='')
+        elif selected_state:
+            attention_rows = AtencionSocial.objects.none()
+        if date_from:
+            attention_rows = attention_rows.filter(fecha_registro__date__gte=date_from)
+        if date_to:
+            attention_rows = attention_rows.filter(fecha_registro__date__lte=date_to)
+        attention_rows = attention_rows.select_related(
+            'persona', 'delegacion', 'funcionario', 'funcionario__delegacion',
+            'catalogo_tipo', 'catalogo_subtipo', 'actividad',
+        ).order_by('-fecha_registro')
+    else:
+        attention_rows = AtencionSocial.objects.none()
+
+    backlog_entries = []
+    for compromiso in commitment_rows:
+        status = 'realizado' if compromiso.estado == 'realizado' else compromiso.estado
+        if status == 'revision':
+            status = 'pendiente'
+        backlog_entries.append({
+            'id': f'compromiso-{compromiso.pk}',
+            'tipo': 'compromiso',
+            'tipo_label': 'Compromiso',
+            'title': compromiso.observacion or 'Solicitud de la comunidad',
+            'description': compromiso.observacion or 'Sin descripción adicional.',
+            'requester': compromiso.solicitante,
+            'territory': compromiso.territorio or compromiso.delegacion.nombre,
+            'responsible': f'{compromiso.responsable.nombres} {compromiso.responsable.apellidos}'.strip(),
+            'requested_at': compromiso.fecha_registro,
+            'event_date': None,
+            'due_date': compromiso.fecha_comprometida,
+            'status': status,
+            'original_status': compromiso.get_estado_display(),
+            'detail': compromiso.actividad_origen.descripcion if compromiso.actividad_origen_id else '',
+            'delegation': compromiso.delegacion.nombre,
+        })
+
+    for actividad in activity_rows:
+        status = {
+            'pendiente': 'pendiente',
+            'rechazada': 'pendiente',
+            'en_correccion': 'en_proceso',
+            'validada': 'realizado',
+        }.get(actividad.estado, 'ingresado')
+        backlog_entries.append({
+            'id': f'actividad-{actividad.pk}',
+            'tipo': 'actividad',
+            'tipo_label': 'Actividad',
+            'title': actividad.accion or actividad.item.nombre,
+            'description': actividad.descripcion,
+            'requester': actividad.contacto_nombre or 'No informado',
+            'territory': actividad.funcionario.delegacion.nombre if actividad.funcionario.delegacion_id else 'Sin territorio',
+            'responsible': f'{actividad.funcionario.nombres} {actividad.funcionario.apellidos}'.strip(),
+            'requested_at': actividad.fecha_registro,
+            'event_date': actividad.fecha_actividad,
+            'due_date': None,
+            'status': status,
+            'original_status': actividad.get_estado_display(),
+            'detail': f'{actividad.item.nombre} · {actividad.codigo_evidencia}',
+            'delegation': actividad.funcionario.delegacion.nombre if actividad.funcionario.delegacion_id else 'Sin delegación',
+        })
+
+    for atencion in attention_rows:
+        status = 'realizado' if atencion.resultado else 'pendiente'
+        backlog_entries.append({
+            'id': f'gestion-{atencion.pk}',
+            'tipo': 'gestion',
+            'tipo_label': 'Gestión social',
+            'title': atencion.catalogo_subtipo.nombre if atencion.catalogo_subtipo_id else atencion.catalogo_tipo.nombre,
+            'description': atencion.descripcion,
+            'requester': atencion.solicitante or atencion.persona.nombre or atencion.persona.referencia_anonima,
+            'territory': atencion.delegacion.nombre if atencion.delegacion_id else 'Sin territorio',
+            'responsible': f'{atencion.funcionario.nombres} {atencion.funcionario.apellidos}'.strip(),
+            'requested_at': atencion.fecha_registro,
+            'event_date': atencion.fecha,
+            'due_date': None,
+            'status': status,
+            'original_status': 'Con resultado' if atencion.resultado else 'Sin resultado registrado',
+            'detail': atencion.resultado or 'Sin resultado o acuerdo registrado.',
+            'delegation': atencion.delegacion.nombre if atencion.delegacion_id else 'Sin delegación',
+        })
+
+    backlog_entries.sort(key=lambda entry: entry['requested_at'], reverse=True)
+    status_labels = {
+        'ingresado': 'Ingresado',
+        'pendiente': 'Pendiente',
+        'en_proceso': 'En proceso',
+        'realizado': 'Realizado',
+    }
+    status_styles = {
+        'ingresado': 'border-gray-300 bg-gray-100',
+        'pendiente': 'border-amber-200 bg-amber-50',
+        'en_proceso': 'border-sky-200 bg-sky-50',
+        'realizado': 'border-emerald-200 bg-emerald-50',
+    }
+    backlog_columns = [
+        {
+            'key': status,
+            'label': label,
+            'style': status_styles[status],
+            'entries': [entry for entry in backlog_entries if entry['status'] == status],
+        }
+        for status, label in status_labels.items()
+    ]
+
     return render(request, 'main/coordinador_dashboard.html', {
         'role': 'COORDINADOR',
         'user': user,
@@ -338,6 +552,23 @@ def _coordinator_dashboard(request):
         'evidence_pending': pending_evidence,
         'indicator_rows': indicator_rows,
         'alerts': alerts,
+        'backlog_columns': backlog_columns,
+        'backlog_total': len(backlog_entries),
+        'backlog_filters': backlog_filters,
+        'active_dashboard_panel': active_dashboard_panel,
+        'backlog_type_choices': (
+            ('', 'Todos los tipos'),
+            ('compromiso', 'Compromisos'),
+            ('actividad', 'Actividades'),
+            ('gestion', 'Gestiones sociales'),
+        ),
+        'backlog_status_choices': (
+            ('', 'Todos los estados'),
+            ('ingresado', 'Ingresado'),
+            ('pendiente', 'Pendiente'),
+            ('en_proceso', 'En proceso'),
+            ('realizado', 'Realizado'),
+        ),
     })
 
 
