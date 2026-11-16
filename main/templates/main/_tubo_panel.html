@@ -7,6 +7,10 @@
         </div>
         <div class="flex items-center gap-3">
             <p class="text-sm text-gray-500"><strong class="text-gray-900">{{ backlog_total }}</strong> casos</p>
+            <div class="inline-flex rounded border border-gray-300 bg-white p-1" role="group" aria-label="Cambiar presentación del TUBO">
+                <button type="button" data-tube-view="board" aria-pressed="true" class="rounded px-3 py-1.5 text-sm font-semibold text-white bg-red-800">Tablero</button>
+                <button type="button" data-tube-view="table" aria-pressed="false" class="rounded px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-100">Tabla</button>
+            </div>
             <button type="button" data-export-tube class="inline-flex items-center gap-2 rounded border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"><span aria-hidden="true">↓</span> Exportar Excel</button>
         </div>
     </div>
@@ -41,7 +45,7 @@
         </div>
     </form>
 
-    <div class="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+    <div data-tube-layout="board" class="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 2xl:grid-cols-4">
         {% for column in backlog_columns %}
             <section aria-label="{{ column.label }}: {{ column.entries|length }} casos" class="min-w-0 overflow-hidden rounded border border-gray-200 {{ column.style }}">
                 <header class="flex items-center justify-between gap-2 border-b border-black/5 px-3 py-2.5">
@@ -79,6 +83,58 @@
             </section>
         {% endfor %}
     </div>
+
+    <div data-tube-layout="table" hidden class="overflow-x-auto rounded border border-gray-200 bg-white">
+        <table class="w-full min-w-[1050px] text-left text-sm">
+            <thead class="bg-gray-100 text-xs uppercase text-gray-600">
+                <tr>
+                    <th scope="col" class="px-4 py-3 font-semibold">Tipo / caso</th>
+                    <th scope="col" class="px-4 py-3 font-semibold">Solicitante</th>
+                    <th scope="col" class="px-4 py-3 font-semibold">Territorio</th>
+                    <th scope="col" class="px-4 py-3 font-semibold">Responsable</th>
+                    <th scope="col" class="px-4 py-3 font-semibold">Ingreso</th>
+                    <th scope="col" class="px-4 py-3 font-semibold">Compromiso</th>
+                    <th scope="col" class="px-4 py-3 font-semibold">Estado</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for column in backlog_columns %}
+                    {% for entry in column.entries %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3">
+                                <button type="button" data-case-open
+                                    data-case-title="{{ entry.title }}"
+                                    data-case-description="{{ entry.description }}"
+                                    data-case-type="{{ entry.tipo_label }}"
+                                    data-case-requester="{{ entry.requester }}"
+                                    data-case-territory="{{ entry.territory }}"
+                                    data-case-delegation="{{ entry.delegation }}"
+                                    data-case-responsible="{{ entry.responsible }}"
+                                    data-case-requested="{{ entry.requested_at|date:'d/m/Y H:i' }}"
+                                    data-case-event-date="{% if entry.event_date %}{{ entry.event_date|date:'d/m/Y' }}{% else %}No aplica{% endif %}"
+                                    data-case-due-date="{% if entry.due_date %}{{ entry.due_date|date:'d/m/Y' }}{% else %}Sin compromiso{% endif %}"
+                                    data-case-status="{{ column.label }}"
+                                    data-case-original-status="{{ entry.original_status }}"
+                                    data-case-detail="{{ entry.detail }}"
+                                    class="text-left">
+                                    <span class="block text-xs font-semibold uppercase text-gray-500">{{ entry.tipo_label }} · #{{ entry.id }}</span>
+                                    <span class="mt-1 block max-w-sm font-semibold text-gray-900">{{ entry.title|truncatechars:76 }}</span>
+                                </button>
+                            </td>
+                            <td class="px-4 py-3 text-gray-700">{{ entry.requester|truncatechars:42 }}</td>
+                            <td class="px-4 py-3 text-gray-700">{{ entry.territory|truncatechars:42 }}</td>
+                            <td class="px-4 py-3 text-gray-700">{{ entry.responsible|truncatechars:42 }}</td>
+                            <td class="whitespace-nowrap px-4 py-3 text-gray-700">{{ entry.requested_at|date:'d/m/Y' }}</td>
+                            <td class="whitespace-nowrap px-4 py-3 text-gray-700">{% if entry.due_date %}{{ entry.due_date|date:'d/m/Y' }}{% else %}No aplica{% endif %}</td>
+                            <td class="px-4 py-3"><span class="inline-flex rounded px-2 py-1 text-xs font-semibold {% if entry.status == 'ingresado' %}bg-gray-100 text-gray-700{% elif entry.status == 'pendiente' %}bg-amber-100 text-amber-900{% elif entry.status == 'en_proceso' %}bg-sky-100 text-sky-900{% else %}bg-emerald-100 text-emerald-900{% endif %}">{{ column.label }}</span></td>
+                        </tr>
+                    {% empty %}
+                        {% if forloop.first %}<tr><td colspan="7" class="px-4 py-8 text-center text-sm text-gray-500">No hay casos para mostrar.</td></tr>{% endif %}
+                    {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </section>
 
 <dialog id="case-dialog" aria-labelledby="case-dialog-title" class="w-[min(42rem,calc(100%-2rem))] rounded border border-gray-200 p-0 shadow-xl backdrop:bg-gray-950/50">
@@ -102,6 +158,25 @@
 </dialog>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
+    const tubeViewButtons = document.querySelectorAll('[data-tube-view]');
+    const tubeLayouts = document.querySelectorAll('[data-tube-layout]');
+
+    tubeViewButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const selectedView = button.dataset.tubeView;
+            tubeViewButtons.forEach((item) => {
+                const selected = item === button;
+                item.setAttribute('aria-pressed', String(selected));
+                item.classList.toggle('bg-red-800', selected);
+                item.classList.toggle('text-white', selected);
+                item.classList.toggle('text-gray-700', !selected);
+            });
+            tubeLayouts.forEach((layout) => {
+                layout.hidden = layout.dataset.tubeLayout !== selectedView;
+            });
+        });
+    });
+
     const caseDialog = document.querySelector('#case-dialog');
 
     document.querySelectorAll('[data-case-open]').forEach((card) => {
