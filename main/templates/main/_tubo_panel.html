@@ -60,6 +60,7 @@
                             draggable="true"
                             data-tube-card
                             data-case-id="{{ entry.id }}"
+                            data-case-numeric-id="{{ entry.id|cut:'compromiso-'|cut:'actividad-'|cut:'gestion-' }}"
                             data-case-kind="{{ entry.tipo }}"
                             data-case-title="{{ entry.title }}"
                             data-case-description="{{ entry.description }}"
@@ -83,7 +84,7 @@
                             <span class="mt-1 block text-xs text-gray-600">Ingreso: {{ entry.requested_at|date:'d/m/Y' }} · Compromiso: {% if entry.due_date %}{{ entry.due_date|date:'d/m/Y' }}{% else %}No aplica{% endif %}</span>
                         </button>
                     {% empty %}
-                        <p class="rounded border border-dashed border-gray-300 bg-white/60 px-3 py-6 text-center text-xs text-gray-500">No hay casos en este estado.</p>
+                        <p data-tube-empty class="rounded border border-dashed border-gray-300 bg-white/60 px-3 py-6 text-center text-xs text-gray-500">No hay casos en este estado.</p>
                     {% endfor %}
                 </div>
             </section>
@@ -165,7 +166,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
     const tubeUpdateUrl = "{% url 'main:actualizar_estado_tubo_view' %}";
-    const tubeCsrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    const tubeCsrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || document.cookie.split('; ').find((item) => item.startsWith('csrftoken='))?.split('=')[1] || '';
     const tubeViewButtons = document.querySelectorAll('[data-tube-view]');
     const tubeLayouts = document.querySelectorAll('[data-tube-layout]');
     const tubeViewInput = document.querySelector('[data-tube-view-input]');
@@ -214,7 +215,7 @@
             const previousColumn = card.closest('[data-tube-column]');
             const formData = new FormData();
             const kind = card.dataset.caseKind;
-            const numericId = cardId.split('-').pop();
+            const numericId = card.dataset.caseNumericId;
             formData.append('tipo', kind);
             formData.append('id', numericId);
             formData.append('estado', column.dataset.tubeColumn);
@@ -224,16 +225,21 @@
                     headers: {'X-CSRFToken': tubeCsrfToken, 'X-Requested-With': 'XMLHttpRequest'},
                     body: formData,
                 });
-                if (!response.ok) throw new Error('No se pudo actualizar el estado.');
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result.ok) throw new Error(result.error || `El servidor rechazó el cambio (${response.status}).`);
                 column.appendChild(card);
                 card.dataset.caseStatus = column.dataset.tubeLabel;
+                card.dataset.caseOriginalStatus = column.dataset.tubeLabel;
                 card.querySelector('[data-tube-card-status]').textContent = column.dataset.tubeLabel;
-                const count = column.parentElement.querySelector('header span');
-                if (count) count.textContent = column.children.length;
-                if (previousColumn) {
-                    const previousCount = previousColumn.parentElement.querySelector('header span');
-                    if (previousCount) previousCount.textContent = previousColumn.children.length;
-                }
+                const updateColumn = (tubeColumn) => {
+                    const cards = tubeColumn.querySelectorAll('[data-tube-card]');
+                    const count = tubeColumn.parentElement.querySelector('header span');
+                    if (count) count.textContent = cards.length;
+                    const emptyMessage = tubeColumn.querySelector('[data-tube-empty]');
+                    if (emptyMessage) emptyMessage.hidden = cards.length > 0;
+                };
+                updateColumn(column);
+                if (previousColumn) updateColumn(previousColumn);
             } catch (error) {
                 window.Swal?.fire({icon: 'error', title: 'No se pudo mover el caso', text: error.message});
             }

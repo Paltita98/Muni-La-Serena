@@ -1086,6 +1086,7 @@ def _datos_tubo_delegacion(request, delegacion):
         status = 'pendiente' if compromiso.estado == 'revision' else compromiso.estado
         entries.append({
             'id': f'compromiso-{compromiso.pk}',
+            'tipo': 'compromiso',
             'tipo_label': 'Compromiso',
             'title': compromiso.observacion or 'Solicitud de la comunidad',
             'description': compromiso.observacion or 'Sin descripción adicional.',
@@ -1105,6 +1106,7 @@ def _datos_tubo_delegacion(request, delegacion):
         status = {'pendiente': 'pendiente', 'rechazada': 'pendiente', 'en_correccion': 'en_proceso', 'validada': 'realizado'}.get(actividad.estado, 'ingresado')
         entries.append({
             'id': f'actividad-{actividad.pk}',
+            'tipo': 'actividad',
             'tipo_label': 'Actividad',
             'title': actividad.accion or actividad.item.nombre,
             'description': actividad.descripcion,
@@ -1124,6 +1126,7 @@ def _datos_tubo_delegacion(request, delegacion):
         status = 'en_proceso' if atencion.resultado == 'En proceso' else 'realizado' if atencion.resultado else 'pendiente'
         entries.append({
             'id': f'gestion-{atencion.pk}',
+            'tipo': 'gestion',
             'tipo_label': 'Gestión social',
             'title': atencion.catalogo_subtipo.nombre if atencion.catalogo_subtipo_id else atencion.catalogo_tipo.nombre,
             'description': atencion.descripcion,
