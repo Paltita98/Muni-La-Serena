@@ -17,7 +17,7 @@
             </div>
             <nav aria-label="Navegación de organizaciones comunitarias" class="flex-1 px-3 py-4 space-y-1">
                 <button type="button" data-dashboard-target="resumen" aria-controls="panel-resumen" aria-pressed="true" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition bg-red-900 text-white font-semibold">Resumen</button>
-                <button type="button" data-dashboard-target="registro" aria-controls="panel-registro" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Registro OROC</button>
+                <a href="{% url 'main:organizaciones_jjvv_list_view' %}" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Registro OROC</a>
                 <button type="button" data-dashboard-target="formacion" aria-controls="panel-formacion" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Asesoría y formación</button>
                 <button type="button" data-dashboard-target="territorio" aria-controls="panel-territorio" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Trabajo territorial</button>
                 <button type="button" data-dashboard-target="convocatorias" aria-controls="panel-convocatorias" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Convocatorias</button>
