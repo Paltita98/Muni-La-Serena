@@ -88,11 +88,33 @@ def delegado_demo_view(request):
         .order_by('-fecha', '-id')
         if delegacion else AtencionSocial.objects.none()
     )
+    is_letter_submission = request.method == 'POST' and request.POST.get('accion') == 'crear_carta'
+    carta_form = CartaDelegacionForm(
+        request.POST if is_letter_submission else None,
+        delegacion=delegacion,
+    )
+    if is_letter_submission:
+        if delegacion is None:
+            carta_form.add_error(None, 'No tienes una delegación asignada para registrar cartas.')
+        elif carta_form.is_valid():
+            carta = carta_form.save(commit=False)
+            carta.delegacion = delegacion
+            carta.registrada_por = delegado
+            carta.save()
+            messages.success(request, 'Carta registrada correctamente.')
+            return redirect('delegado_cartas_view')
+
     tubo_data = _datos_tubo_delegacion(request, delegacion)
+    cartas_total = CartaDelegacion.objects.filter(
+        delegacion=delegacion,
+        registrada_por=delegado,
+    ).count() if delegacion else 0
 
     return render(request, 'funcionario_demo_app/delegado_demo.html', {
         'delegado': delegado,
         'delegacion': delegacion,
+        'carta_form': carta_form,
+        'cartas_total': cartas_total,
         'compromisos': compromisos[:3],
         'compromisos_total': compromisos.count(),
         'compromisos_en_proceso': compromisos.filter(estado='en_proceso').count(),
@@ -116,7 +138,7 @@ def delegado_cartas_view(request):
         return redirect('main:login_view')
     delegacion = _delegacion_del_delegado(delegado)
     cartas = (
-        CartaDelegacion.objects.filter(delegacion=delegacion)
+        CartaDelegacion.objects.filter(delegacion=delegacion, registrada_por=delegado)
         .select_related('registrada_por')
         if delegacion else CartaDelegacion.objects.none()
     )
@@ -143,18 +165,6 @@ def delegado_cartas_view(request):
     if hasta:
         cartas = cartas.filter(fecha_emision__lte=hasta)
 
-    form = CartaDelegacionForm(request.POST or None, delegacion=delegacion)
-    if request.method == 'POST':
-        if delegacion is None:
-            messages.error(request, 'No tienes una delegación asignada para registrar cartas.')
-        elif form.is_valid():
-            carta = form.save(commit=False)
-            carta.delegacion = delegacion
-            carta.registrada_por = delegado
-            carta.save()
-            messages.success(request, 'Carta registrada correctamente.')
-            return redirect('delegado_cartas_view')
-
     return render(request, 'funcionario_demo_app/delegado_cartas.html', {
         'delegado': delegado,
         'delegacion': delegacion,
@@ -162,10 +172,9 @@ def delegado_cartas_view(request):
         'cartas_total': cartas.count(),
         'carta_filters': filters,
         'carta_estado_choices': CartaDelegacion.ESTADO_CHOICES,
-        'form': form,
         'active_section': 'cartas',
-        'page_title': 'Cartas',
-        'page_description': 'Registro y seguimiento de cartas de la delegación.',
+        'page_title': 'TUBO Cartas',
+        'page_description': 'Tabla de cartas registradas por tu cuenta.',
     })
 
 

@@ -425,9 +425,21 @@ class FlujoCompromisosTests(TestCase):
             destinatario='Destinatario Norte',
             asunto='Carta externa',
         )
+        CartaDelegacion.objects.create(
+            delegacion=self.delegacion,
+            registrada_por=self.funcionario,
+            folio='CENTRO-FUNC-001',
+            fecha_emision=date(2026, 11, 10),
+            destinatario='Destinatario del funcionario',
+            asunto='Carta de otro usuario',
+        )
         self.iniciar_sesion_rol('DELEGADO', self.delegado)
+        summary_response = self.client.get(reverse('delegado_demo_view'))
+        self.assertContains(summary_response, 'data-open-carta-dialog')
+        self.assertContains(summary_response, 'id="delegado-carta-dialog"')
 
-        create_response = self.client.post(reverse('delegado_cartas_view'), {
+        create_response = self.client.post(reverse('delegado_demo_view'), {
+            'accion': 'crear_carta',
             'folio': 'CENTRO-001',
             'fecha_emision': '2026-11-12',
             'destinatario': 'Junta vecinal Centro',
@@ -444,10 +456,16 @@ class FlujoCompromisosTests(TestCase):
         self.assertEqual(carta.delegacion, self.delegacion)
         self.assertEqual(carta.registrada_por, self.delegado)
 
-        response = self.client.get(reverse('delegado_cartas_view'), {'q': 'CENTRO-001'})
+        response = self.client.get(reverse('delegado_cartas_view'))
         self.assertContains(response, 'CENTRO-001')
         self.assertNotContains(response, 'NORTE-001')
+        self.assertNotContains(response, 'CENTRO-FUNC-001')
+        self.assertNotContains(response, 'name="folio"')
         self.assertContains(response, 'TUBO Cartas')
+
+        filtered_response = self.client.get(reverse('delegado_cartas_view'), {'q': 'CENTRO-001'})
+        self.assertContains(filtered_response, 'CENTRO-001')
+        self.assertNotContains(filtered_response, 'CENTRO-FUNC-001')
 
     def test_delegate_tube_includes_records_from_selected_local_date(self):
         registration_time = timezone.make_aware(datetime(2026, 10, 1, 0, 30))

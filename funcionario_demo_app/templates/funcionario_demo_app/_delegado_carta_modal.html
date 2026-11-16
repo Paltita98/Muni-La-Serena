@@ -1,0 +1,38 @@
+<dialog id="delegado-carta-dialog" data-show-on-load="{% if carta_form.errors %}true{% else %}false{% endif %}" aria-labelledby="delegado-carta-title" class="m-auto max-h-[92vh] w-[min(48rem,calc(100%-2rem))] overflow-hidden rounded border border-gray-200 p-0 shadow-xl backdrop:bg-gray-950/50">
+    <form method="post" action="{% url 'delegado_demo_view' %}" class="flex max-h-[92vh] flex-col bg-white">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="crear_carta">
+        <header class="flex shrink-0 items-center justify-between gap-4 border-b border-gray-200 px-5 py-4">
+            <div><p class="text-xs font-semibold uppercase text-red-800">TUBO Cartas</p><h2 id="delegado-carta-title" class="mt-1 text-lg font-bold text-gray-950">Registrar carta</h2></div>
+            <button type="button" data-close-carta-dialog aria-label="Cerrar formulario" class="flex h-9 w-9 items-center justify-center rounded border border-gray-300 text-xl text-gray-700 hover:bg-gray-100">×</button>
+        </header>
+        <div class="grid grid-cols-1 gap-4 overflow-y-auto p-5 sm:grid-cols-2">
+            {% if carta_form.non_field_errors %}<div class="sm:col-span-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{{ carta_form.non_field_errors }}</div>{% endif %}
+            {% for field in carta_form %}
+                <label for="{{ field.id_for_label }}" class="text-xs font-semibold text-gray-700 {% if field.name == 'contenido' or field.name == 'observaciones' %}sm:col-span-2{% endif %}">
+                    {{ field.label }}{% if field.field.required %}<span class="text-red-700" aria-hidden="true"> *</span>{% endif %}
+                    {{ field }}
+                    {% for error in field.errors %}<span class="mt-1 block text-xs font-normal text-red-700">{{ error }}</span>{% endfor %}
+                </label>
+            {% endfor %}
+        </div>
+        <footer class="flex shrink-0 justify-end gap-2 border-t border-gray-200 px-5 py-4">
+            <button type="button" data-close-carta-dialog class="rounded border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Cancelar</button>
+            <button type="submit" class="rounded bg-red-800 px-4 py-2 text-sm font-semibold text-white hover:bg-red-900">Guardar carta</button>
+        </footer>
+    </form>
+</dialog>
+<script>
+    const cartaDialog = document.querySelector('#delegado-carta-dialog');
+
+    document.querySelectorAll('[data-open-carta-dialog]').forEach((button) => {
+        button.addEventListener('click', () => cartaDialog.showModal());
+    });
+    document.querySelectorAll('[data-close-carta-dialog]').forEach((button) => {
+        button.addEventListener('click', () => cartaDialog.close());
+    });
+    cartaDialog.addEventListener('click', (event) => {
+        if (event.target === cartaDialog) cartaDialog.close();
+    });
+    if (cartaDialog.dataset.showOnLoad === 'true') cartaDialog.showModal();
+</script>

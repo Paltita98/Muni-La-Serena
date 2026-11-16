@@ -32,7 +32,7 @@
             {% include 'main/_logout_button.html' %}
         </aside>
         <main class="min-w-0 flex-1 overflow-y-auto bg-gray-50">
-            <header class="h-16 bg-white shadow-sm flex items-center px-6 md:px-8">
+            <header class="sticky top-0 z-10 h-16 bg-white shadow-sm flex items-center px-6 md:px-8">
                 <h1 class="font-bold text-gray-900">{% if role == 'COORDINADOR' %}Coordinación del sistema{% elif role == 'DELEGADO' %}Gestión de delegación{% else %}Consulta de información{% endif %}</h1>
                 <div class="ml-auto">{% include 'main/_notification_bell.html' %}</div>
             </header>

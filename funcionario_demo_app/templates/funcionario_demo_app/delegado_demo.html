@@ -13,7 +13,7 @@
         {% include 'funcionario_demo_app/_delegado_sidebar.html' with active_section=active_section %}
 
         <main id="inicio" class="flex-1 flex flex-col h-screen overflow-y-auto min-w-0">
-            <header class="min-h-16 bg-white shadow-sm flex justify-between items-center gap-4 px-5 md:px-8 py-3 border-b border-gray-100">
+            <header class="sticky top-0 z-10 min-h-16 bg-white shadow-sm flex justify-between items-center gap-4 px-5 md:px-8 py-3 border-b border-gray-100">
                 <div>
                     <p class="text-xs text-gray-500">Gestión territorial <span class="mx-1">/</span> Panel de delegación</p>
                     <p class="text-sm font-semibold text-gray-900 mt-1">{{ delegacion.nombre|default:"Delegación" }}</p>
@@ -39,9 +39,11 @@
                         <h1 class="text-2xl font-bold text-gray-900 mt-1">Seguimiento de la delegación</h1>
                         <p class="text-sm text-gray-500 mt-1">Revisa compromisos, responsables y fechas de cumplimiento.</p>
                     </div>
-                    <a href="{% url 'delegado_compromiso_nuevo_view' %}" class="inline-flex items-center justify-center gap-2 bg-blue-700 hover:bg-blue-800 text-white px-4 py-2.5 rounded-lg text-sm font-semibold shadow-sm transition">
-                        <span aria-hidden="true">+</span> Asignar compromiso
-                    </a>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" data-open-carta-dialog class="inline-flex items-center justify-center gap-2 rounded-lg bg-red-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-900"><span aria-hidden="true">+</span> Registrar carta</button>
+                        <a href="{% url 'delegado_cartas_view' %}" class="inline-flex items-center justify-center rounded-lg border border-red-800 px-4 py-2.5 text-sm font-semibold text-red-800 transition hover:bg-red-50">TUBO Cartas · {{ cartas_total }}</a>
+                        <a href="{% url 'delegado_compromiso_nuevo_view' %}" class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-800"><span aria-hidden="true">+</span> Asignar compromiso</a>
+                    </div>
                 </section>
 
                 <section aria-label="Resumen de gestiones del TUBO" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
@@ -97,6 +99,7 @@
                         {% for persona in equipo|slice:":3" %}<p class="mt-3 truncate border-t border-gray-100 pt-2 text-sm text-gray-700">{{ persona.nombres }} {{ persona.apellidos }} · {{ persona.cargo|default:"Sin cargo" }}</p>{% empty %}<p class="mt-3 border-t border-gray-100 pt-2 text-sm text-gray-500">No hay integrantes activos.</p>{% endfor %}
                     </a>
                 </section>
+                {% include 'funcionario_demo_app/_delegado_carta_modal.html' %}
                 {% endif %}
             </div>
         </main>
