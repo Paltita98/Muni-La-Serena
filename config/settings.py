@@ -72,6 +72,8 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'main.context_processors.connected_users',
+                'main.context_processors.current_user',
+                'main.context_processors.current_measurement_period',
                 'main.context_processors.user_notifications',
             ],
         },

@@ -35,6 +35,7 @@
         hasLoadedForm = false;
         title.textContent = link.dataset.modalTitle || link.textContent.trim() || 'Formulario';
         frame.title = title.textContent;
+        destination.searchParams.set('modal', '1');
         frame.src = destination.href;
         dialog.showModal();
         closeButton.focus();

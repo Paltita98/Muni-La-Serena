@@ -114,6 +114,9 @@ class OrganizacionJJVVForm(forms.ModelForm):
             'presidente_n',
             'tesorero_n',
             'secretario_n',
+            'presidente_usuario',
+            'tesorero_usuario',
+            'secretario_usuario',
         )
         labels = {
             'organizaciones': 'Nombre de la organización',
@@ -128,6 +131,9 @@ class OrganizacionJJVVForm(forms.ModelForm):
             'presidente_n': 'Presidente',
             'tesorero_n': 'Tesorero',
             'secretario_n': 'Secretario',
+            'presidente_usuario': 'Buscar presidente',
+            'tesorero_usuario': 'Buscar tesorero',
+            'secretario_usuario': 'Buscar secretario',
         }
         widgets = {
             'organizaciones': forms.TextInput(attrs={'autocomplete': 'organization'}),
@@ -146,13 +152,21 @@ class OrganizacionJJVVForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         delegacion_usuario = kwargs.pop('delegacion_usuario', None)
+        allow_all_delegations = kwargs.pop('allow_all_delegations', False)
         super().__init__(*args, **kwargs)
         self.fields['delegacion'].queryset = (
-            Delegacion.objects.filter(pk=delegacion_usuario.pk)
+            Delegacion.objects.order_by('nombre')
+            if allow_all_delegations
+            else Delegacion.objects.filter(pk=delegacion_usuario.pk)
             if delegacion_usuario else Delegacion.objects.none()
         )
-        self.fields['delegacion'].initial = delegacion_usuario
-        self.fields['delegacion'].disabled = True
+        if not allow_all_delegations:
+            self.fields['delegacion'].initial = delegacion_usuario
+        self.fields['delegacion'].disabled = not allow_all_delegations
+        for field_name in ('presidente_usuario', 'tesorero_usuario', 'secretario_usuario'):
+            self.fields[field_name].queryset = Usuario.objects.filter(estado='activo').order_by('apellidos', 'nombres')
+            self.fields[field_name].required = False
+            self.fields[field_name].widget = forms.HiddenInput()
         for field in self.fields.values():
             field.widget.attrs['class'] = (
                 'w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm '
@@ -165,6 +179,16 @@ class OrganizacionJJVVForm(forms.ModelForm):
         fecha_inscripcion = cleaned_data.get('fecha_inscripcion_reg')
         if fecha_constitucion and fecha_inscripcion and fecha_inscripcion < fecha_constitucion:
             self.add_error('fecha_inscripcion_reg', 'La inscripción no puede ser anterior a la constitución.')
+        for role_field, legacy_field in (
+            ('presidente_usuario', 'presidente_n'),
+            ('tesorero_usuario', 'tesorero_n'),
+            ('secretario_usuario', 'secretario_n'),
+        ):
+            usuario = cleaned_data.get(role_field)
+            if usuario:
+                nombre_completo = f'{usuario.nombres} {usuario.apellidos}'.strip()
+                cleaned_data[legacy_field] = nombre_completo
+                self.instance.__dict__[legacy_field] = nombre_completo
         return cleaned_data
 
 

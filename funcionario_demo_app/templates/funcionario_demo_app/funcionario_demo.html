@@ -52,15 +52,6 @@
                 </div>
                 <div class="flex items-center space-x-6">
                     {% include 'main/_notification_bell.html' %}
-                    <div class="flex items-center border-l pl-6">
-                        <div class="w-8 h-8 rounded-full bg-blue-200 flex items-center justify-center text-blue-700 font-bold">
-                            IA
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm font-semibold">{{ funcionario|default:"Sin funcionario activo" }}</p>
-                            <p class="text-xs text-gray-500">{{ funcionario.cargo|default:"Funcionario" }}</p>
-                        </div>
-                    </div>
                 </div>
             </header>
 

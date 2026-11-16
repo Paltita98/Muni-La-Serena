@@ -1,0 +1,43 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGR - Resumen del período</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body class="page-shell">
+    <div class="flex h-screen overflow-hidden">
+        {% include 'admin_demo_app/_admin_sidebar.html' with seccion_activa='periodos' %}
+        <main class="min-w-0 flex-1 overflow-y-auto bg-gray-50">
+            <header class="sticky top-0 z-10 flex min-h-16 items-center justify-between gap-4 border-b border-red-100 bg-white px-5 py-3 md:px-8">
+                <div><p class="text-xs text-gray-500">Períodos de medición</p><h1 class="text-lg font-bold text-gray-900">Resumen del período {{ periodo.pk }}</h1></div>
+                <a href="{% url 'admin_periodos_view' %}" class="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Volver a períodos</a>
+            </header>
+            <div class="space-y-6 p-5 md:p-8">
+                <section class="rounded-lg border {% if periodo.estado == 'abierto' %}border-green-300 bg-green-50{% else %}border-gray-200 bg-white{% endif %} p-5">
+                    <div class="flex flex-wrap items-center justify-between gap-4"><div><p class="text-xs font-bold uppercase tracking-wide text-gray-500">Fechas de medición</p><p class="mt-1 text-2xl font-bold text-gray-950">{{ periodo.fecha_inicio|date:'d/m/Y' }} - {{ periodo.fecha_termino|date:'d/m/Y' }}</p><p class="mt-1 text-sm text-gray-600">{{ periodo.dias_computables }} días computables · Versión {{ periodo.version_parametros }}</p></div><div class="flex items-center gap-3"><span class="rounded px-3 py-1.5 text-sm font-semibold {% if periodo.estado == 'abierto' %}bg-green-100 text-green-700{% else %}bg-gray-100 text-gray-600{% endif %}">{{ periodo.get_estado_display }}</span><form method="post" action="{% url 'admin_periodo_toggle_view' periodo.pk %}">{% csrf_token %}<button type="submit" class="rounded px-3 py-2 text-sm font-semibold text-white {% if periodo.estado == 'abierto' %}bg-red-700 hover:bg-red-800{% else %}bg-green-700 hover:bg-green-800{% endif %}">{% if periodo.estado == 'abierto' %}Desactivar período{% else %}Activar período{% endif %}</button></form></div></div>
+                </section>
+
+                <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <article class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm"><p class="text-sm text-gray-500">Actividades registradas</p><p class="mt-2 text-3xl font-bold text-gray-900">{{ resumen.actividades }}</p><p class="mt-1 text-xs text-gray-500">{{ resumen.actividades_validadas }} validadas · {{ resumen.actividades_pendientes }} pendientes</p></article>
+                    <article class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm"><p class="text-sm text-gray-500">Evidencias</p><p class="mt-2 text-3xl font-bold text-gray-900">{{ resumen.evidencias }}</p><p class="mt-1 text-xs text-gray-500">{{ resumen.evidencias_aprobadas }} aprobadas</p></article>
+                    <article class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm"><p class="text-sm text-gray-500">Metas configuradas</p><p class="mt-2 text-3xl font-bold text-gray-900">{{ resumen.metas }}</p><p class="mt-1 text-xs text-gray-500">{{ resumen.metas_vigentes }} vigentes</p></article>
+                    <article class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm"><p class="text-sm text-gray-500">Atenciones sociales</p><p class="mt-2 text-3xl font-bold text-gray-900">{{ resumen.atenciones }}</p><p class="mt-1 text-xs text-gray-500">{{ resumen.compromisos }} compromisos relacionados</p></article>
+                    <article class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm"><p class="text-sm text-gray-500">Indicadores calculados</p><p class="mt-2 text-3xl font-bold text-gray-900">{{ resumen.indicadores }}</p><p class="mt-1 text-xs text-gray-500">Resultados asociados a las metas</p></article>
+                    <article class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm"><p class="text-sm text-gray-500">Ajustes de incentivo</p><p class="mt-2 text-3xl font-bold text-gray-900">{{ resumen.ajustes }}</p><p class="mt-1 text-xs text-gray-500">Incentivos y penalizaciones</p></article>
+                </section>
+
+                <section class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                    <article class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm"><h2 class="text-base font-bold text-gray-900">Estado de las actividades</h2><dl class="mt-4 space-y-3 text-sm"><div class="flex justify-between border-b border-gray-100 pb-2"><dt class="text-gray-500">Validadas</dt><dd class="font-semibold text-green-700">{{ resumen.actividades_validadas }}</dd></div><div class="flex justify-between border-b border-gray-100 pb-2"><dt class="text-gray-500">Pendientes</dt><dd class="font-semibold text-amber-700">{{ resumen.actividades_pendientes }}</dd></div><div class="flex justify-between"><dt class="text-gray-500">Rechazadas o en corrección</dt><dd class="font-semibold text-red-700">{{ resumen.actividades_rechazadas }}</dd></div></dl></article>
+                    <article class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm"><h2 class="text-base font-bold text-gray-900">Compromisos relacionados</h2><dl class="mt-4 space-y-3 text-sm"><div class="flex justify-between border-b border-gray-100 pb-2"><dt class="text-gray-500">Total</dt><dd class="font-semibold text-gray-900">{{ resumen.compromisos }}</dd></div><div class="flex justify-between"><dt class="text-gray-500">Realizados</dt><dd class="font-semibold text-green-700">{{ resumen.compromisos_realizados }}</dd></div></dl></article>
+                </section>
+
+                <section class="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm"><div class="border-b border-gray-100 px-5 py-4"><h2 class="font-bold text-gray-900">Actividad reciente del período</h2></div><table class="w-full min-w-[620px] text-left text-sm"><thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500"><tr><th class="px-5 py-3">Código</th><th class="px-5 py-3">Descripción</th><th class="px-5 py-3">Funcionario</th><th class="px-5 py-3">Estado</th></tr></thead><tbody>{% for actividad in actividades_recientes %}<tr class="border-b border-gray-100 last:border-0"><td class="px-5 py-3 font-mono text-gray-600">{{ actividad.codigo_evidencia }}</td><td class="px-5 py-3 font-medium text-gray-900">{{ actividad.descripcion }}</td><td class="px-5 py-3 text-gray-600">{{ actividad.funcionario }}</td><td class="px-5 py-3">{{ actividad.get_estado_display }}</td></tr>{% empty %}<tr><td colspan="4" class="px-5 py-8 text-center text-gray-500">No hay actividades registradas en este período.</td></tr>{% endfor %}</tbody></table></section>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

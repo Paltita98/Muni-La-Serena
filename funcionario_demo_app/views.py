@@ -713,6 +713,7 @@ def actividad_detalle_view(request, actividad_id):
         'puede_subir_evidencia': puede_subir_evidencia,
         'is_delegado': delegado is not None,
         'panel_url': reverse('delegado_demo_view' if delegado else 'funcionario_demo_view'),
+        'modal_view': request.GET.get('modal') == '1',
     })
 
 

@@ -577,6 +577,18 @@ class OrganizacionJJVV(models.Model):
     presidente_n = models.CharField(max_length=100, null=True, blank=True)
     tesorero_n = models.CharField(max_length=100, null=True, blank=True)
     secretario_n = models.CharField(max_length=100, null=True, blank=True)
+    presidente_usuario = models.ForeignKey(
+        'Usuario', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='organizaciones_presididas',
+    )
+    tesorero_usuario = models.ForeignKey(
+        'Usuario', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='organizaciones_tesoreria',
+    )
+    secretario_usuario = models.ForeignKey(
+        'Usuario', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='organizaciones_secretaria',
+    )
 
     class Meta:
         db_table = 'organizaciones_jjvv'

@@ -1,3 +1,6 @@
+import calendar
+from datetime import date, timedelta
+
 from django import forms
 
 from .validators import validate_chilean_rut
@@ -91,6 +94,40 @@ class ItemMedicionForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['codigo'].required = True
         self.fields['descripcion'].required = True
+
+
+class PeriodoForm(forms.ModelForm):
+    class Meta:
+        model = Periodo
+        fields = ('fecha_inicio', 'fecha_termino', 'dias_computables')
+        widgets = {
+            'fecha_inicio': forms.DateInput(attrs={'type': 'date'}),
+            'fecha_termino': forms.DateInput(attrs={'type': 'date', 'readonly': True}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['fecha_termino'].disabled = True
+        self.fields['fecha_termino'].required = False
+        self.fields['fecha_termino'].label = 'Fin del trimestre (calculado)'
+        self.fields['fecha_termino'].help_text = 'Se calcula automáticamente y no se puede modificar.'
+        self.fields['dias_computables'].disabled = True
+        self.fields['dias_computables'].required = False
+        self.fields['dias_computables'].label = 'Días del trimestre (calculado)'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        fecha_inicio = cleaned_data.get('fecha_inicio')
+        if fecha_inicio:
+            month_index = fecha_inicio.month - 1 + 3
+            year = fecha_inicio.year + month_index // 12
+            month = month_index % 12 + 1
+            fecha_termino = date(year, month, min(fecha_inicio.day, calendar.monthrange(year, month)[1])) - timedelta(days=1)
+            cleaned_data['fecha_termino'] = fecha_termino
+            cleaned_data['dias_computables'] = (fecha_termino - fecha_inicio).days + 1
+            self.instance.fecha_termino = fecha_termino
+            self.instance.dias_computables = cleaned_data['dias_computables']
+        return cleaned_data
 
 
 class MetaForm(forms.ModelForm):

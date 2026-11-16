@@ -19,7 +19,7 @@
             <div class="p-4 sm:p-7 max-w-screen-2xl mx-auto space-y-5">
                 {% if messages %}<div class="space-y-2">{% for message in messages %}<div role="status" class="border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 rounded-md">{{ message }}</div>{% endfor %}</div>{% endif %}
                 <section class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3">
-                    <div><p class="text-sm font-semibold text-red-800">Registro OROC</p><h1 class="mt-1 text-2xl font-bold text-gray-900">Organizaciones</h1><p class="mt-1 text-sm text-gray-500">Consulta y administra juntas de vecinos y agrupaciones funcionales.</p></div>
+                    <div><p class="text-sm font-semibold text-red-800">{% if es_coordinador %}Coordinación{% else %}Registro OROC{% endif %}</p><h1 class="mt-1 text-2xl font-bold text-gray-900">Organizaciones comunitarias</h1><p class="mt-1 text-sm text-gray-500">Consulta y administra juntas de vecinos y agrupaciones funcionales.</p></div>
                     <a href="{% url 'main:nueva_organizacion_jjvv_view' %}" class="inline-flex items-center justify-center gap-2 rounded-md bg-red-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-900">+ Nueva organización</a>
                 </section>
                 <section class="bg-white border border-gray-200 rounded-md">

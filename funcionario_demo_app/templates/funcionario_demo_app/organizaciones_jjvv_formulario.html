@@ -12,34 +12,97 @@
     <div class="min-h-screen">
         <main class="w-full min-h-screen">
             <header class="sticky top-0 z-10 min-h-16 bg-white border-b border-gray-200 flex items-center gap-4 px-4 sm:px-7 py-3">
-                <div><p class="text-xs text-gray-500">OROC <span class="mx-1">/</span> <a href="{% url 'main:organizaciones_jjvv_list_view' %}" class="hover:underline">Organizaciones</a> <span class="mx-1">/</span> {% if organizacion %}Editar{% else %}Nuevo registro{% endif %}</p><p class="mt-1 text-sm font-semibold text-gray-900">{% if organizacion %}Editar organización{% else %}Registrar organización{% endif %}</p></div>
+                <div><p class="text-xs text-gray-500">{% if es_coordinador %}Coordinación{% else %}OROC{% endif %} <span class="mx-1">/</span> <a href="{% url 'main:organizaciones_jjvv_list_view' %}" class="hover:underline">Organizaciones</a> <span class="mx-1">/</span> {% if organizacion %}Editar{% else %}Nuevo registro{% endif %}</p><p class="mt-1 text-sm font-semibold text-gray-900">{% if organizacion %}Editar organización{% else %}Registrar organización{% endif %}</p></div>
                 <div class="ml-auto shrink-0">{% include 'main/_notification_bell.html' %}</div>
             </header>
             <div class="p-4 sm:p-7 max-w-4xl mx-auto space-y-5">
                 <section><p class="text-sm font-semibold text-red-800">Registro OROC</p><h1 class="mt-1 text-2xl font-bold text-gray-900">{% if organizacion %}{{ organizacion.organizaciones }}{% else %}Nueva organización comunitaria{% endif %}</h1><p class="mt-1 text-sm text-gray-500">Ingresa los antecedentes disponibles de la organización.</p></section>
                 <form method="post" class="bg-white border border-gray-200 rounded-md p-4 sm:p-6 space-y-5">
                     {% csrf_token %}
-                    {% if not delegacion_usuario %}<div role="alert" class="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">Tu cuenta no tiene una delegación asignada. Solicita que se configure antes de registrar organizaciones.</div>{% endif %}
+                    {% if not delegacion_usuario and not es_coordinador %}<div role="alert" class="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">Tu cuenta no tiene una delegación asignada. Solicita que se configure antes de registrar organizaciones.</div>{% endif %}
                     {% if form.non_field_errors %}<div role="alert" class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ form.non_field_errors }}</div>{% endif %}
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {% for field in form %}
-                            {% if field.name == 'presidente_n' %}<h2 class="sm:col-span-2 border-t border-gray-100 pt-4 text-sm font-bold text-gray-900">Directiva vigente <span class="font-normal text-gray-500">(opcional)</span></h2>{% endif %}
-                            <div class="{% if field.name == 'organizaciones' or field.name == 'domicilio_legal' %}sm:col-span-2{% endif %}">
-                                <label for="{{ field.id_for_label }}" class="mb-1.5 block text-sm font-semibold text-gray-800">{{ field.label }}{% if field.field.required %}<span class="text-red-700"> *</span>{% endif %}</label>
-                                {{ field }}
-                                {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
-                                {% for error in field.errors %}<p class="mt-1 text-xs font-medium text-red-700">{{ error }}</p>{% endfor %}
-                            </div>
-                        {% endfor %}
+                                {% if field.name == 'presidente_n' %}<h2 class="sm:col-span-2 border-t border-gray-100 pt-4 text-sm font-bold text-gray-900">Directiva vigente <span class="font-normal text-gray-500">(opcional)</span></h2>{% endif %}
+                                {% if field.name == 'presidente_n' or field.name == 'tesorero_n' or field.name == 'secretario_n' %}
+                                    <input type="hidden" name="{{ field.name }}" value="{{ field.value|default:'' }}">
+                                {% elif field.name == 'presidente_usuario' or field.name == 'tesorero_usuario' or field.name == 'secretario_usuario' %}
+                                    <div class="directiva-picker" data-search-url="{% url 'main:buscar_usuarios_directiva_view' %}" data-create-url="{% url 'main:crear_usuario_directiva_view' %}">
+                                        <label for="{{ field.id_for_label }}-query" class="mb-1.5 block text-sm font-semibold text-gray-800">{{ field.label }}</label>
+                                        {{ field }}
+                                        <div class="flex gap-2"><input id="{{ field.id_for_label }}-query" type="search" autocomplete="off" placeholder="Buscar por nombre, RUT o correo" class="min-w-0 flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"><button type="button" data-directiva-add class="shrink-0 rounded-md border border-emerald-700 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50">Agregar usuario</button></div>
+                                        <div class="mt-1 space-y-1" data-directiva-results></div>
+                                        <p class="mt-1 text-xs text-gray-500" data-directiva-selected>{% if field.value %}Usuario seleccionado{% else %}Sin usuario seleccionado{% endif %}</p>
+                                        {% for error in field.errors %}<p class="mt-1 text-xs font-medium text-red-700">{{ error }}</p>{% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="{% if field.name == 'organizaciones' or field.name == 'domicilio_legal' %}sm:col-span-2{% endif %}">
+                                        <label for="{{ field.id_for_label }}" class="mb-1.5 block text-sm font-semibold text-gray-800">{{ field.label }}{% if field.field.required %}<span class="text-red-700"> *</span>{% endif %}</label>
+                                        {{ field }}
+                                        {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                                        {% for error in field.errors %}<p class="mt-1 text-xs font-medium text-red-700">{{ error }}</p>{% endfor %}
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
                     </div>
                     <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 border-t border-gray-100 pt-4">
                         <a href="{% url 'main:organizaciones_jjvv_list_view' %}" class="rounded-md border border-gray-300 px-4 py-2.5 text-center text-sm font-semibold text-gray-700 hover:bg-gray-50">Cancelar</a>
-                        <button type="submit" {% if not delegacion_usuario %}disabled{% endif %} class="rounded-md bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50">{% if organizacion %}Guardar cambios{% else %}Registrar organización{% endif %}</button>
+                        <button type="submit" {% if not delegacion_usuario and not es_coordinador %}disabled{% endif %} class="rounded-md bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50">{% if organizacion %}Guardar cambios{% else %}Registrar organización{% endif %}</button>
                     </div>
                 </form>
             </div>
         </main>
     </div>
+    <dialog id="directiva-user-dialog" class="m-auto w-[min(96vw,32rem)] rounded-lg border border-gray-200 bg-white p-0 shadow-xl backdrop:bg-black/40">
+        <form method="dialog" id="directiva-user-form" class="space-y-4 p-5">
+            <div><h2 class="text-lg font-bold text-gray-900">Agregar usuario</h2><p class="mt-1 text-sm text-gray-500">El usuario quedará disponible para seleccionarlo en la directiva.</p></div>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2"><label class="text-sm font-semibold text-gray-700">RUT<input name="identificador_inst" required class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"></label><label class="text-sm font-semibold text-gray-700">Correo<input name="email" type="email" required class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"></label><label class="text-sm font-semibold text-gray-700">Nombres<input name="nombres" required class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"></label><label class="text-sm font-semibold text-gray-700">Apellidos<input name="apellidos" required class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"></label></div>
+            <p class="hidden text-sm text-red-700" data-directiva-error></p>
+            <div class="flex justify-end gap-2"><button type="button" data-directiva-cancel class="rounded border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700">Cancelar</button><button type="submit" class="rounded bg-emerald-800 px-3 py-2 text-sm font-semibold text-white">Guardar usuario</button></div>
+        </form>
+    </dialog>
+    <script>
+        (() => {
+            const dialog = document.getElementById('directiva-user-dialog');
+            const userForm = document.getElementById('directiva-user-form');
+            const error = dialog.querySelector('[data-directiva-error]');
+            let activePicker = null;
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            document.querySelectorAll('.directiva-picker').forEach((picker) => {
+                const query = picker.querySelector('input[type=search]');
+                const hidden = picker.querySelector('input[type=hidden]');
+                const results = picker.querySelector('[data-directiva-results]');
+                const selected = picker.querySelector('[data-directiva-selected]');
+                let timer;
+                const renderResults = (items) => {
+                    results.replaceChildren();
+                    items.forEach((item) => {
+                        const button = document.createElement('button');
+                        button.type = 'button'; button.className = 'block w-full rounded border border-gray-200 bg-white px-3 py-2 text-left text-sm hover:bg-emerald-50';
+                        button.textContent = `${item.nombre} · ${item.rut} · ${item.email}`;
+                        button.addEventListener('click', () => { hidden.value = item.id; selected.textContent = `Seleccionado: ${button.textContent}`; query.value = ''; results.replaceChildren(); });
+                        results.appendChild(button);
+                    });
+                };
+                query.addEventListener('input', () => {
+                    clearTimeout(timer); results.replaceChildren();
+                    if (query.value.trim().length < 2) return;
+                    timer = setTimeout(async () => { const response = await fetch(`${picker.dataset.searchUrl}?q=${encodeURIComponent(query.value.trim())}`, {headers: {'X-Requested-With': 'XMLHttpRequest'}}); if (response.ok) renderResults((await response.json()).results); }, 200);
+                });
+                picker.querySelector('[data-directiva-add]').addEventListener('click', () => { activePicker = picker; userForm.reset(); error.classList.add('hidden'); dialog.showModal(); });
+            });
+            userForm.addEventListener('submit', async (event) => {
+                event.preventDefault(); error.classList.add('hidden');
+                const response = await fetch(activePicker.dataset.createUrl, {method: 'POST', headers: {'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest'}, body: new FormData(userForm)});
+                const data = await response.json();
+                if (!response.ok) { error.textContent = data.error || 'No se pudo crear el usuario.'; error.classList.remove('hidden'); return; }
+                activePicker.querySelector('input[type=hidden]').value = data.id;
+                activePicker.querySelector('[data-directiva-selected]').textContent = `Seleccionado: ${data.nombre} · ${data.rut}`;
+                dialog.close();
+            });
+            dialog.querySelector('[data-directiva-cancel]').addEventListener('click', () => dialog.close());
+        })();
+    </script>
     {% include 'main/_sweetalerts.html' %}
 </body>
 </html>

@@ -10,7 +10,7 @@
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans page-shell">
     <div class="flex h-screen overflow-hidden">
-        <aside class="sidebar w-64 shrink-0 text-white flex flex-col">
+        {% if not modal_view %}<aside class="sidebar w-64 shrink-0 text-white flex flex-col">
             <div class="h-16 flex items-center px-4 border-b border-white/15">
                 <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo">
             </div>
@@ -34,7 +34,7 @@
                 {% endif %}
             </nav>
             {% include 'main/_logout_button.html' %}
-        </aside>
+        </aside>{% endif %}
 
         <main class="min-w-0 flex-1 overflow-y-auto px-4 py-6 md:p-8">
     <div class="max-w-4xl mx-auto space-y-6">

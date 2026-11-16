@@ -11,6 +11,7 @@
         <button type="button" data-dashboard-target="criterios" aria-controls="criterios" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Criterios por resolver</button>
         <button type="button" data-dashboard-target="mejoras" aria-controls="mejoras" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Coordinación de mejoras</button>
         <button type="button" data-dashboard-target="tubo" aria-controls="tubo" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">TUBO</button>
+        <a href="{% url 'main:organizaciones_jjvv_list_view' %}" class="flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Organizaciones comunitarias</a>
     </nav>
     {% include 'main/_logout_button.html' %}
 </aside>

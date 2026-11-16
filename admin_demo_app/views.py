@@ -19,8 +19,8 @@ from main.notifications import (
     notificar_usuarios_delegacion,
     notificar_usuarios_rol,
 )
-from .forms import CatalogoTipoForm, DelegacionForm, ItemMedicionForm, MetaForm, RolForm, UsuarioForm
-from .models import AtencionSocial, Auditoria, CatalogoTipo, Compromiso, Delegacion, ItemMedicion, Meta, Periodo, PersonaUsuaria, Rol, Usuario, Alerta
+from .forms import CatalogoTipoForm, DelegacionForm, ItemMedicionForm, MetaForm, PeriodoForm, RolForm, UsuarioForm
+from .models import Actividad, AjusteIncentivo, AtencionSocial, Auditoria, CatalogoTipo, Compromiso, Delegacion, Evidencia, Indicador, ItemMedicion, Meta, Periodo, PersonaUsuaria, Rol, Usuario, Alerta
 
 
 def _admin_access(request):
@@ -154,6 +154,94 @@ def admin_demo_view(request):
 
 def admin_nuevo_usuario_view(request):
     return gestionar_usuario_view(request)
+
+
+def admin_periodos_view(request):
+    denied = _admin_access(request)
+    if denied:
+        return denied
+    periodos = Periodo.objects.order_by('-fecha_inicio', '-pk')
+    return render(request, 'admin_demo_app/periodos.html', {
+        'periodos': periodos,
+        'periodo_actual': periodos.filter(estado='abierto').first(),
+        'periodo_form': PeriodoForm(),
+        'vista': request.GET.get('vista', 'tablero'),
+        'seccion_activa': 'periodos',
+    })
+
+
+def admin_periodo_nuevo_view(request):
+    denied = _admin_access(request)
+    if denied:
+        return denied
+    form = PeriodoForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        periodo = form.save()
+        messages.success(request, f'El período {periodo.pk} fue creado correctamente.')
+        return redirect('admin_periodos_view')
+    periodos = Periodo.objects.order_by('-fecha_inicio', '-pk')
+    return render(request, 'admin_demo_app/periodos.html', {
+        'periodos': periodos,
+        'periodo_actual': periodos.filter(estado='abierto').first(),
+        'periodo_form': form,
+        'vista': 'tablero',
+        'seccion_activa': 'periodos',
+        'mostrar_formulario': True,
+    })
+
+
+def admin_periodo_detalle_view(request, periodo_id):
+    denied = _admin_access(request)
+    if denied:
+        return denied
+    periodo = get_object_or_404(Periodo, pk=periodo_id)
+    actividades = Actividad.objects.filter(periodo=periodo)
+    evidencias = Evidencia.objects.filter(actividad__periodo=periodo)
+    metas = Meta.objects.filter(periodo=periodo)
+    indicadores = Indicador.objects.filter(meta__periodo=periodo)
+    ajustes = AjusteIncentivo.objects.filter(periodo=periodo)
+    atenciones = AtencionSocial.objects.filter(actividad__periodo=periodo)
+    compromisos = Compromiso.objects.filter(actividad_origen__periodo=periodo)
+    return render(request, 'admin_demo_app/periodo_detalle.html', {
+        'periodo': periodo,
+        'resumen': {
+            'actividades': actividades.count(),
+            'actividades_pendientes': actividades.filter(estado='pendiente').count(),
+            'actividades_validadas': actividades.filter(estado='validada').count(),
+            'actividades_rechazadas': actividades.filter(estado__in=('rechazada', 'en_correccion')).count(),
+            'evidencias': evidencias.count(),
+            'evidencias_aprobadas': evidencias.filter(estado='aprobada').count(),
+            'metas': metas.count(),
+            'metas_vigentes': metas.filter(vigente=True).count(),
+            'indicadores': indicadores.count(),
+            'ajustes': ajustes.count(),
+            'atenciones': atenciones.count(),
+            'compromisos': compromisos.count(),
+            'compromisos_realizados': compromisos.filter(estado='realizado').count(),
+        },
+        'actividades_recientes': actividades.select_related('funcionario').order_by('-fecha_registro')[:8],
+        'seccion_activa': 'periodos',
+    })
+
+
+def admin_periodo_toggle_view(request, periodo_id):
+    denied = _admin_access(request)
+    if denied:
+        return denied
+    if request.method != 'POST':
+        return redirect('admin_periodos_view')
+    with transaction.atomic():
+        periodo = get_object_or_404(Periodo.objects.select_for_update(), pk=periodo_id)
+        if periodo.estado == 'abierto':
+            periodo.estado = 'cerrado'
+            periodo.save(update_fields=['estado'])
+            messages.success(request, f'El período {periodo.pk} fue desactivado.')
+        else:
+            Periodo.objects.filter(estado='abierto').exclude(pk=periodo.pk).update(estado='cerrado')
+            periodo.estado = 'abierto'
+            periodo.save(update_fields=['estado'])
+            messages.success(request, f'El período {periodo.pk} quedó activo para todos los usuarios.')
+    return redirect(request.POST.get('next') or 'admin_periodos_view')
 
 
 def admin_usuarios_view(request):

@@ -5,6 +5,10 @@ urlpatterns = [
     # Panel y secciones del administrador
     path('panel/', views.admin_demo_view, name='admin_demo'),
     path('panel/', views.admin_demo_view, name='admin_dashboard_view'),
+    path('periodos/', views.admin_periodos_view, name='admin_periodos_view'),
+    path('periodos/nuevo/', views.admin_periodo_nuevo_view, name='admin_periodo_nuevo_view'),
+    path('periodos/<int:periodo_id>/', views.admin_periodo_detalle_view, name='admin_periodo_detalle_view'),
+    path('periodos/<int:periodo_id>/activar/', views.admin_periodo_toggle_view, name='admin_periodo_toggle_view'),
     path('usuarios/', views.admin_usuarios_view, name='admin_usuarios_view'),
     path('solicitantes/', views.admin_solicitantes_view, name='admin_solicitantes_view'),
     path('roles/', views.admin_roles_view, name='admin_roles_view'),

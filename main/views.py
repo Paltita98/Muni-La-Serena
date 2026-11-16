@@ -1,5 +1,6 @@
 import secrets
 from datetime import timedelta
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.core.mail import send_mail
 from django.contrib.auth.password_validation import validate_password
@@ -22,6 +23,7 @@ from admin_demo_app.models import (
     AtencionSocial,
     CodigoRecuperacion,
     Compromiso,
+    CompromisoEstadoHistorial,
     Evidencia,
     Meta,
     Notificacion,
@@ -88,6 +90,7 @@ def login_view(request):
                 request.session['user_role'] = role
                 request.session['user_email'] = user.email
                 request.session['user_name'] = f'{user.nombres} {user.apellidos}'.strip()
+                request.session['user_rut'] = getattr(user, 'identificador_inst', '')
                 if getattr(user, 'debe_cambiar_password', False):
                     request.session['must_change_password'] = True
                     messages.info(request, 'Por seguridad, crea tu contraseña personal para continuar.')
@@ -176,7 +179,7 @@ def organizaciones_comunitarias_dashboard_view(request):
 
 
 def organizaciones_jjvv_list_view(request):
-    if request.session.get('user_role') != 'ORGANIZACIONES_COMUNITARIAS':
+    if request.session.get('user_role') not in {'ORGANIZACIONES_COMUNITARIAS', 'COORDINADOR'}:
         return redirect('main:login_view')
     busqueda = request.GET.get('q', '').strip()
     organizaciones = OrganizacionJJVV.objects.all()
@@ -191,6 +194,7 @@ def organizaciones_jjvv_list_view(request):
     return render(request, 'funcionario_demo_app/organizaciones_jjvv_listado.html', {
         'organizaciones': organizaciones.order_by('organizaciones'),
         'busqueda': busqueda,
+        'es_coordinador': request.session.get('user_role') == 'COORDINADOR',
     })
 
 
@@ -202,9 +206,63 @@ def editar_organizacion_jjvv_view(request, organizacion_id):
     return _gestionar_organizacion_jjvv(request, organizacion_id)
 
 
+def buscar_usuarios_directiva_view(request):
+    if request.session.get('user_role') not in {'ORGANIZACIONES_COMUNITARIAS', 'COORDINADOR'}:
+        return JsonResponse({'results': []}, status=403)
+    query = request.GET.get('q', '').strip()
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+    usuarios = Usuario.objects.filter(estado='activo').filter(
+        Q(nombres__icontains=query)
+        | Q(apellidos__icontains=query)
+        | Q(identificador_inst__icontains=query)
+        | Q(email__icontains=query)
+    ).order_by('apellidos', 'nombres')[:10]
+    return JsonResponse({'results': [
+        {
+            'id': usuario.pk,
+            'nombre': f'{usuario.nombres} {usuario.apellidos}'.strip(),
+            'rut': usuario.identificador_inst,
+            'email': usuario.email,
+        }
+        for usuario in usuarios
+    ]})
+
+
+@require_POST
+def crear_usuario_directiva_view(request):
+    if request.session.get('user_role') not in {'ORGANIZACIONES_COMUNITARIAS', 'COORDINADOR'}:
+        return JsonResponse({'error': 'No autorizado.'}, status=403)
+    rut = request.POST.get('identificador_inst', '').strip()
+    nombres = request.POST.get('nombres', '').strip()
+    apellidos = request.POST.get('apellidos', '').strip()
+    email = request.POST.get('email', '').strip().lower()
+    if not all((rut, nombres, apellidos, email)):
+        return JsonResponse({'error': 'Completa RUT, nombres, apellidos y correo.'}, status=400)
+    if Usuario.objects.filter(Q(identificador_inst__iexact=rut) | Q(email__iexact=email)).exists():
+        return JsonResponse({'error': 'Ya existe un usuario con ese RUT o correo.'}, status=400)
+    usuario = Usuario.objects.create(
+        identificador_inst=rut,
+        nombres=nombres,
+        apellidos=apellidos,
+        email=email,
+        password_hash=make_password(secrets.token_urlsafe(24)),
+        debe_cambiar_password=True,
+        estado='activo',
+    )
+    return JsonResponse({
+        'id': usuario.pk,
+        'nombre': f'{usuario.nombres} {usuario.apellidos}'.strip(),
+        'rut': usuario.identificador_inst,
+        'email': usuario.email,
+    })
+
+
 def _gestionar_organizacion_jjvv(request, organizacion_id=None):
-    if request.session.get('user_role') != 'ORGANIZACIONES_COMUNITARIAS':
+    role = request.session.get('user_role')
+    if role not in {'ORGANIZACIONES_COMUNITARIAS', 'COORDINADOR'}:
         return redirect('main:login_view')
+    es_coordinador = role == 'COORDINADOR'
     usuario = Usuario.objects.select_related('delegacion').filter(
         pk=request.session.get('user_id'),
         estado='activo',
@@ -220,12 +278,14 @@ def _gestionar_organizacion_jjvv(request, organizacion_id=None):
         form_data,
         instance=organizacion,
         delegacion_usuario=delegacion_usuario,
+        allow_all_delegations=es_coordinador,
     )
-    if request.method == 'POST' and not delegacion_usuario:
+    if request.method == 'POST' and not delegacion_usuario and not es_coordinador:
         form.add_error(None, 'Tu cuenta no tiene una delegación asignada. Solicita que se configure antes de registrar organizaciones.')
-    if request.method == 'POST' and delegacion_usuario and form.is_valid():
+    if request.method == 'POST' and (delegacion_usuario or es_coordinador) and form.is_valid():
         organizacion = form.save(commit=False)
-        organizacion.delegacion = delegacion_usuario
+        if not es_coordinador:
+            organizacion.delegacion = delegacion_usuario
         organizacion.save()
         messages.success(
             request,
@@ -237,6 +297,7 @@ def _gestionar_organizacion_jjvv(request, organizacion_id=None):
         'form': form,
         'organizacion': organizacion,
         'delegacion_usuario': delegacion_usuario,
+        'es_coordinador': es_coordinador,
     })
 
 
@@ -249,6 +310,56 @@ def eliminar_organizacion_jjvv_view(request, organizacion_id):
     organizacion.delete()
     messages.success(request, f'Organización «{nombre}» eliminada del registro.')
     return redirect('main:organizaciones_jjvv_list_view')
+
+
+@require_POST
+def actualizar_estado_tubo_view(request):
+    if request.session.get('user_role') != 'COORDINADOR':
+        return JsonResponse({'error': 'No autorizado.'}, status=403)
+    case_type = request.POST.get('tipo', '')
+    case_id = request.POST.get('id', '')
+    new_status = request.POST.get('estado', '')
+    valid_statuses = {'ingresado', 'pendiente', 'en_proceso', 'realizado'}
+    if new_status not in valid_statuses or not case_id.isdigit():
+        return JsonResponse({'error': 'Estado o caso inválido.'}, status=400)
+
+    if case_type == 'compromiso':
+        compromiso = get_object_or_404(Compromiso, pk=case_id)
+        target_status = new_status if new_status != 'pendiente' else 'pendiente'
+        if compromiso.estado != target_status:
+            CompromisoEstadoHistorial.objects.create(
+                compromiso=compromiso,
+                estado_anterior=compromiso.estado,
+                estado_nuevo=target_status,
+                autor_id=request.session.get('user_id'),
+            )
+            compromiso.estado = target_status
+            compromiso.save(update_fields=['estado'])
+    elif case_type == 'actividad':
+        actividad = get_object_or_404(Actividad, pk=case_id)
+        target_status = {
+            'ingresado': 'pendiente',
+            'pendiente': 'pendiente',
+            'en_proceso': 'en_correccion',
+            'realizado': 'validada',
+        }[new_status]
+        if actividad.estado != target_status:
+            actividad.estado = target_status
+            actividad.save(update_fields=['estado'])
+    elif case_type == 'gestion':
+        atencion = get_object_or_404(AtencionSocial, pk=case_id)
+        target_result = {
+            'ingresado': '',
+            'pendiente': '',
+            'en_proceso': 'En proceso',
+            'realizado': atencion.resultado or 'Gestión realizada desde TUBO',
+        }[new_status]
+        if atencion.resultado != target_result:
+            atencion.resultado = target_result
+            atencion.save(update_fields=['resultado'])
+    else:
+        return JsonResponse({'error': 'Tipo de caso inválido.'}, status=400)
+    return JsonResponse({'ok': True, 'estado': new_status})
 
 
 def _coordinator_dashboard(request):
