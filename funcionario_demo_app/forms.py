@@ -7,6 +7,7 @@ from admin_demo_app.models import (
     Actividad,
     AtencionSocial,
     CatalogoTipo,
+    CartaDelegacion,
     Compromiso,
     Delegacion,
     ItemMedicion,
@@ -164,6 +165,61 @@ class OrganizacionJJVVForm(forms.ModelForm):
         fecha_inscripcion = cleaned_data.get('fecha_inscripcion_reg')
         if fecha_constitucion and fecha_inscripcion and fecha_inscripcion < fecha_constitucion:
             self.add_error('fecha_inscripcion_reg', 'La inscripción no puede ser anterior a la constitución.')
+        return cleaned_data
+
+
+class CartaDelegacionForm(forms.ModelForm):
+    class Meta:
+        model = CartaDelegacion
+        fields = (
+            'folio', 'fecha_emision', 'destinatario', 'institucion', 'asunto',
+            'contenido', 'estado', 'fecha_envio', 'observaciones',
+        )
+        labels = {
+            'folio': 'Folio',
+            'fecha_emision': 'Fecha de emisión',
+            'destinatario': 'Destinatario',
+            'institucion': 'Institución',
+            'asunto': 'Asunto',
+            'contenido': 'Contenido de la carta',
+            'estado': 'Estado',
+            'fecha_envio': 'Fecha de envío',
+            'observaciones': 'Observaciones',
+        }
+        widgets = {
+            'fecha_emision': forms.DateInput(attrs={'type': 'date'}),
+            'fecha_envio': forms.DateInput(attrs={'type': 'date'}),
+            'contenido': forms.Textarea(attrs={'rows': 3}),
+            'observaciones': forms.Textarea(attrs={'rows': 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.delegacion = kwargs.pop('delegacion', None)
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs['class'] = (
+                'w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm '
+                'focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100'
+            )
+
+    def clean_folio(self):
+        folio = self.cleaned_data['folio'].strip()
+        if self.delegacion and CartaDelegacion.objects.filter(
+            delegacion=self.delegacion,
+            folio__iexact=folio,
+        ).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError('Ya existe una carta con este folio en la delegación.')
+        return folio
+
+    def clean(self):
+        cleaned_data = super().clean()
+        fecha_emision = cleaned_data.get('fecha_emision')
+        fecha_envio = cleaned_data.get('fecha_envio')
+        estado = cleaned_data.get('estado')
+        if fecha_emision and fecha_envio and fecha_envio < fecha_emision:
+            self.add_error('fecha_envio', 'La fecha de envío no puede ser anterior a la fecha de emisión.')
+        if estado in {'enviada', 'respondida'} and not fecha_envio:
+            self.add_error('fecha_envio', 'Indica la fecha de envío para este estado.')
         return cleaned_data
 
 

@@ -17,6 +17,7 @@ from main.backlog_filters import filter_by_local_dates
 from admin_demo_app.models import (
     AtencionSocial,
     Actividad,
+    CartaDelegacion,
     Compromiso,
     CompromisoEstadoHistorial,
     Delegacion,
@@ -32,6 +33,7 @@ from main.notifications import notificar, notificar_accion_funcionario, notifica
 from .forms import (
     AtencionSocialForm,
     ActividadForm,
+    CartaDelegacionForm,
     CompromisoEstadoForm,
     CompromisoForm,
     DelegadoCompromisoForm,
@@ -105,6 +107,65 @@ def delegado_demo_view(request):
         'atenciones_total': atenciones.count(),
         'fecha_actual': fecha_actual,
         **tubo_data,
+    })
+
+
+def delegado_cartas_view(request):
+    delegado = _delegado_actual(request)
+    if delegado is None:
+        return redirect('main:login_view')
+    delegacion = _delegacion_del_delegado(delegado)
+    cartas = (
+        CartaDelegacion.objects.filter(delegacion=delegacion)
+        .select_related('registrada_por')
+        if delegacion else CartaDelegacion.objects.none()
+    )
+    filters = {
+        'q': request.GET.get('q', '').strip(),
+        'estado': request.GET.get('estado', '').strip(),
+        'desde': request.GET.get('desde', '').strip(),
+        'hasta': request.GET.get('hasta', '').strip(),
+    }
+    if filters['q']:
+        cartas = cartas.filter(
+            Q(folio__icontains=filters['q'])
+            | Q(destinatario__icontains=filters['q'])
+            | Q(institucion__icontains=filters['q'])
+            | Q(asunto__icontains=filters['q'])
+            | Q(observaciones__icontains=filters['q'])
+        )
+    if filters['estado'] in dict(CartaDelegacion.ESTADO_CHOICES):
+        cartas = cartas.filter(estado=filters['estado'])
+    desde = parse_date(filters['desde'])
+    hasta = parse_date(filters['hasta'])
+    if desde:
+        cartas = cartas.filter(fecha_emision__gte=desde)
+    if hasta:
+        cartas = cartas.filter(fecha_emision__lte=hasta)
+
+    form = CartaDelegacionForm(request.POST or None, delegacion=delegacion)
+    if request.method == 'POST':
+        if delegacion is None:
+            messages.error(request, 'No tienes una delegación asignada para registrar cartas.')
+        elif form.is_valid():
+            carta = form.save(commit=False)
+            carta.delegacion = delegacion
+            carta.registrada_por = delegado
+            carta.save()
+            messages.success(request, 'Carta registrada correctamente.')
+            return redirect('delegado_cartas_view')
+
+    return render(request, 'funcionario_demo_app/delegado_cartas.html', {
+        'delegado': delegado,
+        'delegacion': delegacion,
+        'cartas': cartas.order_by('-fecha_emision', '-pk'),
+        'cartas_total': cartas.count(),
+        'carta_filters': filters,
+        'carta_estado_choices': CartaDelegacion.ESTADO_CHOICES,
+        'form': form,
+        'active_section': 'cartas',
+        'page_title': 'Cartas',
+        'page_description': 'Registro y seguimiento de cartas de la delegación.',
     })
 
 
@@ -1072,6 +1133,7 @@ def _datos_tubo_delegacion(request, delegacion):
     return {
         'active_dashboard_panel': active_panel,
         'active_section': 'tubo' if active_panel == 'tubo' else 'resumen',
+        'backlog_view': 'tabla' if request.GET.get('vista') == 'tabla' else 'tablero',
         'backlog_filters': filters,
         'backlog_columns': columns,
         'backlog_total': len(entries),

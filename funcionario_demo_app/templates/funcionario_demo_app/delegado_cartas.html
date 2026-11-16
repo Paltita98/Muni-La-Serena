@@ -1,0 +1,88 @@
+{% extends 'funcionario_demo_app/delegado_seccion_base.html' %}
+{% block title %}Cartas de la delegación{% endblock %}
+{% block section_content %}
+    <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+            <p class="text-sm font-semibold text-red-800">TUBO Cartas</p>
+            <h2 class="mt-1 text-xl font-bold text-gray-950">Registro de cartas</h2>
+            <p class="mt-1 text-sm text-gray-600">{{ delegacion.nombre|default:'Sin delegación asignada' }} · {{ cartas_total }} registro{{ cartas_total|pluralize:"s" }}</p>
+        </div>
+    </div>
+
+    {% if messages %}
+        <div class="space-y-2" role="status" aria-live="polite">
+            {% for message in messages %}<p class="border-l-4 {% if message.tags == 'error' %}border-red-700 bg-red-50 text-red-900{% else %}border-emerald-700 bg-emerald-50 text-emerald-900{% endif %} px-3 py-2 text-sm">{{ message }}</p>{% endfor %}
+        </div>
+    {% endif %}
+
+    <section class="border-y border-gray-200 bg-white" aria-labelledby="carta-form-heading">
+        <h3 id="carta-form-heading" class="border-b border-gray-100 px-4 py-3 text-sm font-bold text-gray-900">Registrar carta</h3>
+        <form method="post" class="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 xl:grid-cols-3">
+            {% csrf_token %}
+            {% if form.non_field_errors %}<div class="sm:col-span-2 xl:col-span-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{{ form.non_field_errors }}</div>{% endif %}
+            {% for field in form %}
+                <label class="text-xs font-semibold text-gray-700 {% if field.name == 'contenido' or field.name == 'observaciones' %}sm:col-span-2{% endif %}">
+                    {{ field.label }}{% if field.field.required %}<span class="text-red-700" aria-hidden="true"> *</span>{% endif %}
+                    {{ field }}
+                    {% for error in field.errors %}<span class="mt-1 block text-xs font-normal text-red-700">{{ error }}</span>{% endfor %}
+                </label>
+            {% endfor %}
+            <div class="sm:col-span-2 xl:col-span-3">
+                <button type="submit" class="rounded bg-red-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-900">Guardar carta</button>
+            </div>
+        </form>
+    </section>
+
+    <form method="get" class="grid grid-cols-1 gap-3 border-y border-gray-200 bg-white p-4 sm:grid-cols-2 xl:grid-cols-5" aria-label="Filtros de cartas">
+        <label class="text-xs font-semibold text-gray-700 sm:col-span-2">Buscar
+            <input type="search" name="q" value="{{ carta_filters.q }}" placeholder="Folio, destinatario, institución o asunto" class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm font-normal focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100">
+        </label>
+        <label class="text-xs font-semibold text-gray-700">Estado
+            <select name="estado" class="mt-1 block w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm font-normal focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100">
+                <option value="">Todos</option>
+                {% for value, label in carta_estado_choices %}<option value="{{ value }}" {% if carta_filters.estado == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+        </label>
+        <label class="text-xs font-semibold text-gray-700">Emitida desde
+            <input type="date" name="desde" value="{{ carta_filters.desde }}" class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm font-normal focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100">
+        </label>
+        <label class="text-xs font-semibold text-gray-700">Emitida hasta
+            <input type="date" name="hasta" value="{{ carta_filters.hasta }}" class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm font-normal focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100">
+        </label>
+        <div class="flex items-end gap-2 sm:col-span-2 xl:col-span-5">
+            <button type="submit" class="rounded bg-red-800 px-4 py-2 text-sm font-semibold text-white hover:bg-red-900">Filtrar</button>
+            <a href="{% url 'delegado_cartas_view' %}" class="rounded border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Limpiar</a>
+        </div>
+    </form>
+
+    <div class="overflow-x-auto border-y border-gray-200 bg-white">
+        <table class="w-full min-w-[950px] text-left text-sm">
+            <thead class="bg-gray-100 text-xs uppercase text-gray-600">
+                <tr>
+                    <th scope="col" class="px-4 py-3 font-semibold">Folio / asunto</th>
+                    <th scope="col" class="px-4 py-3 font-semibold">Destinatario</th>
+                    <th scope="col" class="px-4 py-3 font-semibold">Institución</th>
+                    <th scope="col" class="px-4 py-3 font-semibold">Emisión</th>
+                    <th scope="col" class="px-4 py-3 font-semibold">Envío</th>
+                    <th scope="col" class="px-4 py-3 font-semibold">Estado</th>
+                    <th scope="col" class="px-4 py-3 font-semibold">Observaciones</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for carta in cartas %}
+                    <tr class="align-top hover:bg-gray-50">
+                        <td class="px-4 py-3"><p class="font-semibold text-gray-900">{{ carta.folio }}</p><p class="mt-1 max-w-xs text-gray-600">{{ carta.asunto }}</p></td>
+                        <td class="px-4 py-3 text-gray-700">{{ carta.destinatario }}</td>
+                        <td class="px-4 py-3 text-gray-700">{{ carta.institucion|default:'-' }}</td>
+                        <td class="whitespace-nowrap px-4 py-3 text-gray-700">{{ carta.fecha_emision|date:'d/m/Y' }}</td>
+                        <td class="whitespace-nowrap px-4 py-3 text-gray-700">{{ carta.fecha_envio|date:'d/m/Y'|default:'-' }}</td>
+                        <td class="px-4 py-3"><span class="inline-flex rounded px-2 py-1 text-xs font-semibold {% if carta.estado == 'enviada' %}bg-sky-100 text-sky-900{% elif carta.estado == 'respondida' %}bg-emerald-100 text-emerald-900{% elif carta.estado == 'anulada' %}bg-gray-100 text-gray-700{% else %}bg-amber-100 text-amber-900{% endif %}">{{ carta.get_estado_display }}</span></td>
+                        <td class="max-w-xs px-4 py-3 text-gray-600">{{ carta.observaciones|default:'-'|truncatechars:100 }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="7" class="px-4 py-10 text-center text-sm text-gray-500">No hay cartas que coincidan con los filtros.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

@@ -620,6 +620,7 @@ def _coordinator_dashboard(request):
         'backlog_total': len(backlog_entries),
         'backlog_summary': backlog_summary,
         'backlog_filters': backlog_filters,
+        'backlog_view': 'tabla' if request.GET.get('vista') == 'tabla' else 'tablero',
         'active_dashboard_panel': active_dashboard_panel,
         'backlog_type_choices': (
             ('', 'Todos los tipos'),

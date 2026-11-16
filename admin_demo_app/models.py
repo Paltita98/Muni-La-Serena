@@ -384,6 +384,46 @@ class Compromiso(models.Model):
         return self.solicitante
 
 
+class CartaDelegacion(models.Model):
+    ESTADO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('enviada', 'Enviada'),
+        ('respondida', 'Respondida'),
+        ('anulada', 'Anulada'),
+    ]
+
+    id = models.BigAutoField(primary_key=True, db_column='id_carta')
+    delegacion = models.ForeignKey(
+        Delegacion, on_delete=models.RESTRICT, related_name='cartas', db_column='id_delegacion',
+    )
+    registrada_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='cartas_registradas', db_column='id_usuario',
+    )
+    folio = models.CharField(max_length=50)
+    fecha_emision = models.DateField(default=timezone.localdate)
+    destinatario = models.CharField(max_length=150)
+    institucion = models.CharField(max_length=150, blank=True)
+    asunto = models.CharField(max_length=255)
+    contenido = models.TextField(blank=True)
+    estado = models.CharField(max_length=12, choices=ESTADO_CHOICES, default='pendiente')
+    fecha_envio = models.DateField(null=True, blank=True)
+    observaciones = models.TextField(blank=True)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'carta_delegacion'
+        verbose_name = 'Carta de delegación'
+        verbose_name_plural = 'Cartas de delegación'
+        ordering = ('-fecha_emision', '-id')
+        constraints = [
+            models.UniqueConstraint(fields=('delegacion', 'folio'), name='carta_delegacion_folio_unico'),
+        ]
+
+    def __str__(self):
+        return f'{self.folio} - {self.destinatario}'
+
+
 class CompromisoEstadoHistorial(models.Model):
     ESTADO_CHOICES = Compromiso.ESTADO_CHOICES
 

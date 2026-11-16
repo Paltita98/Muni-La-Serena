@@ -4,6 +4,7 @@ from . import views
 urlpatterns = [
     # Panel y vistas del funcionario
     path('delegado/panel/', views.delegado_demo_view, name='delegado_demo_view'),
+    path('delegado/cartas/', views.delegado_cartas_view, name='delegado_cartas_view'),
     path('delegado/actividades/', views.delegado_actividades_view, name='delegado_actividades_view'),
     path('delegado/atencion-social/', views.delegado_atenciones_view, name='delegado_atenciones_view'),
     path('delegado/equipo/', views.delegado_equipo_view, name='delegado_equipo_view'),

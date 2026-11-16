@@ -508,6 +508,12 @@ button:hover {
 }
 
 @media (min-width: 761px) {
+  .page-shell > .flex.h-screen.overflow-hidden > main > header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
   .page-shell > .flex.h-screen.overflow-hidden > .sidebar {
     width: 16rem;
     flex-shrink: 0;

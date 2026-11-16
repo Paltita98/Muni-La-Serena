@@ -468,3 +468,29 @@ CREATE TABLE organizaciones_jjvv (
         FOREIGN KEY (id_delegacion) REFERENCES delegacion (id_delegacion)
         ON DELETE RESTRICT ON UPDATE CASCADE
 );
+
+CREATE TABLE carta_delegacion (
+    id_carta BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    id_delegacion INT UNSIGNED NOT NULL,
+    id_usuario INT UNSIGNED NULL,
+    folio VARCHAR(50) NOT NULL,
+    fecha_emision DATE NOT NULL,
+    destinatario VARCHAR(150) NOT NULL,
+    institucion VARCHAR(150) NOT NULL DEFAULT '',
+    asunto VARCHAR(255) NOT NULL,
+    contenido TEXT NOT NULL,
+    estado ENUM('pendiente', 'enviada', 'respondida', 'anulada') NOT NULL DEFAULT 'pendiente',
+    fecha_envio DATE NULL,
+    observaciones TEXT NOT NULL,
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_carta_delegacion_folio UNIQUE (id_delegacion, folio),
+    CONSTRAINT fk_carta_delegacion_delegacion
+        FOREIGN KEY (id_delegacion) REFERENCES delegacion (id_delegacion)
+        ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_carta_delegacion_usuario
+        FOREIGN KEY (id_usuario) REFERENCES usuario (id_usuario)
+        ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+CREATE INDEX idx_carta_delegacion_estado_fecha
+    ON carta_delegacion (id_delegacion, estado, fecha_emision);

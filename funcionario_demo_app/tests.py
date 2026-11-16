@@ -19,6 +19,7 @@ from admin_demo_app.models import (
     Actividad,
     AtencionSocial,
     CatalogoTipo,
+    CartaDelegacion,
     Cargo,
     Compromiso,
     CompromisoEstadoHistorial,
@@ -401,6 +402,52 @@ class FlujoCompromisosTests(TestCase):
         })
         self.assertEqual(filtered_response.context['backlog_total'], 0)
         self.assertNotContains(filtered_response, 'Solicitud externa del TUBO')
+
+    def test_delegate_tube_keeps_table_view_after_filtering(self):
+        self.iniciar_sesion_rol('DELEGADO', self.delegado)
+
+        response = self.client.get(reverse('delegado_demo_view'), {
+            'panel': 'tubo',
+            'vista': 'tabla',
+            'q': 'Centro',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['backlog_view'], 'tabla')
+        self.assertContains(response, 'data-tube-layout="table" style=""')
+        self.assertContains(response, 'data-tube-view="table" aria-pressed="true"')
+
+    def test_delegate_can_register_and_filter_only_own_letters(self):
+        CartaDelegacion.objects.create(
+            delegacion=self.otra_delegacion,
+            folio='NORTE-001',
+            fecha_emision=date(2026, 11, 10),
+            destinatario='Destinatario Norte',
+            asunto='Carta externa',
+        )
+        self.iniciar_sesion_rol('DELEGADO', self.delegado)
+
+        create_response = self.client.post(reverse('delegado_cartas_view'), {
+            'folio': 'CENTRO-001',
+            'fecha_emision': '2026-11-12',
+            'destinatario': 'Junta vecinal Centro',
+            'institucion': 'Municipalidad',
+            'asunto': 'Coordinación comunitaria',
+            'contenido': 'Invitación a reunión',
+            'estado': 'pendiente',
+            'fecha_envio': '',
+            'observaciones': 'Enviar copia a la directiva',
+        })
+
+        self.assertRedirects(create_response, reverse('delegado_cartas_view'))
+        carta = CartaDelegacion.objects.get(folio='CENTRO-001')
+        self.assertEqual(carta.delegacion, self.delegacion)
+        self.assertEqual(carta.registrada_por, self.delegado)
+
+        response = self.client.get(reverse('delegado_cartas_view'), {'q': 'CENTRO-001'})
+        self.assertContains(response, 'CENTRO-001')
+        self.assertNotContains(response, 'NORTE-001')
+        self.assertContains(response, 'TUBO Cartas')
 
     def test_delegate_tube_includes_records_from_selected_local_date(self):
         registration_time = timezone.make_aware(datetime(2026, 10, 1, 0, 30))

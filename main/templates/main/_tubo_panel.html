@@ -8,8 +8,8 @@
         <div class="flex items-center gap-3">
             <p class="text-sm text-gray-500"><strong class="text-gray-900">{{ backlog_total }}</strong> casos</p>
             <div class="inline-flex rounded border border-gray-300 bg-white p-1" role="group" aria-label="Cambiar presentación del TUBO">
-                <button type="button" data-tube-view="board" aria-pressed="true" class="rounded px-3 py-1.5 text-sm font-semibold text-white bg-red-800">Tablero</button>
-                <button type="button" data-tube-view="table" aria-pressed="false" class="rounded px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-100">Tabla</button>
+                <button type="button" data-tube-view="board" aria-pressed="{% if backlog_view == 'tabla' %}false{% else %}true{% endif %}" class="rounded px-3 py-1.5 text-sm font-semibold {% if backlog_view == 'tabla' %}text-gray-700 hover:bg-gray-100{% else %}text-white bg-red-800{% endif %}">Tablero</button>
+                <button type="button" data-tube-view="table" aria-pressed="{% if backlog_view == 'tabla' %}true{% else %}false{% endif %}" class="rounded px-3 py-1.5 text-sm font-semibold {% if backlog_view == 'tabla' %}text-white bg-red-800{% else %}text-gray-700 hover:bg-gray-100{% endif %}">Tabla</button>
             </div>
             <button type="button" data-export-tube class="inline-flex items-center gap-2 rounded border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"><span aria-hidden="true">↓</span> Exportar Excel</button>
         </div>
@@ -17,6 +17,7 @@
 
     <form method="get" class="grid grid-cols-1 gap-3 rounded border border-gray-200 bg-white p-4 sm:grid-cols-2 xl:grid-cols-6" aria-label="Filtros del backlog">
         <input type="hidden" name="panel" value="tubo">
+        <input type="hidden" name="vista" value="{{ backlog_view|default:'tablero' }}" data-tube-view-input>
         <label class="text-xs font-semibold text-gray-700">Buscar
             <input type="search" name="q" value="{{ backlog_filters.q }}" placeholder="Caso, solicitante, responsable..." class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm font-normal focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100">
         </label>
@@ -45,7 +46,7 @@
         </div>
     </form>
 
-    <div data-tube-layout="board" class="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+    <div data-tube-layout="board" style="{% if backlog_view == 'tabla' %}display: none;{% endif %}" class="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 2xl:grid-cols-4">
         {% for column in backlog_columns %}
             <section aria-label="{{ column.label }}: {{ column.entries|length }} casos" class="min-w-0 overflow-hidden rounded border border-gray-200 {{ column.style }}">
                 <header class="flex items-center justify-between gap-2 border-b border-black/5 px-3 py-2.5">
@@ -84,7 +85,7 @@
         {% endfor %}
     </div>
 
-    <div data-tube-layout="table" style="display: none;" class="overflow-x-auto rounded border border-gray-200 bg-white">
+    <div data-tube-layout="table" style="{% if backlog_view == 'tabla' %}{% else %}display: none;{% endif %}" class="overflow-x-auto rounded border border-gray-200 bg-white">
         <table class="w-full min-w-[1050px] text-left text-sm">
             <thead class="bg-gray-100 text-xs uppercase text-gray-600">
                 <tr>
@@ -160,10 +161,12 @@
 <script>
     const tubeViewButtons = document.querySelectorAll('[data-tube-view]');
     const tubeLayouts = document.querySelectorAll('[data-tube-layout]');
+    const tubeViewInput = document.querySelector('[data-tube-view-input]');
 
     tubeViewButtons.forEach((button) => {
         button.addEventListener('click', () => {
             const selectedView = button.dataset.tubeView;
+            tubeViewInput.value = selectedView === 'table' ? 'tabla' : 'tablero';
             tubeViewButtons.forEach((item) => {
                 const selected = item === button;
                 item.setAttribute('aria-pressed', String(selected));

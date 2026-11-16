@@ -9,6 +9,7 @@ from .models import (
     Auditoria,
     Cargo,
     CatalogoTipo,
+    CartaDelegacion,
     Compromiso,
     CompromisoEstadoHistorial,
     Delegacion,
@@ -122,6 +123,13 @@ class CompromisoAdmin(admin.ModelAdmin):
     list_filter = ('estado', 'delegacion', 'fecha_comprometida')
     search_fields = ('solicitante', 'territorio', 'observacion')
     autocomplete_fields = ('actividad_origen', 'delegacion', 'responsable')
+
+
+@admin.register(CartaDelegacion)
+class CartaDelegacionAdmin(admin.ModelAdmin):
+    list_display = ('folio', 'delegacion', 'destinatario', 'asunto', 'fecha_emision', 'estado')
+    list_filter = ('estado', 'delegacion', 'fecha_emision')
+    search_fields = ('folio', 'destinatario', 'institucion', 'asunto')
 
 
 @admin.register(CompromisoEstadoHistorial)
