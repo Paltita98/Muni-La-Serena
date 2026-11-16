@@ -182,7 +182,6 @@ class UsuarioForm(forms.ModelForm):
             "email",
             "cargo",
             "delegacion",
-            "delegaciones_autorizadas",
             "roles",
             "estado",
         )
@@ -193,7 +192,6 @@ class UsuarioForm(forms.ModelForm):
             "email": "Correo institucional",
             "cargo": "Cargo",
             "delegacion": "Delegación",
-            "delegaciones_autorizadas": "Delegaciones autorizadas",
             "roles": "Roles",
             "estado": "Estado",
         }
@@ -209,7 +207,6 @@ class UsuarioForm(forms.ModelForm):
             "email": forms.EmailInput(attrs={"class": "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"}),
             "cargo": forms.Select(attrs={"class": "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"}),
             "delegacion": forms.Select(attrs={"class": "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"}),
-            "delegaciones_autorizadas": forms.CheckboxSelectMultiple,
             "estado": forms.Select(attrs={"class": "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"}),
             "roles": forms.CheckboxSelectMultiple,
         }
@@ -218,7 +215,6 @@ class UsuarioForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["cargo"].queryset = Cargo.objects.filter(estado="activo").order_by("nombre")
         self.fields["delegacion"].queryset = Delegacion.objects.filter(estado="activa").order_by("nombre")
-        self.fields["delegaciones_autorizadas"].queryset = Delegacion.objects.filter(estado="activa").order_by("nombre")
         self.fields["roles"].queryset = Rol.objects.order_by("nombre")
         self.fields["cargo"].required = True
         self.fields["delegacion"].required = True
