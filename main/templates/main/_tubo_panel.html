@@ -84,7 +84,7 @@
         {% endfor %}
     </div>
 
-    <div data-tube-layout="table" hidden class="overflow-x-auto rounded border border-gray-200 bg-white">
+    <div data-tube-layout="table" style="display: none;" class="overflow-x-auto rounded border border-gray-200 bg-white">
         <table class="w-full min-w-[1050px] text-left text-sm">
             <thead class="bg-gray-100 text-xs uppercase text-gray-600">
                 <tr>
@@ -172,7 +172,7 @@
                 item.classList.toggle('text-gray-700', !selected);
             });
             tubeLayouts.forEach((layout) => {
-                layout.hidden = layout.dataset.tubeLayout !== selectedView;
+                layout.style.display = layout.dataset.tubeLayout === selectedView ? '' : 'none';
             });
         });
     });
