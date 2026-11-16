@@ -5,13 +5,13 @@
         <span class="text-xs font-bold tracking-widest">DELEGADO</span>
     </div>
     <nav class="flex-1 px-3 py-4 space-y-1" aria-label="Navegación de delegación">
-        <a href="{% url 'delegado_cartas_view' %}" class="flex items-center px-3 py-2.5 rounded-lg transition {% if active_section == 'cartas' %}bg-red-900 text-white{% else %}text-red-100 hover:bg-red-800{% endif %}">TUBO Cartas</a>
         <a href="{% url 'delegado_demo_view' %}" class="flex items-center px-3 py-2.5 rounded-lg transition {% if active_section == 'resumen' %}bg-red-900 text-white{% else %}text-red-100 hover:bg-red-800{% endif %}">Resumen</a>
-        <a href="{% url 'delegado_demo_view' %}?panel=tubo" class="flex items-center px-3 py-2.5 rounded-lg transition {% if active_section == 'tubo' %}bg-red-900 text-white{% else %}text-red-100 hover:bg-red-800{% endif %}">TUBO</a>
         <a href="{% url 'delegado_actividades_view' %}" class="flex items-center px-3 py-2.5 rounded-lg transition {% if active_section == 'actividades' %}bg-red-900 text-white{% else %}text-red-100 hover:bg-red-800{% endif %}">Actividades</a>
         <a href="{% url 'delegado_atenciones_view' %}" class="flex items-center px-3 py-2.5 rounded-lg transition {% if active_section == 'atenciones' %}bg-red-900 text-white{% else %}text-red-100 hover:bg-red-800{% endif %}">Atención Social</a>
         <a href="{% url 'delegado_compromisos_view' %}" class="flex items-center px-3 py-2.5 rounded-lg transition {% if active_section == 'compromisos' %}bg-red-900 text-white{% else %}text-red-100 hover:bg-red-800{% endif %}">Agenda Colectiva</a>
         <a href="{% url 'delegado_equipo_view' %}" class="flex items-center px-3 py-2.5 rounded-lg transition {% if active_section == 'equipo' %}bg-red-900 text-white{% else %}text-red-100 hover:bg-red-800{% endif %}">Equipo</a>
+        <a href="{% url 'delegado_demo_view' %}?panel=tubo" class="flex items-center px-3 py-2.5 rounded-lg transition {% if active_section == 'tubo' %}bg-red-900 text-white{% else %}text-red-100 hover:bg-red-800{% endif %}">TUBO</a>
+        <a href="{% url 'delegado_cartas_view' %}" class="flex items-center px-3 py-2.5 rounded-lg transition {% if active_section == 'cartas' %}bg-red-900 text-white{% else %}text-red-100 hover:bg-red-800{% endif %}">TUBO Cartas</a>
     </nav>
     <div class="border-t border-white/15 px-4 py-3">
         <p class="text-xs font-semibold uppercase tracking-wide text-red-100">Delegación a cargo</p>
