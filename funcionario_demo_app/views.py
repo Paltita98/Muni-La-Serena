@@ -46,9 +46,9 @@ def funcionario_demo_view(request):
     funcionario = _funcionario_actual(request)
     if funcionario is None:
         return redirect('main:login_view')
-    actividades = Actividad.objects.filter(funcionario=funcionario).order_by('-fecha_actividad') if funcionario else Actividad.objects.none()
-    compromisos = Compromiso.objects.filter(responsable=funcionario).order_by('fecha_comprometida') if funcionario else Compromiso.objects.none()
     periodo = _periodo_actual()
+    actividades = Actividad.objects.filter(funcionario=funcionario, periodo=periodo).order_by('-fecha_actividad') if funcionario and periodo else Actividad.objects.none()
+    compromisos = Compromiso.objects.filter(responsable=funcionario, periodo=periodo).order_by('fecha_comprometida') if funcionario and periodo else Compromiso.objects.none()
     metricas = _calcular_metricas_funcionario(funcionario, periodo) if funcionario and periodo else None
     return render(request, 'funcionario_demo_app/funcionario_demo.html', {
         'funcionario': funcionario,
@@ -64,8 +64,9 @@ def delegado_demo_view(request):
         return redirect('main:login_view')
 
     delegacion = _delegacion_del_delegado(delegado)
+    periodo = _periodo_actual()
     compromisos = (
-        Compromiso.objects.filter(delegacion=delegacion)
+        Compromiso.objects.filter(delegacion=delegacion, periodo=periodo)
         .select_related('responsable')
         .order_by('fecha_comprometida')
         if delegacion else Compromiso.objects.none()
@@ -77,13 +78,13 @@ def delegado_demo_view(request):
         if delegacion else Usuario.objects.none()
     )
     actividades = (
-        Actividad.objects.filter(funcionario__delegacion=delegacion)
+        Actividad.objects.filter(funcionario__delegacion=delegacion, periodo=periodo)
         .select_related('funcionario', 'item')
         .order_by('-fecha_actividad')
         if delegacion else Actividad.objects.none()
     )
     atenciones = (
-        AtencionSocial.objects.filter(funcionario__delegacion=delegacion)
+        AtencionSocial.objects.filter(funcionario__delegacion=delegacion, periodo=periodo)
         .select_related('persona', 'catalogo_tipo', 'funcionario')
         .order_by('-fecha', '-id')
         if delegacion else AtencionSocial.objects.none()
@@ -113,6 +114,7 @@ def delegado_demo_view(request):
     return render(request, 'funcionario_demo_app/delegado_demo.html', {
         'delegado': delegado,
         'delegacion': delegacion,
+        'periodo_actual': periodo,
         'carta_form': carta_form,
         'cartas_total': cartas_total,
         'compromisos': compromisos[:3],
@@ -183,8 +185,9 @@ def delegado_actividades_view(request):
     if delegado is None:
         return redirect('main:login_view')
     delegacion = _delegacion_del_delegado(delegado)
+    periodo = _periodo_actual()
     actividades = (
-        Actividad.objects.filter(funcionario__delegacion=delegacion)
+        Actividad.objects.filter(funcionario__delegacion=delegacion, periodo=periodo)
         .select_related('funcionario', 'item')
         .order_by('-fecha_actividad')
         if delegacion else Actividad.objects.none()
@@ -204,8 +207,9 @@ def delegado_atenciones_view(request):
     if delegado is None:
         return redirect('main:login_view')
     delegacion = _delegacion_del_delegado(delegado)
+    periodo = _periodo_actual()
     atenciones = (
-        AtencionSocial.objects.filter(funcionario__delegacion=delegacion)
+        AtencionSocial.objects.filter(funcionario__delegacion=delegacion, periodo=periodo)
         .select_related('persona', 'catalogo_tipo', 'catalogo_subtipo', 'funcionario')
         .order_by('-fecha', '-id')
         if delegacion else AtencionSocial.objects.none()
@@ -246,8 +250,9 @@ def delegado_compromisos_view(request):
     if delegado is None:
         return redirect('main:login_view')
     delegacion = _delegacion_del_delegado(delegado)
+    periodo = _periodo_actual()
     compromisos = (
-        Compromiso.objects.filter(delegacion=delegacion)
+        Compromiso.objects.filter(delegacion=delegacion, periodo=periodo)
         .select_related('responsable')
         .order_by('fecha_comprometida')
         if delegacion else Compromiso.objects.none()
@@ -265,6 +270,7 @@ def delegado_compromiso_view(request, compromiso_id=None):
     if delegado is None:
         return redirect('main:login_view')
     delegacion = _delegacion_del_delegado(delegado)
+    periodo = _periodo_actual()
     if delegacion is None:
         messages.error(request, 'No tienes una delegación asignada para gestionar compromisos.')
         return redirect('delegado_demo_view')
@@ -275,6 +281,7 @@ def delegado_compromiso_view(request, compromiso_id=None):
             Compromiso.objects.select_related('responsable', 'delegacion', 'persona'),
             pk=compromiso_id,
             delegacion=delegacion,
+            periodo=periodo,
         )
 
     if compromiso and compromiso.estado == 'revision':
@@ -299,6 +306,7 @@ def delegado_compromiso_view(request, compromiso_id=None):
             with transaction.atomic():
                 nuevo_compromiso = form.save(commit=False)
                 nuevo_compromiso.delegacion = delegacion
+                nuevo_compromiso.periodo = periodo
                 if compromiso is None:
                     nuevo_compromiso.estado = 'ingresado'
                 nuevo_compromiso.save()
@@ -499,13 +507,14 @@ def actividades_view(request):
 def atenciones_sociales_view(request):
     delegado = _delegado_actual(request)
     funcionario = _funcionario_actual(request)
+    periodo = _periodo_actual()
     if delegado:
         delegacion = _delegacion_del_delegado(delegado)
-        atenciones = AtencionSocial.objects.filter(funcionario__delegacion=delegacion) if delegacion else AtencionSocial.objects.none()
+        atenciones = AtencionSocial.objects.filter(funcionario__delegacion=delegacion, periodo=periodo) if delegacion and periodo else AtencionSocial.objects.none()
         panel_url = reverse('delegado_demo_view')
         is_delegado = True
     elif funcionario:
-        atenciones = AtencionSocial.objects.filter(funcionario=funcionario)
+        atenciones = AtencionSocial.objects.filter(funcionario=funcionario, periodo=periodo) if periodo else AtencionSocial.objects.none()
         panel_url = reverse('funcionario_demo_view')
         is_delegado = False
     else:
@@ -539,11 +548,14 @@ def nueva_atencion_social_view(request):
     funcionario = _funcionario_actual(request)
     if funcionario is None:
         return redirect('main:login_view')
+    periodo = _periodo_actual()
     if request.method == 'POST':
         form = AtencionSocialForm(request.POST, funcionario=funcionario)
-        if form.is_valid():
+        if form.is_valid() and periodo:
             with transaction.atomic():
                 atencion = form.save()
+                atencion.periodo = periodo
+                atencion.save(update_fields=['periodo'])
             notificar_accion_funcionario(
                 funcionario.pk,
                 f'Registraste una atención social para {atencion.persona.referencia_anonima}.',
@@ -552,6 +564,8 @@ def nueva_atencion_social_view(request):
             )
             messages.success(request, f'Atención social de {atencion.persona.referencia_anonima} registrada correctamente.')
             return redirect('atenciones_sociales_view')
+        if not periodo:
+            form.add_error(None, 'No existe un período de medición activo.')
     else:
         form = AtencionSocialForm(funcionario=funcionario)
     return render(request, 'funcionario_demo_app/nueva_atencion_social.html', {
@@ -584,13 +598,14 @@ def buscar_personas_view(request):
 def agenda_colectiva_view(request):
     delegado = _delegado_actual(request)
     funcionario = _funcionario_actual(request)
+    periodo = _periodo_actual()
     if delegado:
         delegacion = _delegacion_del_delegado(delegado)
-        compromisos = Compromiso.objects.filter(delegacion=delegacion) if delegacion else Compromiso.objects.none()
+        compromisos = Compromiso.objects.filter(delegacion=delegacion, periodo=periodo) if delegacion and periodo else Compromiso.objects.none()
         panel_url = reverse('delegado_demo_view')
         is_delegado = True
     elif funcionario:
-        compromisos = Compromiso.objects.filter(responsable=funcionario)
+        compromisos = Compromiso.objects.filter(responsable=funcionario, periodo=periodo) if periodo else Compromiso.objects.none()
         panel_url = reverse('funcionario_demo_view')
         is_delegado = False
     else:
@@ -912,12 +927,14 @@ def registrar_actividad_view(request):
 
 def nuevo_compromiso_view(request):
     funcionario = _funcionario_actual(request)
+    periodo = _periodo_actual()
     if request.method == 'POST':
         form = CompromisoForm(request.POST, funcionario=funcionario)
-        if form.is_valid() and funcionario:
+        if form.is_valid() and funcionario and periodo:
             with transaction.atomic():
                 compromiso = form.save(commit=False)
                 compromiso.responsable = funcionario
+                compromiso.periodo = periodo
                 compromiso.save()
                 _registrar_cambio_compromiso(
                     compromiso,
@@ -933,6 +950,8 @@ def nuevo_compromiso_view(request):
             )
             messages.success(request, 'Compromiso guardado en la agenda colectiva.')
             return redirect('agenda_colectiva_view')
+        if not periodo:
+            form.add_error(None, 'No existe un período de medición activo.')
     else:
         form = CompromisoForm(funcionario=funcionario)
     return render(request, 'funcionario_demo_app/nuevo_compromiso.html', {'form': form, 'funcionario': funcionario})
@@ -966,9 +985,10 @@ def _datos_tubo_delegacion(request, delegacion):
     search_term = filters['q']
     territory_term = filters['territorio']
 
-    commitments = Compromiso.objects.filter(delegacion=delegacion) if delegacion else Compromiso.objects.none()
-    activities = Actividad.objects.filter(funcionario__delegacion=delegacion) if delegacion else Actividad.objects.none()
-    attentions = AtencionSocial.objects.filter(funcionario__delegacion=delegacion) if delegacion else AtencionSocial.objects.none()
+    periodo = _periodo_actual()
+    commitments = Compromiso.objects.filter(delegacion=delegacion, periodo=periodo) if delegacion and periodo else Compromiso.objects.none()
+    activities = Actividad.objects.filter(funcionario__delegacion=delegacion, periodo=periodo) if delegacion and periodo else Actividad.objects.none()
+    attentions = AtencionSocial.objects.filter(funcionario__delegacion=delegacion, periodo=periodo) if delegacion and periodo else AtencionSocial.objects.none()
 
     commitment_rows = commitments
     if selected_type and selected_type != 'compromiso':
@@ -1049,8 +1069,10 @@ def _datos_tubo_delegacion(request, delegacion):
             attention_rows = attention_rows.filter(delegacion__nombre__icontains=territory_term)
         if selected_state == 'pendiente':
             attention_rows = attention_rows.filter(Q(resultado='') | Q(resultado__isnull=True))
+        elif selected_state == 'en_proceso':
+            attention_rows = attention_rows.filter(resultado='En proceso')
         elif selected_state == 'realizado':
-            attention_rows = attention_rows.filter(resultado__gt='')
+            attention_rows = attention_rows.exclude(Q(resultado='') | Q(resultado__isnull=True) | Q(resultado='En proceso'))
         elif selected_state in {'ingresado', 'en_proceso'}:
             attention_rows = AtencionSocial.objects.none()
         attention_rows = filter_by_local_dates(attention_rows, 'fecha_registro', date_from, date_to)
@@ -1099,6 +1121,7 @@ def _datos_tubo_delegacion(request, delegacion):
         })
 
     for atencion in attention_rows:
+        status = 'en_proceso' if atencion.resultado == 'En proceso' else 'realizado' if atencion.resultado else 'pendiente'
         entries.append({
             'id': f'gestion-{atencion.pk}',
             'tipo_label': 'Gestión social',
@@ -1110,8 +1133,8 @@ def _datos_tubo_delegacion(request, delegacion):
             'requested_at': atencion.fecha_registro,
             'event_date': atencion.fecha,
             'due_date': None,
-            'status': 'realizado' if atencion.resultado else 'pendiente',
-            'original_status': 'Con resultado' if atencion.resultado else 'Sin resultado registrado',
+            'status': status,
+            'original_status': 'En proceso' if status == 'en_proceso' else 'Con resultado' if atencion.resultado else 'Sin resultado registrado',
             'detail': atencion.resultado or 'Sin resultado o acuerdo registrado.',
             'delegation': atencion.delegacion.nombre if atencion.delegacion_id else 'Sin delegación',
         })

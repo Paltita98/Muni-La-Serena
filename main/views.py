@@ -314,7 +314,8 @@ def eliminar_organizacion_jjvv_view(request, organizacion_id):
 
 @require_POST
 def actualizar_estado_tubo_view(request):
-    if request.session.get('user_role') != 'COORDINADOR':
+    role = request.session.get('user_role')
+    if role not in {'COORDINADOR', 'DELEGADO'}:
         return JsonResponse({'error': 'No autorizado.'}, status=403)
     case_type = request.POST.get('tipo', '')
     case_id = request.POST.get('id', '')
@@ -323,8 +324,20 @@ def actualizar_estado_tubo_view(request):
     if new_status not in valid_statuses or not case_id.isdigit():
         return JsonResponse({'error': 'Estado o caso inválido.'}, status=400)
 
+    delegation_id = None
+    if role == 'DELEGADO':
+        delegado = Usuario.objects.select_related('delegacion').filter(
+            pk=request.session.get('user_id'), estado='activo',
+        ).first()
+        delegation_id = delegado.delegacion_id if delegado else None
+        if not delegation_id:
+            return JsonResponse({'error': 'El delegado no tiene una delegación asignada.'}, status=403)
+
     if case_type == 'compromiso':
-        compromiso = get_object_or_404(Compromiso, pk=case_id)
+        compromiso_query = Compromiso.objects.all()
+        if delegation_id:
+            compromiso_query = compromiso_query.filter(delegacion_id=delegation_id)
+        compromiso = get_object_or_404(compromiso_query, pk=case_id)
         target_status = new_status if new_status != 'pendiente' else 'pendiente'
         if compromiso.estado != target_status:
             CompromisoEstadoHistorial.objects.create(
@@ -336,7 +349,10 @@ def actualizar_estado_tubo_view(request):
             compromiso.estado = target_status
             compromiso.save(update_fields=['estado'])
     elif case_type == 'actividad':
-        actividad = get_object_or_404(Actividad, pk=case_id)
+        actividad_query = Actividad.objects.all()
+        if delegation_id:
+            actividad_query = actividad_query.filter(funcionario__delegacion_id=delegation_id)
+        actividad = get_object_or_404(actividad_query, pk=case_id)
         target_status = {
             'ingresado': 'pendiente',
             'pendiente': 'pendiente',
@@ -347,7 +363,10 @@ def actualizar_estado_tubo_view(request):
             actividad.estado = target_status
             actividad.save(update_fields=['estado'])
     elif case_type == 'gestion':
-        atencion = get_object_or_404(AtencionSocial, pk=case_id)
+        atencion_query = AtencionSocial.objects.all()
+        if delegation_id:
+            atencion_query = atencion_query.filter(funcionario__delegacion_id=delegation_id)
+        atencion = get_object_or_404(atencion_query, pk=case_id)
         target_result = {
             'ingresado': '',
             'pendiente': '',
@@ -379,9 +398,9 @@ def _coordinator_dashboard(request):
         if period else f'Mes actual, hasta {today:%d/%m/%Y}'
     )
 
-    activities = Actividad.objects.filter(fecha_actividad__range=(period_start, period_end))
-    attentions = AtencionSocial.objects.filter(fecha__range=(period_start, period_end))
-    commitments = Compromiso.objects.all()
+    activities = Actividad.objects.filter(periodo=period)
+    attentions = AtencionSocial.objects.filter(periodo=period)
+    commitments = Compromiso.objects.filter(periodo=period)
     open_commitments = commitments.exclude(estado='realizado')
     overdue_commitments_query = open_commitments.filter(fecha_comprometida__lt=today)
     overdue_commitments = overdue_commitments_query.count()
@@ -498,7 +517,7 @@ def _coordinator_dashboard(request):
     search_term = backlog_filters['q']
     territory_term = backlog_filters['territorio']
 
-    commitment_rows = Compromiso.objects.all()
+    commitment_rows = Compromiso.objects.filter(periodo=period)
     if not selected_type or selected_type == 'compromiso':
         if search_term:
             commitment_rows = commitment_rows.filter(
@@ -529,7 +548,7 @@ def _coordinator_dashboard(request):
     else:
         commitment_rows = Compromiso.objects.none()
 
-    activity_rows = Actividad.objects.all()
+    activity_rows = Actividad.objects.filter(periodo=period)
     if not selected_type or selected_type == 'actividad':
         if search_term:
             activity_rows = activity_rows.filter(
@@ -558,7 +577,7 @@ def _coordinator_dashboard(request):
     else:
         activity_rows = Actividad.objects.none()
 
-    attention_rows = AtencionSocial.objects.all()
+    attention_rows = AtencionSocial.objects.filter(periodo=period)
     if not selected_type or selected_type == 'gestion':
         if search_term:
             attention_rows = attention_rows.filter(
@@ -576,8 +595,10 @@ def _coordinator_dashboard(request):
             attention_rows = attention_rows.filter(delegacion__nombre__icontains=territory_term)
         if selected_state == 'pendiente':
             attention_rows = attention_rows.filter(Q(resultado='') | Q(resultado__isnull=True))
+        elif selected_state == 'en_proceso':
+            attention_rows = attention_rows.filter(resultado='En proceso')
         elif selected_state == 'realizado':
-            attention_rows = attention_rows.filter(resultado__gt='')
+            attention_rows = attention_rows.exclude(Q(resultado='') | Q(resultado__isnull=True) | Q(resultado='En proceso'))
         elif selected_state:
             attention_rows = AtencionSocial.objects.none()
         attention_rows = filter_by_local_dates(attention_rows, 'fecha_registro', date_from, date_to)
@@ -637,7 +658,7 @@ def _coordinator_dashboard(request):
         })
 
     for atencion in attention_rows:
-        status = 'realizado' if atencion.resultado else 'pendiente'
+        status = 'en_proceso' if atencion.resultado == 'En proceso' else 'realizado' if atencion.resultado else 'pendiente'
         backlog_entries.append({
             'id': f'gestion-{atencion.pk}',
             'tipo': 'gestion',
@@ -651,7 +672,7 @@ def _coordinator_dashboard(request):
             'event_date': atencion.fecha,
             'due_date': None,
             'status': status,
-            'original_status': 'Con resultado' if atencion.resultado else 'Sin resultado registrado',
+            'original_status': 'En proceso' if status == 'en_proceso' else 'Con resultado' if atencion.resultado else 'Sin resultado registrado',
             'detail': atencion.resultado or 'Sin resultado o acuerdo registrado.',
             'delegation': atencion.delegacion.nombre if atencion.delegacion_id else 'Sin delegación',
         })

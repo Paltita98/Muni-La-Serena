@@ -325,6 +325,7 @@ class AtencionSocial(models.Model):
         related_name='atenciones_sociales',
     )
     actividad = models.ForeignKey(Actividad, on_delete=models.SET_NULL, null=True, blank=True)
+    periodo = models.ForeignKey(Periodo, on_delete=models.RESTRICT, null=True, blank=True, related_name='atenciones_sociales')
     catalogo_tipo = models.ForeignKey(CatalogoTipo, on_delete=models.RESTRICT)
     catalogo_subtipo = models.ForeignKey(
         CatalogoTipo, on_delete=models.RESTRICT, null=True, blank=True,
@@ -356,6 +357,7 @@ class Compromiso(models.Model):
     ]
 
     actividad_origen = models.ForeignKey(Actividad, on_delete=models.SET_NULL, null=True, blank=True)
+    periodo = models.ForeignKey(Periodo, on_delete=models.RESTRICT, null=True, blank=True, related_name='compromisos')
     delegacion = models.ForeignKey(Delegacion, on_delete=models.RESTRICT, related_name='compromisos')
     persona = models.ForeignKey(
         PersonaUsuaria, on_delete=models.SET_NULL, null=True, blank=True,

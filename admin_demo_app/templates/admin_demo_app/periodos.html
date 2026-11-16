@@ -10,7 +10,7 @@
 </head>
 <body class="page-shell">
     <div class="flex h-screen overflow-hidden">
-        {% include 'admin_demo_app/_admin_sidebar.html' with seccion_activa='periodos' %}
+        {% if not mostrar_formulario %}{% include 'admin_demo_app/_admin_sidebar.html' with seccion_activa='periodos' %}{% endif %}
         <main class="min-w-0 flex-1 overflow-y-auto bg-gray-50">
             <header class="sticky top-0 z-10 flex min-h-16 items-center justify-between gap-4 border-b border-red-100 bg-white px-5 py-3 md:px-8">
                 <div>

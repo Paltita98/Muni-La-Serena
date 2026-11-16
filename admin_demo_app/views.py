@@ -134,7 +134,7 @@ def admin_dashboard_view(request):
             delegacion=delegacion,
             estado='activo',
         ).count()
-        delegacion.compromisos_count = Compromiso.objects.filter(delegacion=delegacion).count()
+        delegacion.compromisos_count = Compromiso.objects.filter(delegacion=delegacion, periodo=periodo).count()
 
     return render(request, 'admin_demo_app/admin_demo.html', {
         'usuarios_activos': Usuario.objects.filter(estado='activo').count(),
@@ -417,7 +417,8 @@ def admin_atenciones_view(request):
     denied = _admin_access(request)
     if denied:
         return denied
-    atenciones = AtencionSocial.objects.select_related('persona', 'catalogo_tipo', 'catalogo_subtipo', 'delegacion', 'funcionario').order_by('-fecha', '-id')
+    periodo = Periodo.objects.filter(estado='abierto').order_by('-fecha_inicio').first()
+    atenciones = AtencionSocial.objects.filter(periodo=periodo).select_related('persona', 'catalogo_tipo', 'catalogo_subtipo', 'delegacion', 'funcionario').order_by('-fecha', '-id')
     delegaciones = Delegacion.objects.order_by('nombre')
     tipos = CatalogoTipo.objects.filter(categoria='atencion').order_by('nombre')
     rows = [_listing_row(
