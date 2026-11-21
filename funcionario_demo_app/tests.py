@@ -90,7 +90,7 @@ class MetricasFuncionarioTests(SimpleTestCase):
             )
         self.assertEqual(
             actividad_manager.filter.call_args.kwargs['fecha_actividad__range'],
-            (periodo.fecha_inicio, date(2026, 1, 15)),
+            (periodo.fecha_inicio, periodo.fecha_termino),
         )
         return metricas
 

@@ -308,8 +308,21 @@ class ActividadForm(forms.ModelForm):
         cleaned_data = super().clean()
         if not self.funcionario:
             self.add_error(None, "No existe un funcionario activo para registrar la actividad.")
-        if not Periodo.objects.filter(estado="abierto").exists():
+
+        periodo = Periodo.objects.filter(estado="abierto").order_by('-fecha_inicio').first()
+        if not periodo:
             self.add_error(None, "No hay un período de medición abierto. Cree o abra un período antes de registrar actividades.")
+            return cleaned_data
+
+        fecha_actividad = cleaned_data.get("fecha_actividad")
+        if fecha_actividad:
+            hoy = timezone.localdate()
+            if fecha_actividad > hoy:
+                self.add_error("fecha_actividad", "La fecha de la actividad no puede ser futura.")
+            if fecha_actividad < periodo.fecha_inicio:
+                self.add_error("fecha_actividad", "La fecha debe estar dentro del período de medición abierto.")
+            if fecha_actividad > periodo.fecha_termino:
+                self.add_error("fecha_actividad", "La fecha debe estar dentro del período de medición abierto.")
         return cleaned_data
 
 

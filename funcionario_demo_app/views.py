@@ -419,7 +419,7 @@ def _calcular_metricas_funcionario(funcionario, periodo, fecha_actual=None):
             estado='validada',
             fecha_actividad__range=(
                 periodo.fecha_inicio,
-                min(fecha_actual, periodo.fecha_termino),
+                periodo.fecha_termino,
             ),
             item_id__in=metas_por_item,
         )
