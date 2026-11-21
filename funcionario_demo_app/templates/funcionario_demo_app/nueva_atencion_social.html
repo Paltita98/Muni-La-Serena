@@ -10,6 +10,7 @@
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans p-8 page-shell">
     <div class="form-card">
+        {% if not request.GET.modal %}
         <div class="form-header dark">
             <div>
                 <h1 class="text-lg font-bold text-white">Registrar Atención Social</h1>
@@ -20,6 +21,7 @@
                 <a href="{% url 'funcionario_demo_view' %}" class="text-slate-300 hover:text-white text-sm font-medium">Cerrar</a>
             </div>
         </div>
+        {% endif %}
         <form method="post" class="form-body space-y-5">
             {% csrf_token %}
             {% if form.non_field_errors %}

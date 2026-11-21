@@ -11,11 +11,13 @@
 <body class="bg-gray-50 text-gray-800 page-shell">
     <main class="min-h-screen max-w-4xl mx-auto px-4 py-8 md:px-8">
         <a href="{% url 'funcionario_demo_view' %}" class="text-sm font-semibold text-blue-700 hover:text-blue-900">&larr; Volver a mi tablero</a>
+        {% if not request.GET.modal %}
         <header class="mt-5 mb-7">
             <p class="text-sm font-semibold text-blue-700">Seguimiento asignado</p>
             <h1 class="text-2xl font-bold text-gray-900 mt-1">Actualizar compromiso</h1>
             <p class="text-sm text-gray-500 mt-1">Registra el avance y envíalo a revisión cuando esté cumplido.</p>
         </header>
+        {% endif %}
 
         {% if messages %}
             <div class="space-y-2 mb-5">

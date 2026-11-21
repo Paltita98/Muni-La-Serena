@@ -10,12 +10,14 @@
 </head>
 <body class="page-shell flex items-center justify-center min-h-screen p-5">
     <main class="form-card w-full max-w-2xl">
+        {% if not request.GET.modal %}
         <header class="form-header dark">
             <h1 class="text-lg font-bold text-white">{{ titulo }}</h1>
             <div class="flex items-center gap-4">
                 <a href="{% url 'admin_dashboard_view' %}" class="text-slate-300 hover:text-white text-sm">Panel</a>
             </div>
         </header>
+        {% endif %}
         <form method="post" class="form-body space-y-5">
             {% csrf_token %}
             {% if form.non_field_errors %}<div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{{ form.non_field_errors }}</div>{% endif %}
