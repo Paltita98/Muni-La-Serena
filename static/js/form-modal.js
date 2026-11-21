@@ -42,6 +42,39 @@
     });
 
     frame.addEventListener('load', () => {
+        try {
+            const frameDocument = frame.contentDocument;
+            if (frameDocument?.body) {
+                frameDocument.body.classList.add('modal-form-view');
+                if (!frameDocument.getElementById('modal-form-view-styles')) {
+                    const style = frameDocument.createElement('style');
+                    style.id = 'modal-form-view-styles';
+                    style.textContent = `
+                        body.modal-form-view { padding: 0 !important; }
+                        body.modal-form-view .form-header,
+                        body.modal-form-view header.mt-5.mb-7,
+                        body.modal-form-view main > header {
+                            display: none !important;
+                        }
+                        body.modal-form-view .form-card,
+                        body.modal-form-view main.form-card {
+                            max-width: none !important;
+                            width: 100% !important;
+                            margin: 0 !important;
+                            border: 0 !important;
+                            border-radius: 0 !important;
+                            box-shadow: none !important;
+                        }
+                        body.modal-form-view .form-body { padding: 1.5rem; }
+                    `;
+                    frameDocument.head.appendChild(style);
+                }
+            }
+        } catch {
+            closeDialog();
+            return;
+        }
+
         if (!hasLoadedForm) {
             hasLoadedForm = true;
             return;
