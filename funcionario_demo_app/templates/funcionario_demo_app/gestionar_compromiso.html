@@ -10,14 +10,6 @@
 </head>
 <body class="bg-gray-50 text-gray-800 page-shell">
     <main class="min-h-screen max-w-5xl mx-auto px-4 py-8 md:px-8">
-        <a href="{% url 'delegado_demo_view' %}" class="text-sm font-semibold text-blue-700 hover:text-blue-900">&larr; Volver al panel</a>
-        {% if not request.GET.modal %}
-        <header class="mt-5 mb-7">
-            <p class="text-sm font-semibold text-blue-700">{{ delegacion.nombre }}</p>
-            <h1 class="text-2xl font-bold text-gray-900 mt-1">{% if compromiso %}Gestionar compromiso{% else %}Asignar un compromiso{% endif %}</h1>
-            <p class="text-sm text-gray-500 mt-1">Asigna una persona responsable y acompaña el avance hasta validar su cumplimiento.</p>
-        </header>
-        {% endif %}
 
         {% if messages %}
             <div class="space-y-2 mb-5">
