@@ -300,7 +300,7 @@ class ActividadForm(forms.ModelForm):
         if periodo:
             self.fields["fecha_actividad"].widget.attrs.update({
                 'min': periodo.fecha_inicio.isoformat(),
-                'max': min(periodo.fecha_termino, timezone.localdate()).isoformat(),
+                'max': periodo.fecha_termino.isoformat(),
             })
         if funcionario and funcionario.cargo_id:
             self.fields["item"].queryset = ItemMedicion.objects.filter(
@@ -325,8 +325,6 @@ class ActividadForm(forms.ModelForm):
             hoy = timezone.localdate()
             if fecha_actividad > hoy:
                 self.add_error("fecha_actividad", "La fecha de la actividad no puede ser futura.")
-            if fecha_actividad < periodo.fecha_inicio or fecha_actividad > periodo.fecha_termino:
-                self.add_error("fecha_actividad", "La fecha debe estar dentro del período de medición abierto.")
         return cleaned_data
 
 
