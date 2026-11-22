@@ -322,9 +322,8 @@ class ActividadForm(forms.ModelForm):
 
         fecha_actividad = cleaned_data.get("fecha_actividad")
         if fecha_actividad:
-            hoy = timezone.localdate()
-            if fecha_actividad > hoy:
-                self.add_error("fecha_actividad", "La fecha de la actividad no puede ser futura.")
+            if fecha_actividad < periodo.fecha_inicio or fecha_actividad > periodo.fecha_termino:
+                self.add_error("fecha_actividad", "La fecha debe estar dentro del período de medición abierto.")
         return cleaned_data
 
 
