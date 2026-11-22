@@ -105,7 +105,7 @@ class Periodo(models.Model):
     fecha_inicio = models.DateField()
     fecha_termino = models.DateField()
     dias_computables = models.PositiveSmallIntegerField()
-    estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='abierto')
+    estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='cerrado')
     version_parametros = models.PositiveIntegerField(default=1)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
@@ -115,6 +115,11 @@ class Periodo(models.Model):
 
     def __str__(self):
         return f"Período {self.fecha_inicio} al {self.fecha_termino}"
+
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            self.estado = 'cerrado'
+        super().save(*args, **kwargs)
 
 
 class ItemMedicion(models.Model):

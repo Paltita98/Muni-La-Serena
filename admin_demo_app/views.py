@@ -200,8 +200,8 @@ def admin_periodo_detalle_view(request, periodo_id):
     metas = Meta.objects.filter(periodo=periodo)
     indicadores = Indicador.objects.filter(meta__periodo=periodo)
     ajustes = AjusteIncentivo.objects.filter(periodo=periodo)
-    atenciones = AtencionSocial.objects.filter(actividad__periodo=periodo)
-    compromisos = Compromiso.objects.filter(actividad_origen__periodo=periodo)
+    atenciones = AtencionSocial.objects.filter(periodo=periodo)
+    compromisos = Compromiso.objects.filter(periodo=periodo)
     return render(request, 'admin_demo_app/periodo_detalle.html', {
         'periodo': periodo,
         'resumen': {
