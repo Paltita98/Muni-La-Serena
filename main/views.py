@@ -69,16 +69,16 @@ def login_view(request):
             role_names = [role.nombre.casefold() for role in user.roles.all()]
             if password_valid and any('admin' in role_name for role_name in role_names):
                 role = 'ADMIN'
+            elif password_valid and any('coordinador' in role_name for role_name in role_names):
+                role = 'COORDINADOR'
             elif password_valid and any('verificador' in role_name for role_name in role_names):
                 role = 'VERIFICADOR'
             elif password_valid and any('delegado' in role_name or 'jefatura' in role_name for role_name in role_names):
                 role = 'DELEGADO'
-            elif password_valid and any('organizaciones comunitarias' in role_name or 'oroc' in role_names):
+            elif password_valid and any('organizaciones comunitarias' in role_name or 'oroc' in role_name for role_name in role_names):
                 role = 'ORGANIZACIONES_COMUNITARIAS'
             elif password_valid and any('funcion' in role_name for role_name in role_names):
                 role = 'FUNCIONARIO'
-            elif password_valid and any('coordinador' in role_name for role_name in role_names):
-                role = 'COORDINADOR'
             elif password_valid and any('consulta' in role_name for role_name in role_names):
                 role = 'CONSULTA'
             else:
