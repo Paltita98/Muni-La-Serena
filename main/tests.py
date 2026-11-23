@@ -15,6 +15,7 @@ from admin_demo_app.models import (
     Evidencia,
     Meta,
     Notificacion,
+    OrganizacionJJVV,
     Periodo,
     Usuario,
 )
@@ -303,6 +304,7 @@ class CoordinatorDashboardTests(SimpleTestCase):
             patch.object(Compromiso, 'objects', commitment_manager),
             patch.object(Evidencia, 'objects', evidence_manager),
             patch.object(Meta, 'objects', meta_manager),
+            patch.object(OrganizacionJJVV, 'objects', Mock(order_by=Mock(return_value=[]))),
             patch('main.views.render', return_value='rendered') as render,
         ):
             response = role_dashboard_view(request)

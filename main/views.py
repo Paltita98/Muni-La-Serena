@@ -519,7 +519,7 @@ def _coordinator_dashboard(request):
         'desde': request.GET.get('desde', '').strip(),
         'hasta': request.GET.get('hasta', '').strip(),
     }
-    dashboard_panels = {'resumen', 'operacion', 'indicadores', 'criterios', 'mejoras', 'tubo'}
+    dashboard_panels = {'resumen', 'operacion', 'indicadores', 'criterios', 'mejoras', 'tubo', 'organizaciones'}
     active_dashboard_panel = request.GET.get('panel', '')
     if any(backlog_filters.values()) and not active_dashboard_panel:
         active_dashboard_panel = 'tubo'
@@ -784,6 +784,7 @@ def _coordinator_dashboard(request):
             ('en_proceso', 'En proceso'),
             ('realizado', 'Realizado'),
         ),
+        'organizaciones': OrganizacionJJVV.objects.order_by('organizaciones'),
     })
 
 
