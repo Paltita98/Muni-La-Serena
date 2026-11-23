@@ -296,12 +296,6 @@ class ActividadForm(forms.ModelForm):
     def __init__(self, *args, funcionario=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.funcionario = funcionario
-        periodo = Periodo.objects.filter(estado="abierto").order_by('-fecha_inicio').first()
-        if periodo:
-            self.fields["fecha_actividad"].widget.attrs.update({
-                'min': periodo.fecha_inicio.isoformat(),
-                'max': periodo.fecha_termino.isoformat(),
-            })
         if funcionario and funcionario.cargo_id:
             self.fields["item"].queryset = ItemMedicion.objects.filter(
                 cargo=funcionario.cargo,
@@ -314,16 +308,6 @@ class ActividadForm(forms.ModelForm):
         cleaned_data = super().clean()
         if not self.funcionario:
             self.add_error(None, "No existe un funcionario activo para registrar la actividad.")
-
-        periodo = Periodo.objects.filter(estado="abierto").order_by('-fecha_inicio').first()
-        if not periodo:
-            self.add_error(None, "No hay un período de medición abierto. Cree o abra un período antes de registrar actividades.")
-            return cleaned_data
-
-        fecha_actividad = cleaned_data.get("fecha_actividad")
-        if fecha_actividad:
-            if fecha_actividad < periodo.fecha_inicio or fecha_actividad > periodo.fecha_termino:
-                self.add_error("fecha_actividad", "La fecha debe estar dentro del período de medición abierto.")
         return cleaned_data
 
 
@@ -359,12 +343,6 @@ class CompromisoForm(PersonaSolicitanteFields, forms.ModelForm):
 
     def __init__(self, *args, funcionario=None, **kwargs):
         super().__init__(*args, **kwargs)
-        periodo = Periodo.objects.filter(estado="abierto").order_by('-fecha_inicio').first()
-        if periodo:
-            self.fields["fecha_comprometida"].widget.attrs.update({
-                'min': periodo.fecha_inicio.isoformat(),
-                'max': periodo.fecha_termino.isoformat(),
-            })
         delegaciones = Delegacion.objects.filter(estado="activa")
         if funcionario and funcionario.delegacion_id:
             delegaciones = delegaciones.filter(pk=funcionario.delegacion_id)
@@ -373,15 +351,7 @@ class CompromisoForm(PersonaSolicitanteFields, forms.ModelForm):
         self.fields["delegacion"].queryset = delegaciones.order_by("nombre")
 
     def clean(self):
-        cleaned_data = super().clean()
-        periodo = Periodo.objects.filter(estado="abierto").order_by('-fecha_inicio').first()
-        fecha_comprometida = cleaned_data.get("fecha_comprometida")
-        if periodo and fecha_comprometida:
-            if fecha_comprometida < periodo.fecha_inicio or fecha_comprometida > periodo.fecha_termino:
-                self.add_error("fecha_comprometida", "La fecha comprometida debe estar dentro del período de medición abierto.")
-        elif not periodo:
-            self.add_error(None, "No existe un período de medición activo.")
-        return cleaned_data
+        return super().clean()
 
 
 class DelegadoCompromisoForm(forms.ModelForm):
@@ -503,12 +473,6 @@ class AtencionSocialForm(PersonaSolicitanteFields, forms.Form):
     def __init__(self, *args, funcionario=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.funcionario = funcionario
-        periodo = Periodo.objects.filter(estado="abierto").order_by('-fecha_inicio').first()
-        if periodo:
-            self.fields["fecha"].widget.attrs.update({
-                'min': periodo.fecha_inicio.isoformat(),
-                'max': min(periodo.fecha_termino, timezone.localdate()).isoformat(),
-            })
         for field in self.fields.values():
             field.widget.attrs.setdefault(
                 "class",
@@ -540,18 +504,11 @@ class AtencionSocialForm(PersonaSolicitanteFields, forms.Form):
         orden = cleaned_data.get("orden_gestion")
         if persona and orden and AtencionSocial.objects.filter(persona=persona, orden_gestion=orden).exists():
             self.add_error("orden_gestion", "Esta persona ya tiene registrada esa gestión.")
-        if not self.funcionario:
-            self.add_error(None, "No hay un funcionario activo para registrar la atención.")
-        periodo = Periodo.objects.filter(estado="abierto").order_by('-fecha_inicio').first()
         fecha_atencion = cleaned_data.get('fecha')
-        if not periodo:
-            self.add_error(None, "No existe un período de medición activo.")
-        elif fecha_atencion:
+        if fecha_atencion:
             hoy = timezone.localdate()
             if fecha_atencion > hoy:
                 self.add_error('fecha', 'La fecha de atención no puede ser futura.')
-            if fecha_atencion < periodo.fecha_inicio or fecha_atencion > periodo.fecha_termino:
-                self.add_error('fecha', 'La fecha debe estar dentro del período de medición abierto.')
         tipo = cleaned_data.get('catalogo_tipo')
         subtipo = cleaned_data.get('catalogo_subtipo')
         if subtipo and tipo and subtipo.padre_id != tipo.pk:

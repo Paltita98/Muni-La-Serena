@@ -35,7 +35,51 @@
                     <article class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm"><h2 class="text-base font-bold text-gray-900">Compromisos relacionados</h2><dl class="mt-4 space-y-3 text-sm"><div class="flex justify-between border-b border-gray-100 pb-2"><dt class="text-gray-500">Total</dt><dd class="font-semibold text-gray-900">{{ resumen.compromisos }}</dd></div><div class="flex justify-between"><dt class="text-gray-500">Realizados</dt><dd class="font-semibold text-green-700">{{ resumen.compromisos_realizados }}</dd></div></dl></article>
                 </section>
 
-                <section class="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm"><div class="border-b border-gray-100 px-5 py-4"><h2 class="font-bold text-gray-900">Actividad reciente del período</h2></div><table class="w-full min-w-[620px] text-left text-sm"><thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500"><tr><th class="px-5 py-3">Código</th><th class="px-5 py-3">Descripción</th><th class="px-5 py-3">Funcionario</th><th class="px-5 py-3">Estado</th></tr></thead><tbody>{% for actividad in actividades_recientes %}<tr class="border-b border-gray-100 last:border-0"><td class="px-5 py-3 font-mono text-gray-600">{{ actividad.codigo_evidencia }}</td><td class="px-5 py-3 font-medium text-gray-900">{{ actividad.descripcion }}</td><td class="px-5 py-3 text-gray-600">{{ actividad.funcionario }}</td><td class="px-5 py-3">{{ actividad.get_estado_display }}</td></tr>{% empty %}<tr><td colspan="4" class="px-5 py-8 text-center text-gray-500">No hay actividades registradas en este período.</td></tr>{% endfor %}</tbody></table></section>
+                <section class="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
+                    <div class="border-b border-gray-100 px-5 py-4">
+                        <h2 class="font-bold text-gray-900">Registros del período</h2>
+                        <form method="get" class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[1fr_180px_180px_auto]">
+                            <input type="search" name="q" value="{{ filtro_q }}" placeholder="Buscar código, descripción, persona o funcionario" class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                            <select name="tipo" class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                                <option value="" {% if not filtro_tipo %}selected{% endif %}>Todos los tipos</option>
+                                <option value="actividad" {% if filtro_tipo == 'actividad' %}selected{% endif %}>Actividades</option>
+                                <option value="atencion" {% if filtro_tipo == 'atencion' %}selected{% endif %}>Atenciones sociales</option>
+                                <option value="compromiso" {% if filtro_tipo == 'compromiso' %}selected{% endif %}>Compromisos</option>
+                            </select>
+                            <select name="estado" class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                                <option value="" {% if not filtro_estado %}selected{% endif %}>Todos los estados</option>
+                                <option value="pendiente" {% if filtro_estado == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                                <option value="validada" {% if filtro_estado == 'validada' %}selected{% endif %}>Validada</option>
+                                <option value="rechazada" {% if filtro_estado == 'rechazada' %}selected{% endif %}>Rechazada</option>
+                                <option value="en_correccion" {% if filtro_estado == 'en_correccion' %}selected{% endif %}>En corrección</option>
+                                <option value="ingresado" {% if filtro_estado == 'ingresado' %}selected{% endif %}>Ingresado</option>
+                                <option value="en_proceso" {% if filtro_estado == 'en_proceso' %}selected{% endif %}>En proceso</option>
+                                <option value="revision" {% if filtro_estado == 'revision' %}selected{% endif %}>En revisión</option>
+                                <option value="realizado" {% if filtro_estado == 'realizado' %}selected{% endif %}>Realizado</option>
+                            </select>
+                            <button type="submit" class="rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white">Buscar</button>
+                        </form>
+                    </div>
+                    <table class="w-full min-w-[760px] text-left text-sm">
+                        <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500">
+                            <tr><th class="px-5 py-3">Tipo</th><th class="px-5 py-3">Fecha</th><th class="px-5 py-3">Código</th><th class="px-5 py-3">Descripción</th><th class="px-5 py-3">Responsable</th><th class="px-5 py-3">Estado</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for registro in registros_periodo %}
+                            <tr class="border-b border-gray-100 last:border-0">
+                                <td class="px-5 py-3"><span class="rounded px-2 py-1 text-xs font-semibold {% if registro.tipo == 'Actividad' %}bg-blue-100 text-blue-700{% elif registro.tipo == 'Atención social' %}bg-purple-100 text-purple-700{% else %}bg-amber-100 text-amber-700{% endif %}">{{ registro.tipo }}</span></td>
+                                <td class="px-5 py-3 text-gray-600">{{ registro.fecha|date:'d/m/Y' }}</td>
+                                <td class="px-5 py-3 font-mono text-gray-600">{{ registro.codigo }}</td>
+                                <td class="px-5 py-3 font-medium text-gray-900">{{ registro.descripcion|default:'—' }}</td>
+                                <td class="px-5 py-3 text-gray-600">{{ registro.responsable|default:'—' }}</td>
+                                <td class="px-5 py-3 text-gray-700">{{ registro.estado }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6" class="px-5 py-8 text-center text-gray-500">No hay registros que coincidan con los filtros.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </section>
             </div>
         </main>
     </div>
