@@ -163,12 +163,16 @@ class MetaForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['item'].queryset = ItemMedicion.objects.filter(estado='activo').select_related('cargo').order_by('nombre')
         self.fields['item'].help_text = 'El cargo y la unidad se heredan del ítem seleccionado.'
-        self.fields['periodo'].queryset = Periodo.objects.order_by('-fecha_inicio')
-        self.fields['funcionarios'].help_text = (
-            'Selecciona un funcionario para esta meta existente.'
-            if self.instance.pk
-            else 'Selecciona uno o varios funcionarios del cargo del ítem. Si no seleccionas a nadie, la meta se asigna al cargo completo.'
-        )
+        periodo_activo = Periodo.objects.filter(estado='abierto').order_by('-fecha_inicio').first()
+        if periodo_activo:
+            self.fields['periodo'].queryset = Periodo.objects.filter(pk=periodo_activo.pk)
+            self.fields['periodo'].initial = periodo_activo
+            self.fields['periodo'].disabled = True
+            self.fields['periodo'].help_text = 'La meta se asigna automáticamente al período activo.'
+        else:
+            self.fields['periodo'].queryset = Periodo.objects.none()
+            self.fields['periodo'].disabled = True
+            self.fields['periodo'].help_text = 'No hay un período abierto. Activa uno antes de crear metas.'
         item_id = self.data.get('item') if self.is_bound else self.instance.item_id
         item = ItemMedicion.objects.filter(pk=item_id, estado='activo').first() if item_id else None
         officials = Usuario.objects.filter(estado='activo')

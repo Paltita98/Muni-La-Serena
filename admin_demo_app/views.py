@@ -281,12 +281,40 @@ def admin_periodo_toggle_view(request, periodo_id):
         if periodo.estado == 'abierto':
             periodo.estado = 'cerrado'
             periodo.save(update_fields=['estado'])
-            messages.success(request, f'El período {periodo.pk} fue desactivado.')
+            Meta.objects.filter(periodo=periodo).update(vigente=False)
+            messages.success(request, f'El período {periodo.pk} fue desactivado y sus metas quedaron inactivas.')
         else:
+            periodo_anterior = Periodo.objects.filter(estado='abierto').exclude(pk=periodo.pk).first()
             Periodo.objects.filter(estado='abierto').exclude(pk=periodo.pk).update(estado='cerrado')
+            if periodo_anterior:
+                Meta.objects.filter(periodo=periodo_anterior).update(vigente=False)
+
             periodo.estado = 'abierto'
             periodo.save(update_fields=['estado'])
-            messages.success(request, f'El período {periodo.pk} quedó activo para todos los usuarios.')
+
+            metas_periodo = Meta.objects.filter(periodo=periodo)
+            if metas_periodo.exists():
+                Meta.objects.exclude(periodo=periodo).update(vigente=False)
+                metas_periodo.update(vigente=True)
+            elif periodo_anterior:
+                Meta.objects.update(vigente=False)
+                metas_fuente = Meta.objects.filter(periodo=periodo_anterior)
+                for meta_fuente in metas_fuente:
+                    Meta.objects.create(
+                        item=meta_fuente.item,
+                        cargo=meta_fuente.cargo,
+                        funcionario=meta_fuente.funcionario,
+                        periodo=periodo,
+                        valor_objetivo=meta_fuente.valor_objetivo,
+                        ponderador_pct=meta_fuente.ponderador_pct,
+                        umbral_minimo_pct=meta_fuente.umbral_minimo_pct,
+                        maximo_computable_pct=meta_fuente.maximo_computable_pct,
+                        autor=meta_fuente.autor,
+                        vigente=True,
+                    )
+            else:
+                Meta.objects.update(vigente=False)
+            messages.success(request, f'El período {periodo.pk} quedó activo y sus metas quedaron vigentes.')
     return redirect(request.POST.get('next') or 'admin_periodos_view')
 
 
