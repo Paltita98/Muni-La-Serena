@@ -73,7 +73,7 @@ def login_view(request):
                 role = 'VERIFICADOR'
             elif password_valid and any('delegado' in role_name or 'jefatura' in role_name for role_name in role_names):
                 role = 'DELEGADO'
-            elif password_valid and any('organizaciones comunitarias' in role_name or 'oroc' in role_name for role_name in role_names):
+            elif password_valid and any('organizaciones comunitarias' in role_name or 'oroc' in role_names):
                 role = 'ORGANIZACIONES_COMUNITARIAS'
             elif password_valid and any('funcion' in role_name for role_name in role_names):
                 role = 'FUNCIONARIO'
@@ -502,7 +502,7 @@ def _coordinator_dashboard(request):
         'desde': request.GET.get('desde', '').strip(),
         'hasta': request.GET.get('hasta', '').strip(),
     }
-    dashboard_panels = {'resumen', 'operacion', 'indicadores', 'criterios', 'mejoras', 'tubo'}
+    dashboard_panels = {'resumen', 'operacion', 'indicadores', 'criterios', 'mejoras', 'organizaciones', 'tubo'}
     active_dashboard_panel = request.GET.get('panel', '')
     if any(backlog_filters.values()) and not active_dashboard_panel:
         active_dashboard_panel = 'tubo'
@@ -732,6 +732,8 @@ def _coordinator_dashboard(request):
         + attention_state_counts['pendiente'],
     }
 
+    organizaciones = OrganizacionJJVV.objects.all().order_by('organizaciones')
+
     return render(request, 'main/coordinador_dashboard.html', {
         'role': 'COORDINADOR',
         'user': user,
@@ -767,6 +769,7 @@ def _coordinator_dashboard(request):
             ('en_proceso', 'En proceso'),
             ('realizado', 'Realizado'),
         ),
+        'organizaciones': organizaciones,
     })
 
 

@@ -179,6 +179,37 @@
                     </div>
                 </section>
 
+                <section id="organizaciones" data-dashboard-panel="organizaciones" {% if active_dashboard_panel != 'organizaciones' %}hidden{% endif %} class="border-t border-gray-200 pt-6" aria-labelledby="organizations-heading">
+                    <div class="mb-4">
+                        <p class="text-sm font-semibold text-red-800">Catastro municipal</p>
+                        <h2 id="organizations-heading" class="mt-1 text-lg font-bold text-gray-950">Organizaciones comunitarias incorporadas</h2>
+                    </div>
+                    <div class="mb-4 flex gap-2">
+                        <input id="organizations-search" type="search" placeholder="Buscar organización, territorio o registro..." class="min-w-0 flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm">
+                    </div>
+                    <div class="overflow-x-auto rounded border border-gray-200 bg-white">
+                        <table class="w-full min-w-[900px] text-left text-sm">
+                            <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                                <tr><th class="px-4 py-3">Organización</th><th class="px-4 py-3">Presidente</th><th class="px-4 py-3">Territorio</th><th class="px-4 py-3">Socios</th><th class="px-4 py-3">Constitución</th><th class="px-4 py-3">Registro PJ</th></tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100" id="organizations-table-body">
+                                {% for organizacion in organizaciones %}
+                                <tr data-organization-row>
+                                    <td class="px-4 py-4"><p class="font-semibold text-gray-900">{{ organizacion.organizaciones }}</p><p class="mt-1 text-xs text-gray-500">{{ organizacion.domicilio_legal|default:"Sin domicilio indicado" }}</p></td>
+                                    <td class="px-4 py-4 text-gray-700">{{ organizacion.presidente_n|default:"-" }}</td>
+                                    <td class="px-4 py-4 text-gray-700">{{ organizacion.territorio_deleg|default:"-" }}</td>
+                                    <td class="px-4 py-4 text-gray-700">{{ organizacion.socios_activos|default:"-" }}</td>
+                                    <td class="px-4 py-4 text-gray-700">{{ organizacion.fecha_constitucion|date:"d/m/Y"|default:"-" }}</td>
+                                    <td class="px-4 py-4 text-gray-700">{{ organizacion.n_reg_pj|default:"-" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="6" class="px-4 py-10 text-center text-gray-500">Aún no hay organizaciones registradas.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
                 {% include 'main/_tubo_panel.html' %}
             </div>
         </main>
@@ -213,6 +244,15 @@
             button.addEventListener('click', () => activateDashboardPanel(button.dataset.dashboardTarget));
         });
 
+        const organizationsSearch = document.getElementById('organizations-search');
+        if (organizationsSearch) {
+            organizationsSearch.addEventListener('input', () => {
+                const term = organizationsSearch.value.trim().toLowerCase();
+                document.querySelectorAll('[data-organization-row]').forEach((row) => {
+                    row.hidden = term && !row.textContent.toLowerCase().includes(term);
+                });
+            });
+        }
     </script>
     {% include 'main/_sweetalerts.html' %}
 </body>
