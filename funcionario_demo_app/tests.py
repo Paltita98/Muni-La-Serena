@@ -1109,6 +1109,24 @@ class OrganizacionesJJVVCrudTests(TestCase):
         self.client.cookies[settings.SESSION_COOKIE_NAME] = session.session_key
         return delegacion
 
+    def test_directiva_user_receives_creators_delegation_only(self):
+        delegacion = self.iniciar_sesion_organizaciones()
+        otra_delegacion = Delegacion.objects.create(nombre='Otra delegación')
+
+        response = self.client.post(reverse('main:crear_usuario_directiva_view'), {
+            'identificador_inst': 'OROC-002',
+            'nombres': 'María',
+            'apellidos': 'Soto',
+            'email': 'maria.soto@muni.test',
+            'delegacion_id': otra_delegacion.pk,
+        })
+
+        self.assertEqual(response.status_code, 200)
+        usuario = Usuario.objects.get(identificador_inst='OROC-002')
+        self.assertEqual(usuario.delegacion, delegacion)
+        self.assertIsNone(usuario.cargo)
+        self.assertFalse(usuario.roles.exists())
+
     def test_create_search_update_and_delete_organization(self):
         delegacion_usuario = self.iniciar_sesion_organizaciones()
         form_response = self.client.get(reverse('main:nueva_organizacion_jjvv_view'))

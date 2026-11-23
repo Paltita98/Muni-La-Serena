@@ -19,6 +19,7 @@
                 <section><p class="text-sm font-semibold text-red-800">Registro OROC</p><h1 class="mt-1 text-2xl font-bold text-gray-900">{% if organizacion %}{{ organizacion.organizaciones }}{% else %}Nueva organización comunitaria{% endif %}</h1><p class="mt-1 text-sm text-gray-500">Ingresa los antecedentes disponibles de la organización.</p></section>
                 <form method="post" class="bg-white border border-gray-200 rounded-md p-4 sm:p-6 space-y-5">
                     {% csrf_token %}
+                    {% if organizacion %}<input type="hidden" name="organizacion_id" value="{{ organizacion.pk }}">{% endif %}
                     {% if not delegacion_usuario and not es_coordinador %}<div role="alert" class="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">Tu cuenta no tiene una delegación asignada. Solicita que se configure antes de registrar organizaciones.</div>{% endif %}
                     {% if form.non_field_errors %}<div role="alert" class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ form.non_field_errors }}</div>{% endif %}
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -93,7 +94,12 @@
             });
             userForm.addEventListener('submit', async (event) => {
                 event.preventDefault(); error.classList.add('hidden');
-                const response = await fetch(activePicker.dataset.createUrl, {method: 'POST', headers: {'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest'}, body: new FormData(userForm)});
+                const formData = new FormData(userForm);
+                const organizacionId = document.querySelector('[name=organizacion_id]');
+                if (organizacionId) formData.append('organizacion_id', organizacionId.value);
+                const delegacion = document.querySelector('[name=delegacion]');
+                if (delegacion && delegacion.value) formData.append('delegacion_id', delegacion.value);
+                const response = await fetch(activePicker.dataset.createUrl, {method: 'POST', headers: {'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest'}, body: formData});
                 const data = await response.json();
                 if (!response.ok) { error.textContent = data.error || 'No se pudo crear el usuario.'; error.classList.remove('hidden'); return; }
                 activePicker.querySelector('input[type=hidden]').value = data.id;

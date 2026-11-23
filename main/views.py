@@ -25,6 +25,7 @@ from admin_demo_app.models import (
     Compromiso,
     CompromisoEstadoHistorial,
     Evidencia,
+    Delegacion,
     Meta,
     Notificacion,
     OrganizacionJJVV,
@@ -75,7 +76,7 @@ def login_view(request):
                 role = 'VERIFICADOR'
             elif password_valid and any('delegado' in role_name or 'jefatura' in role_name for role_name in role_names):
                 role = 'DELEGADO'
-            elif password_valid and any('organizaciones comunitarias' in role_name or 'oroc' in role_name for role_name in role_names):
+            elif password_valid and any('organizaciones comunitarias' in role_name or 'oroc' in role_names for role_name in role_names):
                 role = 'ORGANIZACIONES_COMUNITARIAS'
             elif password_valid and any('funcion' in role_name for role_name in role_names):
                 role = 'FUNCIONARIO'
@@ -258,6 +259,25 @@ def crear_usuario_directiva_view(request):
         return JsonResponse({'error': 'Completa RUT, nombres, apellidos y correo.'}, status=400)
     if Usuario.objects.filter(Q(identificador_inst__iexact=rut) | Q(email__iexact=email)).exists():
         return JsonResponse({'error': 'Ya existe un usuario con ese RUT o correo.'}, status=400)
+    delegacion = None
+    organizacion_id = request.POST.get('organizacion_id')
+    if request.session.get('user_role') == 'ORGANIZACIONES_COMUNITARIAS':
+        usuario_sesion = _usuario_sesion_activo(request)
+        delegacion = usuario_sesion.delegacion if usuario_sesion else None
+    elif organizacion_id:
+        organizacion = OrganizacionJJVV.objects.filter(pk=organizacion_id).select_related('delegacion').first()
+        delegacion = organizacion.delegacion if organizacion else None
+    elif request.session.get('user_role') == 'COORDINADOR':
+        delegacion = Delegacion.objects.filter(
+            pk=request.POST.get('delegacion_id'),
+            estado='activa',
+        ).first()
+    else:
+        usuario_sesion = _usuario_sesion_activo(request)
+        delegacion = usuario_sesion.delegacion if usuario_sesion else None
+    if delegacion is None:
+        return JsonResponse({'error': 'No se pudo determinar la delegación de quien registra la organización.'}, status=400)
+
     usuario = Usuario.objects.create(
         identificador_inst=rut,
         nombres=nombres,
@@ -266,6 +286,7 @@ def crear_usuario_directiva_view(request):
         password_hash=make_password(secrets.token_urlsafe(24)),
         debe_cambiar_password=True,
         estado='activo',
+        delegacion=delegacion,
     )
     return JsonResponse({
         'id': usuario.pk,
@@ -304,6 +325,12 @@ def _gestionar_organizacion_jjvv(request, organizacion_id=None):
         if not es_coordinador:
             organizacion.delegacion = delegacion_usuario
         organizacion.save()
+        for field_name in ('presidente_usuario', 'tesorero_usuario', 'secretario_usuario'):
+            usuario_directiva = getattr(organizacion, field_name)
+            if usuario_directiva:
+                if usuario_directiva.delegacion_id != organizacion.delegacion_id:
+                    usuario_directiva.delegacion = organizacion.delegacion
+                    usuario_directiva.save(update_fields=['delegacion'])
         messages.success(
             request,
             f'Organización «{organizacion.organizaciones}» '
