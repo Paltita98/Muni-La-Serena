@@ -38,6 +38,7 @@
                         <div class="border-b border-gray-100 pb-4"><p class="block text-sm font-medium text-gray-700">Período</p><p class="mt-1 text-sm text-gray-900">{{ actividad.periodo }}</p></div>
                     </div>
                     <div class="border-b border-gray-100 pb-4"><p class="block text-sm font-medium text-gray-700">Ítem</p><p class="mt-1 text-sm text-gray-900">{{ actividad.item }}</p></div>
+                    <div class="border-b border-gray-100 pb-4"><p class="block text-sm font-medium text-gray-700">Origen</p><p class="mt-1 text-sm text-gray-900">{{ actividad.get_origen_tipo_display }}{% if actividad.organizacion_id %} · {{ actividad.organizacion.organizaciones }}{% endif %}</p></div>
                     <div class="border-b border-gray-100 pb-4"><p class="block text-sm font-medium text-gray-700">Acción</p><p class="mt-1 text-sm text-gray-900">{{ actividad.accion }}</p></div>
                     {% if actividad.contacto_nombre %}<div class="border-b border-gray-100 pb-4"><p class="block text-sm font-medium text-gray-700">Contacto</p><p class="mt-1 text-sm text-gray-900">{{ actividad.contacto_nombre }}{% if actividad.contacto_telefono %} · {{ actividad.contacto_telefono }}{% endif %}</p></div>{% endif %}
                 </div>

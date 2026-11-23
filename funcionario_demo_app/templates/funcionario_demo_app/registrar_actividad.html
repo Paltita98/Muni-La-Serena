@@ -14,12 +14,28 @@
             {% csrf_token %}
             {% if not form %}<p class="text-red-600">No se pudo cargar el formulario.</p>{% endif %}
             {% for field in form %}
-                <div>
-                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+                {% if field.is_hidden %}
                     {{ field }}
-                    {% if field.name == 'contacto_nombre' %}<div id="activity-contact-results" data-search-url="{% url 'buscar_personas_view' %}" class="mt-1 space-y-1" role="listbox" aria-label="Personas encontradas"></div>{% endif %}
-                    {% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
-                </div>
+                {% elif field.name == 'origen_tipo' %}
+                    <fieldset id="activity-origin-options" {% if not form.contacto_oroc_usuario_id.value %}hidden{% endif %} class="rounded-lg border border-red-100 bg-red-50 p-4">
+                        <legend class="text-sm font-semibold text-gray-800">¿La actividad viene a título personal o por la organización?</legend>
+                        {{ field }}
+                        {% for error in field.errors %}<p class="mt-1 text-xs text-red-700">{{ error }}</p>{% endfor %}
+                    </fieldset>
+                {% elif field.name == 'organizacion' %}
+                    <div id="activity-organization-field" {% if form.origen_tipo.value != 'organizacion' %}hidden{% endif %}>
+                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
+                        {{ field }}
+                        {% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                    </div>
+                {% else %}
+                    <div>
+                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+                        {{ field }}
+                        {% if field.name == 'contacto_nombre' %}<div id="activity-contact-results" data-search-url="{% url 'buscar_personas_view' %}" class="mt-1 space-y-1" role="listbox" aria-label="Resultados de personas y organizaciones"></div>{% endif %}
+                        {% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                    </div>
+                {% endif %}
             {% endfor %}
             {% if form.non_field_errors %}<div class="text-sm text-red-600">{{ form.non_field_errors }}</div>{% endif %}
             <div class="pt-4 flex justify-end gap-3 border-t border-gray-100">
@@ -33,11 +49,34 @@
             const nameInput = document.getElementById('id_contacto_nombre');
             const phoneInput = document.getElementById('id_contacto_telefono');
             const results = document.getElementById('activity-contact-results');
+            const orocUserInput = document.getElementById('id_contacto_oroc_usuario_id');
+            const originOptions = document.getElementById('activity-origin-options');
+            const organizationField = document.getElementById('activity-organization-field');
+            const organizationSelect = document.getElementById('id_organizacion');
+            const originInputs = document.querySelectorAll('[name="origen_tipo"]');
             if (!nameInput || !results) return;
             let timer;
+            const resetOrocSelection = () => {
+                if (orocUserInput) orocUserInput.value = '';
+                if (originOptions) originOptions.hidden = true;
+                if (organizationField) organizationField.hidden = true;
+                if (organizationSelect) {
+                    organizationSelect.replaceChildren(new Option('Selecciona una organización', ''));
+                    organizationSelect.required = false;
+                }
+                originInputs.forEach((input) => { input.required = false; input.checked = false; });
+            };
+            const updateOrganizationChoice = () => {
+                const isOrganization = document.querySelector('[name="origen_tipo"]:checked')?.value === 'organizacion';
+                if (organizationField) organizationField.hidden = !isOrganization;
+                if (organizationSelect) organizationSelect.required = isOrganization;
+            };
+            originInputs.forEach((input) => input.addEventListener('change', updateOrganizationChoice));
+            updateOrganizationChoice();
             nameInput.addEventListener('input', () => {
                 clearTimeout(timer);
                 results.replaceChildren();
+                resetOrocSelection();
                 const query = nameInput.value.trim();
                 if (query.length < 2) return;
                 timer = setTimeout(async () => {
@@ -51,10 +90,20 @@
                             const option = document.createElement('button');
                             option.type = 'button';
                             option.className = 'block w-full rounded border border-gray-200 bg-white px-3 py-2 text-left text-sm hover:bg-gray-50';
-                            option.textContent = `${person.nombre} · ${person.rut || person.referencia}`;
+                            const organizationNames = person.organizaciones.map((organization) => organization.nombre);
+                            option.textContent = `${person.nombre} · ${person.rut || person.referencia}${organizationNames.length ? ` · OROC: ${organizationNames.join(', ')}` : ''}`;
                             option.addEventListener('click', () => {
                                 nameInput.value = person.nombre;
                                 if (phoneInput) phoneInput.value = person.telefono || '';
+                                resetOrocSelection();
+                                if (person.oroc_usuario_id && organizationNames.length) {
+                                    orocUserInput.value = person.oroc_usuario_id;
+                                    originOptions.hidden = false;
+                                    originInputs.forEach((input) => { input.required = true; });
+                                    person.organizaciones.forEach((organization) => {
+                                        organizationSelect.add(new Option(organization.nombre, organization.id));
+                                    });
+                                }
                                 results.replaceChildren();
                             });
                             results.appendChild(option);

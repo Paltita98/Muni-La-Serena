@@ -920,9 +920,13 @@ class BuscarPersonasTests(SimpleTestCase):
         people_query = Mock()
         people_query.order_by.return_value = [persona]
         manager = Mock(filter=Mock(return_value=people_query))
+        directiva_query = Mock()
+        directiva_query.filter.return_value.distinct.return_value = []
+        directiva_manager = Mock(filter=Mock(return_value=directiva_query))
         with (
             patch('funcionario_demo_app.views._funcionario_actual', return_value=SimpleNamespace(pk=4)),
             patch.object(PersonaUsuaria, 'objects', manager),
+            patch.object(Usuario, 'objects', directiva_manager),
         ):
             response = buscar_personas_view(request)
 
@@ -1128,6 +1132,104 @@ class OrganizacionesJJVVCrudTests(TestCase):
         self.assertFalse(usuario.roles.exists())
         persona = PersonaUsuaria.objects.get(rut='OROC-002')
         self.assertEqual(persona.nombre, 'María Soto')
+
+    def test_activity_form_saves_selected_organization_for_oroc_contact(self):
+        delegacion = Delegacion.objects.create(nombre='Delegación actividad OROC')
+        directiva = Usuario.objects.create(
+            identificador_inst='OROC-ORG-1', nombres='María', apellidos='Soto',
+            email='maria.org@muni.test', password_hash='hash', delegacion=delegacion,
+        )
+        organizacion = OrganizacionJJVV.objects.create(
+            organizaciones='Junta de Vecinos El Faro',
+            delegacion=delegacion,
+            presidente_usuario=directiva,
+        )
+        cargo = Cargo.objects.create(nombre='Gestor actividad OROC')
+        funcionario = Usuario.objects.create(
+            identificador_inst='FUNC-ORG-1', nombres='Juan', apellidos='Pérez',
+            email='juan.org@muni.test', password_hash='hash', delegacion=delegacion,
+            cargo=cargo,
+        )
+        item = ItemMedicion.objects.create(cargo=cargo, nombre='Actividad territorial')
+        form = ActividadForm(data={
+            'fecha_actividad': '2026-11-23',
+            'item': item.pk,
+            'accion': 'Reunión',
+            'descripcion': 'Reunión de la organización',
+            'contacto_nombre': 'María Soto',
+            'contacto_oroc_usuario_id': directiva.pk,
+            'origen_tipo': 'organizacion',
+            'organizacion': organizacion.pk,
+        }, funcionario=funcionario)
+
+        self.assertTrue(form.is_valid(), form.errors)
+        actividad = form.save(commit=False)
+        self.assertEqual(actividad.origen_tipo, 'organizacion')
+        self.assertEqual(actividad.organizacion, organizacion)
+
+    def test_activity_form_rejects_unlinked_organization(self):
+        delegacion = Delegacion.objects.create(nombre='Delegación actividad validación')
+        directiva = Usuario.objects.create(
+            identificador_inst='OROC-ORG-2', nombres='Ana', apellidos='Díaz',
+            email='ana.org@muni.test', password_hash='hash', delegacion=delegacion,
+        )
+        OrganizacionJJVV.objects.create(
+            organizaciones='Organización vinculada', delegacion=delegacion,
+            presidente_usuario=directiva,
+        )
+        organizacion_ajena = OrganizacionJJVV.objects.create(
+            organizaciones='Organización ajena', delegacion=delegacion,
+        )
+        cargo = Cargo.objects.create(nombre='Gestor actividad validación')
+        funcionario = Usuario.objects.create(
+            identificador_inst='FUNC-ORG-2', nombres='Luis', apellidos='Soto',
+            email='luis.org@muni.test', password_hash='hash', delegacion=delegacion,
+            cargo=cargo,
+        )
+        item = ItemMedicion.objects.create(cargo=cargo, nombre='Actividad validación')
+        form = ActividadForm(data={
+            'fecha_actividad': '2026-11-23',
+            'item': item.pk,
+            'accion': 'Reunión',
+            'descripcion': 'Actividad de prueba',
+            'contacto_nombre': 'Ana Díaz',
+            'contacto_oroc_usuario_id': directiva.pk,
+            'origen_tipo': 'organizacion',
+            'organizacion': organizacion_ajena.pk,
+        }, funcionario=funcionario)
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('organizacion', form.errors)
+
+    def test_person_search_returns_oroc_organizations_for_directiva(self):
+        delegacion = Delegacion.objects.create(nombre='Delegación buscador OROC')
+        funcionario = Usuario.objects.create(
+            identificador_inst='FUNC-BUSQ-1', nombres='Pedro', apellidos='Rojas',
+            email='pedro.busq@muni.test', password_hash='hash', delegacion=delegacion,
+        )
+        directiva = Usuario.objects.create(
+            identificador_inst='OROC-BUSQ-1', nombres='María', apellidos='Soto',
+            email='maria.busq@muni.test', password_hash='hash', delegacion=delegacion,
+        )
+        OrganizacionJJVV.objects.create(
+            organizaciones='Junta de Vecinos El Faro', delegacion=delegacion,
+            presidente_usuario=directiva,
+        )
+        PersonaUsuaria.objects.create(
+            referencia_anonima='CASO-OROC-1', rut=directiva.identificador_inst,
+            nombre='María Soto',
+        )
+        session = self.client.session
+        session['user_role'] = 'FUNCIONARIO'
+        session['user_id'] = funcionario.pk
+        session.save()
+
+        response = self.client.get(reverse('buscar_personas_view'), {'q': 'María'})
+
+        self.assertEqual(response.status_code, 200)
+        result = response.json()['results'][0]
+        self.assertEqual(result['oroc_usuario_id'], directiva.pk)
+        self.assertEqual(result['organizaciones'][0]['nombre'], 'Junta de Vecinos El Faro')
 
     def test_create_search_update_and_delete_organization(self):
         delegacion_usuario = self.iniciar_sesion_organizaciones()

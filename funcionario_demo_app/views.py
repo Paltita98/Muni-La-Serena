@@ -24,6 +24,7 @@ from admin_demo_app.models import (
     Delegacion,
     Evidencia,
     Meta,
+    OrganizacionJJVV,
     Periodo,
     PersonaUsuaria,
     Usuario,
@@ -512,13 +513,15 @@ def actividades_view(request):
         is_delegado = False
     else:
         return redirect('main:login_view')
-    actividades = actividades.select_related('funcionario').order_by('-fecha_actividad')
+    actividades = actividades.select_related('funcionario', 'organizacion').order_by('-fecha_actividad')
     datos = [{
         'id': actividad.id,
         'titulo': actividad.descripcion,
         'codigo': actividad.codigo_evidencia,
         'fecha': actividad.fecha_actividad.strftime('%d/%m/%Y'),
         'estado': actividad.estado,
+        'origen': actividad.get_origen_tipo_display(),
+        'organizacion': actividad.organizacion.organizaciones if actividad.organizacion_id else '',
         'url': reverse('actividad_detalle_view', args=[actividad.id]),
     } for actividad in actividades]
     return render(request, 'funcionario_demo_app/actividades.html', {
@@ -605,7 +608,7 @@ def buscar_personas_view(request):
     query = request.GET.get('q', '').strip()
     if len(query) < 2:
         return JsonResponse({'results': []})
-    usuarios_directiva = Usuario.objects.filter(
+    usuarios_directiva = list(Usuario.objects.filter(
         Q(organizaciones_presididas__isnull=False)
         | Q(organizaciones_tesoreria__isnull=False)
         | Q(organizaciones_secretaria__isnull=False)
@@ -613,7 +616,7 @@ def buscar_personas_view(request):
         Q(nombres__icontains=query)
         | Q(apellidos__icontains=query)
         | Q(identificador_inst__icontains=query)
-    ).distinct()[:20]
+    ).distinct()[:20])
     for usuario in usuarios_directiva:
         rut = usuario.identificador_inst if len(usuario.identificador_inst) <= 12 else None
         nombre = f'{usuario.nombres} {usuario.apellidos}'.strip()
@@ -628,18 +631,64 @@ def buscar_personas_view(request):
             rut=rut,
             nombre=nombre,
         )
-    personas = PersonaUsuaria.objects.filter(
+    personas = list(PersonaUsuaria.objects.filter(
         Q(nombre__icontains=query)
         | Q(rut__icontains=query)
         | Q(referencia_anonima__icontains=query)
-    ).order_by('nombre', 'rut')[:10]
-    return JsonResponse({'results': [{
-        'id': persona.pk,
-        'nombre': persona.nombre or 'Persona sin nombre',
-        'rut': persona.rut or '',
-        'telefono': persona.telefono or '',
-        'referencia': persona.referencia_anonima,
-    } for persona in personas]})
+    ).order_by('nombre', 'rut')[:10])
+    personas_ids = {persona.pk for persona in personas}
+    for usuario in usuarios_directiva:
+        rut = usuario.identificador_inst if len(usuario.identificador_inst) <= 12 else None
+        persona_directiva = (
+            PersonaUsuaria.objects.filter(rut=rut).first()
+            if rut
+            else PersonaUsuaria.objects.filter(
+                nombre__iexact=f'{usuario.nombres} {usuario.apellidos}'.strip(),
+                rut__isnull=True,
+            ).first()
+        )
+        if persona_directiva and persona_directiva.pk not in personas_ids:
+            personas.append(persona_directiva)
+            personas_ids.add(persona_directiva.pk)
+    directiva_por_rut = {
+        usuario.identificador_inst: usuario
+        for usuario in usuarios_directiva
+        if len(usuario.identificador_inst) <= 12
+    }
+    directiva_por_nombre = {}
+    for usuario in usuarios_directiva:
+        directiva_por_nombre.setdefault(
+            f'{usuario.nombres} {usuario.apellidos}'.strip().casefold(),
+            [],
+        ).append(usuario)
+
+    resultados = []
+    for persona in personas:
+        usuario_directiva = directiva_por_rut.get(persona.rut or '')
+        if usuario_directiva is None and not persona.rut:
+            usuarios_mismo_nombre = directiva_por_nombre.get(persona.nombre.casefold(), [])
+            if len(usuarios_mismo_nombre) == 1:
+                usuario_directiva = usuarios_mismo_nombre[0]
+        organizaciones = []
+        if usuario_directiva:
+            organizaciones = list(OrganizacionJJVV.objects.filter(
+                Q(presidente_usuario=usuario_directiva)
+                | Q(tesorero_usuario=usuario_directiva)
+                | Q(secretario_usuario=usuario_directiva)
+            ).distinct().values('pk', 'organizaciones'))
+        resultados.append({
+            'id': persona.pk,
+            'nombre': persona.nombre or 'Persona sin nombre',
+            'rut': persona.rut or '',
+            'telefono': persona.telefono or '',
+            'referencia': persona.referencia_anonima,
+            'oroc_usuario_id': usuario_directiva.pk if usuario_directiva else None,
+            'organizaciones': [
+                {'id': organizacion['pk'], 'nombre': organizacion['organizaciones']}
+                for organizacion in organizaciones
+            ],
+        })
+    return JsonResponse({'results': resultados})
 
 
 def agenda_colectiva_view(request):
@@ -715,7 +764,7 @@ def mis_evidencias_view(request):
 def actividad_detalle_view(request, actividad_id):
     delegado = _delegado_actual(request)
     funcionario_actual = _funcionario_actual(request)
-    actividades = Actividad.objects.select_related('funcionario', 'periodo', 'item')
+    actividades = Actividad.objects.select_related('funcionario', 'periodo', 'item', 'organizacion')
     if delegado:
         delegacion = _delegacion_del_delegado(delegado)
         if not delegacion:

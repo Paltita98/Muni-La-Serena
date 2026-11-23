@@ -105,7 +105,7 @@
             const filter = statusFilter.value;
 
             const filtered = actividades.filter(item => {
-                const matchesQuery = item.titulo.toLowerCase().includes(query) || item.codigo.toLowerCase().includes(query);
+                const matchesQuery = item.titulo.toLowerCase().includes(query) || item.codigo.toLowerCase().includes(query) || item.origen.toLowerCase().includes(query) || item.organizacion.toLowerCase().includes(query);
                 const matchesFilter = filter === 'all' || item.estado === filter;
                 return matchesQuery && matchesFilter;
             });
@@ -132,7 +132,7 @@
                 title.textContent = item.titulo;
                 const metadata = document.createElement('p');
                 metadata.className = 'activity-meta';
-                metadata.textContent = `Código: ${item.codigo} | ${item.fecha}`;
+                metadata.textContent = `Código: ${item.codigo} | ${item.fecha} | ${item.origen}${item.organizacion ? `: ${item.organizacion}` : ''}`;
                 main.append(title, metadata);
 
                 const actions = document.createElement('div');

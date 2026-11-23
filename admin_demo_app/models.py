@@ -163,6 +163,12 @@ class Actividad(models.Model):
     accion = models.CharField(max_length=255)
     contacto_nombre = models.CharField(max_length=150, blank=True, null=True)
     contacto_telefono = models.CharField(max_length=20, blank=True, null=True)
+    ORIGEN_CHOICES = [('personal', 'Personal'), ('organizacion', 'Por organización')]
+    origen_tipo = models.CharField(max_length=15, choices=ORIGEN_CHOICES, default='personal')
+    organizacion = models.ForeignKey(
+        'OrganizacionJJVV', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='actividades',
+    )
     item = models.ForeignKey(ItemMedicion, on_delete=models.RESTRICT)
     catalogo_tipo = models.ForeignKey(
         'CatalogoTipo', on_delete=models.SET_NULL, null=True, blank=True,

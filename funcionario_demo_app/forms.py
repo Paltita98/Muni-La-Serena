@@ -268,6 +268,7 @@ class VerificacionEvidenciaForm(forms.Form):
 
 class ActividadForm(forms.ModelForm):
     evidencia = ImageEvidenceField(required=False, label="Adjuntar imagen de evidencia")
+    contacto_oroc_usuario_id = forms.IntegerField(required=False, widget=forms.HiddenInput())
 
     class Meta:
         model = Actividad
@@ -278,6 +279,9 @@ class ActividadForm(forms.ModelForm):
             "descripcion",
             "contacto_nombre",
             "contacto_telefono",
+            "contacto_oroc_usuario_id",
+            "origen_tipo",
+            "organizacion",
         )
         labels = {
             "fecha_actividad": "Fecha de la actividad",
@@ -286,16 +290,39 @@ class ActividadForm(forms.ModelForm):
             "descripcion": "Descripción detallada",
             "contacto_nombre": "Nombre completo",
             "contacto_telefono": "Teléfono",
+            "origen_tipo": "La actividad corresponde a",
+            "organizacion": "Organización comunitaria",
         }
         widgets = {
             "fecha_actividad": forms.DateInput(attrs={"type": "date"}),
             "accion": forms.TextInput(),
             "descripcion": forms.Textarea(attrs={"rows": 3}),
+            "origen_tipo": forms.RadioSelect(),
         }
 
     def __init__(self, *args, funcionario=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.funcionario = funcionario
+        if not self.is_bound:
+            self.initial['origen_tipo'] = None
+        usuario_id = self.data.get('contacto_oroc_usuario_id') if self.is_bound else None
+        usuario_directiva = None
+        if usuario_id:
+            usuario_directiva = Usuario.objects.filter(pk=usuario_id).filter(
+                Q(organizaciones_presididas__isnull=False)
+                | Q(organizaciones_tesoreria__isnull=False)
+                | Q(organizaciones_secretaria__isnull=False)
+            ).first()
+        organizaciones = OrganizacionJJVV.objects.none()
+        if usuario_directiva:
+            organizaciones = OrganizacionJJVV.objects.filter(
+                Q(presidente_usuario=usuario_directiva)
+                | Q(tesorero_usuario=usuario_directiva)
+                | Q(secretario_usuario=usuario_directiva)
+            ).distinct().order_by('organizaciones')
+        self.fields['organizacion'].queryset = organizaciones
+        self.fields['organizacion'].required = False
+        self.fields['origen_tipo'].required = False
         if funcionario and funcionario.cargo_id:
             self.fields["item"].queryset = ItemMedicion.objects.filter(
                 cargo=funcionario.cargo,
@@ -306,6 +333,35 @@ class ActividadForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        contacto_oroc_usuario_id = cleaned_data.get('contacto_oroc_usuario_id')
+        origen_tipo = cleaned_data.get('origen_tipo')
+        organizacion = cleaned_data.get('organizacion')
+        if contacto_oroc_usuario_id:
+            usuario_directiva = Usuario.objects.filter(pk=contacto_oroc_usuario_id).filter(
+                Q(organizaciones_presididas__isnull=False)
+                | Q(organizaciones_tesoreria__isnull=False)
+                | Q(organizaciones_secretaria__isnull=False)
+            ).first()
+            if usuario_directiva is None:
+                self.add_error('contacto_oroc_usuario_id', 'La persona seleccionada no pertenece a una directiva OROC.')
+            elif origen_tipo not in {'personal', 'organizacion'}:
+                self.add_error('origen_tipo', 'Indica si la actividad es personal o por una organización.')
+            elif origen_tipo == 'organizacion':
+                if organizacion is None:
+                    self.add_error('organizacion', 'Selecciona la organización relacionada con esta actividad.')
+                elif not OrganizacionJJVV.objects.filter(pk=organizacion.pk).filter(
+                    Q(presidente_usuario=usuario_directiva)
+                    | Q(tesorero_usuario=usuario_directiva)
+                    | Q(secretario_usuario=usuario_directiva)
+                ).exists():
+                    self.add_error('organizacion', 'La organización no está vinculada a la persona seleccionada.')
+            else:
+                cleaned_data['organizacion'] = None
+        elif origen_tipo == 'organizacion' or organizacion:
+            self.add_error('origen_tipo', 'Busca y selecciona una persona de directiva OROC para asociar una organización.')
+        else:
+            cleaned_data['origen_tipo'] = 'personal'
+            cleaned_data['organizacion'] = None
         if not self.funcionario:
             self.add_error(None, "No existe un funcionario activo para registrar la actividad.")
         return cleaned_data
