@@ -202,48 +202,6 @@ def admin_periodo_detalle_view(request, periodo_id):
     ajustes = AjusteIncentivo.objects.filter(periodo=periodo)
     atenciones = AtencionSocial.objects.filter(periodo=periodo)
     compromisos = Compromiso.objects.filter(periodo=periodo)
-    tipo = request.GET.get('tipo', '').strip().lower()
-    estado = request.GET.get('estado', '').strip().lower()
-    texto = request.GET.get('q', '').strip()
-
-    actividades_filtradas = actividades.select_related('funcionario', 'item')
-    atenciones_filtradas = atenciones.select_related('persona', 'funcionario', 'catalogo_tipo', 'delegacion')
-    compromisos_filtrados = compromisos.select_related('persona', 'responsable', 'delegacion')
-
-    if texto:
-        actividades_filtradas = actividades_filtradas.filter(
-            Q(codigo_evidencia__icontains=texto) | Q(descripcion__icontains=texto) |
-            Q(accion__icontains=texto) | Q(funcionario__nombres__icontains=texto) |
-            Q(funcionario__apellidos__icontains=texto)
-        )
-        atenciones_filtradas = atenciones_filtradas.filter(
-            Q(descripcion__icontains=texto) | Q(solicitante__icontains=texto) |
-            Q(resultado__icontains=texto) | Q(persona__nombre__icontains=texto) |
-            Q(persona__referencia_anonima__icontains=texto)
-        )
-        compromisos_filtrados = compromisos_filtrados.filter(
-            Q(solicitante__icontains=texto) | Q(observacion__icontains=texto) |
-            Q(territorio__icontains=texto) | Q(persona__nombre__icontains=texto) |
-            Q(persona__referencia_anonima__icontains=texto)
-        )
-
-    if estado:
-        actividades_filtradas = actividades_filtradas.filter(estado=estado)
-        compromisos_filtrados = compromisos_filtrados.filter(estado=estado)
-
-    registros = []
-    if tipo in ('', 'actividad'):
-        for item in actividades_filtradas.order_by('-fecha_registro'):
-            registros.append({'tipo': 'Actividad', 'fecha': item.fecha_actividad, 'codigo': item.codigo_evidencia, 'descripcion': item.descripcion, 'responsable': str(item.funcionario), 'estado': item.get_estado_display()})
-    if tipo in ('', 'atencion'):
-        for item in atenciones_filtradas.order_by('-fecha', '-pk'):
-            registros.append({'tipo': 'Atención social', 'fecha': item.fecha, 'codigo': item.persona.referencia_anonima, 'descripcion': item.descripcion or item.solicitante, 'responsable': str(item.funcionario), 'estado': f'Gestión {item.orden_gestion}'})
-    if tipo in ('', 'compromiso'):
-        for item in compromisos_filtrados.order_by('-fecha_registro'):
-            registros.append({'tipo': 'Compromiso', 'fecha': item.fecha_comprometida, 'codigo': f'C-{item.pk}', 'descripcion': item.observacion or item.solicitante, 'responsable': str(item.responsable), 'estado': item.get_estado_display()})
-
-    registros.sort(key=lambda r: r['fecha'] or periodo.fecha_inicio, reverse=True)
-
     return render(request, 'admin_demo_app/periodo_detalle.html', {
         'periodo': periodo,
         'resumen': {
@@ -262,10 +220,6 @@ def admin_periodo_detalle_view(request, periodo_id):
             'compromisos_realizados': compromisos.filter(estado='realizado').count(),
         },
         'actividades_recientes': actividades.select_related('funcionario').order_by('-fecha_registro')[:8],
-        'registros_periodo': registros,
-        'filtro_tipo': tipo,
-        'filtro_estado': estado,
-        'filtro_q': texto,
         'seccion_activa': 'periodos',
     })
 
@@ -281,40 +235,12 @@ def admin_periodo_toggle_view(request, periodo_id):
         if periodo.estado == 'abierto':
             periodo.estado = 'cerrado'
             periodo.save(update_fields=['estado'])
-            Meta.objects.filter(periodo=periodo).update(vigente=False)
-            messages.success(request, f'El período {periodo.pk} fue desactivado y sus metas quedaron inactivas.')
+            messages.success(request, f'El período {periodo.pk} fue desactivado.')
         else:
-            periodo_anterior = Periodo.objects.filter(estado='abierto').exclude(pk=periodo.pk).first()
             Periodo.objects.filter(estado='abierto').exclude(pk=periodo.pk).update(estado='cerrado')
-            if periodo_anterior:
-                Meta.objects.filter(periodo=periodo_anterior).update(vigente=False)
-
             periodo.estado = 'abierto'
             periodo.save(update_fields=['estado'])
-
-            metas_periodo = Meta.objects.filter(periodo=periodo)
-            if metas_periodo.exists():
-                Meta.objects.exclude(periodo=periodo).update(vigente=False)
-                metas_periodo.update(vigente=True)
-            elif periodo_anterior:
-                Meta.objects.update(vigente=False)
-                metas_fuente = Meta.objects.filter(periodo=periodo_anterior)
-                for meta_fuente in metas_fuente:
-                    Meta.objects.create(
-                        item=meta_fuente.item,
-                        cargo=meta_fuente.cargo,
-                        funcionario=meta_fuente.funcionario,
-                        periodo=periodo,
-                        valor_objetivo=meta_fuente.valor_objetivo,
-                        ponderador_pct=meta_fuente.ponderador_pct,
-                        umbral_minimo_pct=meta_fuente.umbral_minimo_pct,
-                        maximo_computable_pct=meta_fuente.maximo_computable_pct,
-                        autor=meta_fuente.autor,
-                        vigente=True,
-                    )
-            else:
-                Meta.objects.update(vigente=False)
-            messages.success(request, f'El período {periodo.pk} quedó activo y sus metas quedaron vigentes.')
+            messages.success(request, f'El período {periodo.pk} quedó activo para todos los usuarios.')
     return redirect(request.POST.get('next') or 'admin_periodos_view')
 
 
@@ -795,85 +721,3 @@ def eliminar_usuario_permanente_view(request):
             )
             messages.success(request, 'Usuario eliminado permanentemente.')
     return redirect('admin_usuarios_view')
-
-
-def admin_resumen_view(request):
-    denied = _admin_access(request)
-    if denied:
-        return denied
-    periodo = Periodo.objects.filter(estado='abierto').order_by('-fecha_inicio').first()
-    actividades = Actividad.objects.filter(periodo=periodo)
-    atenciones = AtencionSocial.objects.filter(periodo=periodo)
-    compromisos = Compromiso.objects.filter(periodo=periodo)
-    tipo = request.GET.get('tipo', '').strip().lower()
-    estado = request.GET.get('estado', '').strip().lower()
-    texto = request.GET.get('q', '').strip()
-
-    actividades_filtradas = actividades.select_related('funcionario', 'item')
-    atenciones_filtradas = atenciones.select_related('persona', 'funcionario', 'catalogo_tipo', 'delegacion')
-    compromisos_filtrados = compromisos.select_related('persona', 'responsable', 'delegacion')
-
-    if texto:
-        actividades_filtradas = actividades_filtradas.filter(
-            Q(codigo_evidencia__icontains=texto) | Q(descripcion__icontains=texto) |
-            Q(accion__icontains=texto) | Q(funcionario__nombres__icontains=texto) |
-            Q(funcionario__apellidos__icontains=texto)
-        )
-        atenciones_filtradas = atenciones_filtradas.filter(
-            Q(descripcion__icontains=texto) | Q(solicitante__icontains=texto) |
-            Q(resultado__icontains=texto) | Q(persona__nombre__icontains=texto) |
-            Q(persona__referencia_anonima__icontains=texto)
-        )
-        compromisos_filtrados = compromisos_filtrados.filter(
-            Q(solicitante__icontains=texto) | Q(observacion__icontains=texto) |
-            Q(territorio__icontains=texto) | Q(persona__nombre__icontains=texto) |
-            Q(persona__referencia_anonima__icontains=texto)
-        )
-
-    if estado:
-        actividades_filtradas = actividades_filtradas.filter(estado=estado)
-        atenciones_filtradas = atenciones_filtradas
-        compromisos_filtrados = compromisos_filtrados.filter(estado=estado)
-
-    registros = []
-    if tipo in ('', 'actividad'):
-        for item in actividades_filtradas.order_by('-fecha_registro'):
-            registros.append({
-                'tipo': 'Actividad', 'fecha': item.fecha_actividad,
-                'codigo': item.codigo_evidencia,
-                'descripcion': item.descripcion,
-                'responsable': str(item.funcionario),
-                'estado': item.get_estado_display(),
-            })
-    if tipo in ('', 'atencion'):
-        for item in atenciones_filtradas.order_by('-fecha', '-pk'):
-            registros.append({
-                'tipo': 'Atención social', 'fecha': item.fecha,
-                'codigo': item.persona.referencia_anonima,
-                'descripcion': item.descripcion or item.solicitante,
-                'responsable': str(item.funcionario),
-                'estado': f'Gestión {item.orden_gestion}',
-            })
-    if tipo in ('', 'compromiso'):
-        for item in compromisos_filtrados.order_by('-fecha_registro'):
-            registros.append({
-                'tipo': 'Compromiso', 'fecha': item.fecha_comprometida,
-                'codigo': f'C-{item.pk}',
-                'descripcion': item.observacion or item.solicitante,
-                'responsable': str(item.responsable),
-                'estado': item.get_estado_display(),
-            })
-
-    registros.sort(key=lambda r: r['fecha'], reverse=True)
-
-    return render(request, 'admin_demo_app/resumen_administrativo.html', {
-        'registros': registros,
-        'periodo_actual': periodo,
-        'tipos': ['Actividad', 'Atención social', 'Compromiso'],
-        'estados': ['pendiente', 'en_correccion', 'validada', 'aprobada', 'realizado', 'inactivo'],
-        'filtros_activos': {
-            'tipo': tipo,
-            'estado': estado,
-            'q': texto,
-        },
-    })
