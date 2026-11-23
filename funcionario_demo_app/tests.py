@@ -1126,6 +1126,8 @@ class OrganizacionesJJVVCrudTests(TestCase):
         self.assertEqual(usuario.delegacion, delegacion)
         self.assertIsNone(usuario.cargo)
         self.assertFalse(usuario.roles.exists())
+        persona = PersonaUsuaria.objects.get(rut='OROC-002')
+        self.assertEqual(persona.nombre, 'María Soto')
 
     def test_create_search_update_and_delete_organization(self):
         delegacion_usuario = self.iniciar_sesion_organizaciones()

@@ -605,6 +605,29 @@ def buscar_personas_view(request):
     query = request.GET.get('q', '').strip()
     if len(query) < 2:
         return JsonResponse({'results': []})
+    usuarios_directiva = Usuario.objects.filter(
+        Q(organizaciones_presididas__isnull=False)
+        | Q(organizaciones_tesoreria__isnull=False)
+        | Q(organizaciones_secretaria__isnull=False)
+    ).filter(
+        Q(nombres__icontains=query)
+        | Q(apellidos__icontains=query)
+        | Q(identificador_inst__icontains=query)
+    ).distinct()[:20]
+    for usuario in usuarios_directiva:
+        rut = usuario.identificador_inst if len(usuario.identificador_inst) <= 12 else None
+        nombre = f'{usuario.nombres} {usuario.apellidos}'.strip()
+        ya_registrada = (
+            PersonaUsuaria.objects.filter(rut=rut).exists()
+            if rut
+            else PersonaUsuaria.objects.filter(nombre__iexact=nombre, rut__isnull=True).exists()
+        )
+        if ya_registrada:
+            continue
+        PersonaUsuaria.crear_con_referencia_incremental(
+            rut=rut,
+            nombre=nombre,
+        )
     personas = PersonaUsuaria.objects.filter(
         Q(nombre__icontains=query)
         | Q(rut__icontains=query)

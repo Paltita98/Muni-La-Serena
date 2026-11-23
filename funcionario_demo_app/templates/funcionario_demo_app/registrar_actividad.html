@@ -17,6 +17,7 @@
                 <div>
                     <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
                     {{ field }}
+                    {% if field.name == 'contacto_nombre' %}<div id="activity-contact-results" data-search-url="{% url 'buscar_personas_view' %}" class="mt-1 space-y-1" role="listbox" aria-label="Personas encontradas"></div>{% endif %}
                     {% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
                 </div>
             {% endfor %}
@@ -27,6 +28,44 @@
             </div>
         </form>
     </div>
+    <script>
+        (() => {
+            const nameInput = document.getElementById('id_contacto_nombre');
+            const phoneInput = document.getElementById('id_contacto_telefono');
+            const results = document.getElementById('activity-contact-results');
+            if (!nameInput || !results) return;
+            let timer;
+            nameInput.addEventListener('input', () => {
+                clearTimeout(timer);
+                results.replaceChildren();
+                const query = nameInput.value.trim();
+                if (query.length < 2) return;
+                timer = setTimeout(async () => {
+                    try {
+                        const response = await fetch(`${results.dataset.searchUrl}?q=${encodeURIComponent(query)}`, {
+                            headers: {'X-Requested-With': 'XMLHttpRequest'},
+                        });
+                        if (!response.ok) return;
+                        const data = await response.json();
+                        data.results.forEach((person) => {
+                            const option = document.createElement('button');
+                            option.type = 'button';
+                            option.className = 'block w-full rounded border border-gray-200 bg-white px-3 py-2 text-left text-sm hover:bg-gray-50';
+                            option.textContent = `${person.nombre} · ${person.rut || person.referencia}`;
+                            option.addEventListener('click', () => {
+                                nameInput.value = person.nombre;
+                                if (phoneInput) phoneInput.value = person.telefono || '';
+                                results.replaceChildren();
+                            });
+                            results.appendChild(option);
+                        });
+                    } catch {
+                        results.replaceChildren();
+                    }
+                }, 180);
+            });
+        })();
+    </script>
     {% include 'main/_sweetalerts.html' %}
 </body>
 </html>

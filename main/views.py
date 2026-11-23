@@ -30,6 +30,7 @@ from admin_demo_app.models import (
     Notificacion,
     OrganizacionJJVV,
     Periodo,
+    PersonaUsuaria,
     Usuario,
 )
 from funcionario_demo_app.forms import OrganizacionJJVVForm
@@ -288,6 +289,12 @@ def crear_usuario_directiva_view(request):
         estado='activo',
         delegacion=delegacion,
     )
+    rut_persona = rut if len(rut) <= 12 else None
+    if not rut_persona or not PersonaUsuaria.objects.filter(rut=rut_persona).exists():
+        PersonaUsuaria.crear_con_referencia_incremental(
+            rut=rut_persona,
+            nombre=f'{nombres} {apellidos}'.strip(),
+        )
     return JsonResponse({
         'id': usuario.pk,
         'nombre': f'{usuario.nombres} {usuario.apellidos}'.strip(),
