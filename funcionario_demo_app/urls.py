@@ -30,5 +30,9 @@ urlpatterns = [
     path('nuevo-compromiso/', views.nuevo_compromiso_view, name='nuevo_compromiso'),
     path('nuevo-compromiso/', views.nuevo_compromiso_view, name='nuevo_compromiso_view'),
     path('compromisos/<int:compromiso_id>/actualizar/', views.funcionario_compromiso_view, name='funcionario_compromiso_view'),
+    path('delegado/actividades/<int:actividad_id>/reasignar/', views.delegado_reasignar_actividad_view, name='delegado_reasignar_actividad_view'),
+    path('delegado/atencion-social/<int:atencion_id>/reasignar/', views.delegado_reasignar_atencion_view, name='delegado_reasignar_atencion_view'),
+    path('delegado/compromisos/<int:compromiso_id>/reasignar/', views.delegado_reasignar_compromiso_view, name='delegado_reasignar_compromiso_view'),
+    path('delegado/atencion-social/<int:atencion_id>/', views.delegado_atencion_detalle_view, name='delegado_atencion_detalle_view'),
 ]
 

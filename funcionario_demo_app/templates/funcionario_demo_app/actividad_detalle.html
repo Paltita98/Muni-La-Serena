@@ -4,110 +4,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SGR - Detalle de actividad</title>
+    <title>Gestionar actividad - SGR</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans page-shell">
-    <div class="flex h-screen overflow-hidden">
-        {% if not modal_view %}<aside class="sidebar w-64 shrink-0 text-white flex flex-col">
-            <div class="h-16 flex items-center px-4 border-b border-white/15">
-                <img src="{% static 'images/la_serena.png' %}" alt="La Serena" class="brand-logo">
+<body class="bg-gray-50 text-gray-800 page-shell">
+    <main class="min-h-screen max-w-6xl mx-auto px-4 py-8 md:px-8">
+        {% if messages %}
+            <div class="space-y-2 mb-5">
+                {% for message in messages %}<p class="rounded-lg px-4 py-3 text-sm bg-blue-50 text-blue-800">{{ message }}</p>{% endfor %}
             </div>
-            <nav class="flex-1 px-4 py-6 space-y-2">
-                <a href="{{ panel_url }}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
-                    <span>📊</span><span class="ml-3 font-medium">{% if is_delegado %}Panel Delegado{% else %}Mi Tablero{% endif %}</span>
-                </a>
-                <a href="{% url 'actividades_view' %}" aria-current="page" class="flex items-center px-4 py-3 bg-white/10 text-white rounded-lg">
-                    <span>📝</span><span class="ml-3 font-medium">Actividades</span>
-                </a>
-                <a href="{% url 'atenciones_sociales_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
-                    <span>🤝</span><span class="ml-3 font-medium">Atención Social</span>
-                </a>
-                <a href="{% url 'agenda_colectiva_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
-                    <span>📅</span><span class="ml-3 font-medium">Agenda Colectiva</span>
-                </a>
-                {% if not is_delegado %}
-                    <a href="{% url 'mis_evidencias_view' %}" class="flex items-center px-4 py-3 text-slate-200 hover:bg-white/10 rounded-lg transition">
-                        <span>📎</span><span class="ml-3 font-medium">Mis Evidencias</span>
-                    </a>
-                {% endif %}
-            </nav>
-            {% include 'main/_logout_button.html' %}
-        </aside>{% endif %}
-
-        <main class="min-w-0 flex-1 overflow-y-auto px-4 py-6 md:p-8">
-    <div class="max-w-4xl mx-auto space-y-6">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-sm text-gray-500">Actividad {{ actividad.codigo_evidencia }}</p>
-                <h1 class="text-2xl font-bold text-gray-900">{{ actividad.descripcion }}</h1>
-            </div>
-            <div class="flex items-center gap-4">
-                {% include 'main/_notification_bell.html' %}
-                <a href="{% url 'actividades_view' %}" class="text-blue-600 hover:underline">Volver a actividades</a>
-            </div>
-        </div>
-
-        <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><p class="text-xs text-gray-500">Fecha</p><p class="font-medium">{{ actividad.fecha_actividad|date:"d/m/Y" }}</p></div>
-            <div><p class="text-xs text-gray-500">Estado</p><p class="font-medium">{{ actividad.get_estado_display }}</p></div>
-            <div><p class="text-xs text-gray-500">Funcionario</p><p class="font-medium">{{ actividad.funcionario }}</p></div>
-            <div><p class="text-xs text-gray-500">Período</p><p class="font-medium">{{ actividad.periodo }}</p></div>
-            <div><p class="text-xs text-gray-500">Ítem</p><p class="font-medium">{{ actividad.item }}</p></div>
-            <div><p class="text-xs text-gray-500">Acción</p><p class="font-medium">{{ actividad.accion }}</p></div>
-            {% if actividad.contacto_nombre %}<div><p class="text-xs text-gray-500">Contacto</p><p class="font-medium">{{ actividad.contacto_nombre }}{% if actividad.contacto_telefono %} · {{ actividad.contacto_telefono }}{% endif %}</p></div>{% endif %}
-        </section>
-
-        {% if puede_adjuntar %}
-            <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                <h2 class="text-lg font-bold text-gray-900 mb-4">{% if puede_subir_evidencia %}Enviar o reenviar evidencia{% else %}Evidencia en revisión{% endif %}</h2>
-                {% if puede_subir_evidencia %}
-                <form method="post" enctype="multipart/form-data" class="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
-                    {% csrf_token %}
-                    <div class="flex-1 w-full">
-                        <label for="{{ form.archivo.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Archivo</label>
-                        {{ form.archivo }}
-                        {% for error in form.archivo.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
-                    </div>
-                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg">Enviar evidencia</button>
-                </form>
-                {% else %}
-                    <p class="text-sm text-gray-600">Espera la decisión del verificador. Si solicita correcciones, aquí podrás enviar una nueva versión.</p>
-                {% endif %}
-            </section>
         {% endif %}
 
-        <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h2 class="text-lg font-bold text-gray-900 mb-4">Evidencias incorporadas</h2>
-            <div class="space-y-3">
-                {% for evidencia in evidencias %}
-                    <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-                        <div>
-                            <a href="{% url 'evidencia_archivo_view' evidencia.id %}" class="text-blue-600 hover:underline">Descargar {{ evidencia.archivo.name }}</a>
-                            <p class="text-xs text-gray-500">{{ evidencia.formato|upper }} · {{ evidencia.tamanio_bytes }} bytes · {{ evidencia.fecha_carga|date:"d/m/Y H:i" }}</p>
-                        </div>
-                        {% if evidencia.es_imagen %}
-                            <button type="button" data-preview-src="{{ evidencia.url_previsualizacion }}" data-preview-alt="{{ actividad.descripcion }}" class="group shrink-0 overflow-hidden rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-700" aria-haspopup="dialog" aria-label="Ampliar evidencia de {{ actividad.codigo_evidencia }}">
-                                <img src="{{ evidencia.url_previsualizacion }}" alt="Miniatura de evidencia" loading="lazy" class="h-20 w-28 object-cover transition group-hover:scale-105">
-                            </button>
-                        {% endif %}
-                        <div class="text-right">
-                            <span class="text-xs px-2 py-1 rounded {% if evidencia.estado == 'aprobada' %}bg-green-100 text-green-800{% elif evidencia.estado == 'en_correccion' or evidencia.estado == 'rechazada' %}bg-red-100 text-red-800{% else %}bg-yellow-100 text-yellow-800{% endif %}">{{ evidencia.get_estado_display }}</span>
-                            {% with ultima_validacion=evidencia.validaciones.all.0 %}
-                                {% if ultima_validacion and ultima_validacion.observacion %}<p class="mt-2 max-w-md text-left text-sm text-red-800">{{ ultima_validacion.observacion }}</p>{% endif %}
-                            {% endwith %}
-                        </div>
-                    </div>
-                {% empty %}
-                    <p class="text-sm text-gray-500">Esta actividad todavía no tiene evidencias.</p>
-                {% endfor %}
+        <div class="flex items-center justify-between gap-4 mb-6">
+            <div>
+                <p class="text-xs text-gray-500">Actividad {{ actividad.codigo_evidencia }}</p>
+                <h1 class="mt-1 text-2xl font-bold text-gray-900">{% if is_delegado %}Gestionar actividad{% else %}Detalle de actividad{% endif %}</h1>
             </div>
-        </section>
-    </div>
-        </main>
-    </div>
-    {% include 'main/_image_preview_dialog.html' %}
+            <a href="{% if is_delegado %}{% url 'delegado_actividades_view' %}{% else %}{% url 'actividades_view' %}{% endif %}" class="text-sm font-semibold text-red-800 hover:text-red-700">Volver a actividades</a>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+            <section class="bg-white border border-gray-200 rounded-lg shadow-sm p-5 md:p-6 lg:col-span-3">
+                <h2 class="text-lg font-bold text-gray-900">Datos y asignación</h2>
+                <div class="mt-5 space-y-4">
+                    <div class="border-b border-gray-100 pb-4"><p class="block text-sm font-medium text-gray-700">Actividad</p><p class="mt-1 text-sm text-gray-900">{{ actividad.descripcion }}</p></div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="border-b border-gray-100 pb-4"><p class="block text-sm font-medium text-gray-700">Fecha</p><p class="mt-1 text-sm text-gray-900">{{ actividad.fecha_actividad|date:"d/m/Y" }}</p></div>
+                        <div class="border-b border-gray-100 pb-4"><p class="block text-sm font-medium text-gray-700">Estado</p><p class="mt-1"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium {% if actividad.estado == 'validada' %}bg-green-100 text-green-800{% elif actividad.estado == 'rechazada' or actividad.estado == 'en_correccion' %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-700{% endif %}">{{ actividad.get_estado_display }}</span></p></div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="border-b border-gray-100 pb-4"><p class="block text-sm font-medium text-gray-700">Funcionario</p><p class="mt-1 text-sm text-gray-900">{{ actividad.funcionario.nombres }} {{ actividad.funcionario.apellidos }}</p></div>
+                        <div class="border-b border-gray-100 pb-4"><p class="block text-sm font-medium text-gray-700">Período</p><p class="mt-1 text-sm text-gray-900">{{ actividad.periodo }}</p></div>
+                    </div>
+                    <div class="border-b border-gray-100 pb-4"><p class="block text-sm font-medium text-gray-700">Ítem</p><p class="mt-1 text-sm text-gray-900">{{ actividad.item }}</p></div>
+                    <div class="border-b border-gray-100 pb-4"><p class="block text-sm font-medium text-gray-700">Acción</p><p class="mt-1 text-sm text-gray-900">{{ actividad.accion }}</p></div>
+                    {% if actividad.contacto_nombre %}<div class="border-b border-gray-100 pb-4"><p class="block text-sm font-medium text-gray-700">Contacto</p><p class="mt-1 text-sm text-gray-900">{{ actividad.contacto_nombre }}{% if actividad.contacto_telefono %} · {{ actividad.contacto_telefono }}{% endif %}</p></div>{% endif %}
+                </div>
+
+                {% if puede_adjuntar %}
+                    <div class="mt-6 border-t border-gray-100 pt-5">
+                        <h3 class="text-base font-bold text-gray-900">{% if puede_subir_evidencia %}Enviar o reenviar evidencia{% else %}Evidencia en revisión{% endif %}</h3>
+                        {% if puede_subir_evidencia %}
+                            <form method="post" enctype="multipart/form-data" class="mt-4 flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+                                {% csrf_token %}
+                                <div class="flex-1 w-full"><label for="{{ form.archivo.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Archivo</label>{{ form.archivo }}{% for error in form.archivo.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}</div>
+                                <button type="submit" class="bg-red-700 hover:bg-red-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition">Enviar evidencia</button>
+                            </form>
+                        {% else %}<p class="text-sm text-gray-500 mt-3">Espera la decisión del verificador. Si solicita correcciones, aquí podrás enviar una nueva versión.</p>{% endif %}
+                    </div>
+                {% endif %}
+            </section>
+
+            <div class="space-y-6 lg:col-span-2 w-full min-w-0">
+                <section class="bg-white border border-gray-200 rounded-lg shadow-sm p-5 md:p-6">
+                    <h2 class="text-lg font-bold text-gray-900">Evidencias incorporadas</h2>
+                    <div class="mt-4 space-y-4">
+                        {% for evidencia in evidencias %}
+                            <div class="border-l-2 border-red-200 pl-4">
+                                <a href="{% url 'evidencia_archivo_view' evidencia.id %}" class="text-sm font-semibold text-red-800 hover:underline">Descargar {{ evidencia.archivo.name }}</a>
+                                <p class="text-xs text-gray-500 mt-1">{{ evidencia.formato|upper }} · {{ evidencia.tamanio_bytes }} bytes · {{ evidencia.fecha_carga|date:"d/m/Y H:i" }}</p>
+                                <span class="inline-flex mt-2 px-2 py-1 rounded text-xs {% if evidencia.estado == 'aprobada' %}bg-green-100 text-green-800{% elif evidencia.estado == 'en_correccion' or evidencia.estado == 'rechazada' %}bg-red-100 text-red-800{% else %}bg-yellow-100 text-yellow-800{% endif %}">{{ evidencia.get_estado_display }}</span>
+                                {% with ultima_validacion=evidencia.validaciones.all.0 %}{% if ultima_validacion and ultima_validacion.observacion %}<p class="mt-2 text-sm text-red-800">{{ ultima_validacion.observacion }}</p>{% endif %}{% endwith %}
+                            </div>
+                        {% empty %}<p class="text-sm text-gray-500">Esta actividad todavía no tiene evidencias.</p>{% endfor %}
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
     {% include 'main/_sweetalerts.html' %}
 </body>
 </html>

@@ -18,7 +18,7 @@
                     <p class="text-xs text-gray-500">Gestión territorial / Agenda Colectiva</p>
                     <h1 class="text-lg font-bold text-gray-900 mt-1">Compromisos de la delegación</h1>
                 </div>
-                <a href="{% url 'delegado_compromiso_nuevo_view' %}" class="inline-flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition">
+                <a href="{% url 'delegado_compromiso_nuevo_view' %}" class="inline-flex items-center gap-2 bg-red-700 hover:bg-red-800 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition">
                     <span aria-hidden="true">+</span> Asignar compromiso
                 </a>
             </header>
@@ -49,7 +49,18 @@
                                             <p class="font-semibold text-gray-900">{{ compromiso.observacion|default:compromiso.solicitante }}</p>
                                             <p class="mt-1 text-xs text-gray-500">Solicitante: {{ compromiso.solicitante }}</p>
                                         </td>
-                                        <td class="px-5 py-4 text-gray-700">{{ compromiso.responsable.nombres }} {{ compromiso.responsable.apellidos }}</td>
+                                        <td class="px-5 py-4 text-gray-700">
+                                            <form method="post" action="{% url 'delegado_reasignar_compromiso_view' compromiso.id %}">
+                                                {% csrf_token %}
+                                                <select name="responsable_id" aria-label="Cambiar responsable" class="max-w-48 rounded border border-gray-300 bg-white px-2 py-1.5 text-sm" onchange="this.form.submit()">
+                                                    {% for funcionario in equipo %}
+                                                        {% if funcionario.cargo_id == compromiso.responsable.cargo_id %}
+                                                            <option value="{{ funcionario.id }}" {% if funcionario.id == compromiso.responsable_id %}selected{% endif %}>{{ funcionario.nombres }} {{ funcionario.apellidos }}</option>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </select>
+                                            </form>
+                                        </td>
                                         <td class="px-5 py-4 text-gray-600">{{ compromiso.territorio|default:"Sin territorio" }}</td>
                                         <td class="px-5 py-4 text-gray-700">{{ compromiso.fecha_comprometida|date:"d/m/Y" }}</td>
                                         <td class="px-5 py-4">

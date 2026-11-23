@@ -2,14 +2,54 @@
 {% block title %}{{ page_title }}{% endblock %}
 {% block section_content %}
     <p class="text-sm text-gray-500">{{ actividades|length }} actividad{{ actividades|length|pluralize:"es" }} en la delegación.</p>
-    <section class="overflow-hidden rounded-lg border border-gray-200 bg-white">
+    <section class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full min-w-[700px] text-left text-sm">
-                <thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr><th class="px-5 py-3">Actividad</th><th class="px-5 py-3">Funcionario</th><th class="px-5 py-3">Ítem</th><th class="px-5 py-3">Fecha</th><th class="px-5 py-3">Estado</th></tr></thead>
-                <tbody class="divide-y divide-gray-100">
+            <table class="w-full min-w-[760px] text-left">
+                <thead>
+                    <tr class="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                        <th class="px-5 py-3 font-medium">Actividad</th>
+                        <th class="px-5 py-3 font-medium">Funcionario</th>
+                        <th class="px-5 py-3 font-medium">Ítem</th>
+                        <th class="px-5 py-3 font-medium">Fecha</th>
+                        <th class="px-5 py-3 font-medium">Estado</th>
+                        <th class="px-5 py-3 font-medium">Acción</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 text-sm">
                     {% for actividad in actividades %}
-                        <tr><td class="px-5 py-4"><a class="font-semibold text-red-800 hover:underline" href="{% url 'actividad_detalle_view' actividad.id %}">{{ actividad.descripcion }}</a><p class="mt-1 text-xs text-gray-500">{{ actividad.codigo_evidencia }}</p></td><td class="px-5 py-4">{{ actividad.funcionario.nombres }} {{ actividad.funcionario.apellidos }}</td><td class="px-5 py-4">{{ actividad.item.nombre }}</td><td class="px-5 py-4">{{ actividad.fecha_actividad|date:'d/m/Y' }}</td><td class="px-5 py-4">{{ actividad.get_estado_display }}</td></tr>
-                    {% empty %}<tr><td colspan="5" class="px-5 py-10 text-center text-gray-500">No hay actividades registradas para esta delegación.</td></tr>{% endfor %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-5 py-4">
+                                <p class="font-semibold text-gray-900">{{ actividad.descripcion }}</p>
+                                <p class="mt-1 text-xs text-gray-500">{{ actividad.codigo_evidencia }}</p>
+                            </td>
+                            <td class="px-5 py-4 text-gray-700">
+                                <form method="post" action="{% url 'delegado_reasignar_actividad_view' actividad.id %}">
+                                    {% csrf_token %}
+                                    <select name="funcionario_id" aria-label="Cambiar funcionario" class="max-w-48 rounded border border-gray-300 bg-white px-2 py-1.5 text-sm" onchange="this.form.submit()">
+                                        {% for funcionario in equipo %}
+                                            {% if funcionario.cargo_id == actividad.item.cargo_id %}
+                                                <option value="{{ funcionario.id }}" {% if funcionario.id == actividad.funcionario_id %}selected{% endif %}>{{ funcionario.nombres }} {{ funcionario.apellidos }}</option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                </form>
+                            </td>
+                            <td class="px-5 py-4 text-gray-600">{{ actividad.item.nombre }}</td>
+                            <td class="px-5 py-4 text-gray-700">{{ actividad.fecha_actividad|date:'d/m/Y' }}</td>
+                            <td class="px-5 py-4">
+                                <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium {% if actividad.estado == 'validada' %}bg-green-100 text-green-800{% elif actividad.estado == 'rechazada' or actividad.estado == 'en_correccion' %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-700{% endif %}">
+                                    {{ actividad.get_estado_display }}
+                                </span>
+                            </td>
+                            <td class="px-5 py-4">
+                                <a href="{% url 'actividad_detalle_view' actividad.id %}" class="font-semibold text-red-800 hover:text-red-700">Gestionar</a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="px-5 py-12 text-center text-gray-500">No hay actividades registradas para esta delegación.</td>
+                        </tr>
+                    {% endfor %}
                 </tbody>
             </table>
         </div>

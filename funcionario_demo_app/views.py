@@ -17,6 +17,7 @@ from main.backlog_filters import filter_by_local_dates
 from admin_demo_app.models import (
     AtencionSocial,
     Actividad,
+    Auditoria,
     CartaDelegacion,
     Compromiso,
     CompromisoEstadoHistorial,
@@ -74,7 +75,9 @@ def delegado_demo_view(request):
     fecha_actual = date.today()
     compromisos_pendientes = compromisos.exclude(estado='realizado')
     equipo = (
-        Usuario.objects.filter(delegacion=delegacion, estado='activo').order_by('apellidos', 'nombres')
+        Usuario.objects.filter(delegacion=delegacion, estado='activo')
+        .select_related('cargo')
+        .order_by('apellidos', 'nombres')
         if delegacion else Usuario.objects.none()
     )
     actividades = (
@@ -192,10 +195,17 @@ def delegado_actividades_view(request):
         .order_by('-fecha_actividad')
         if delegacion else Actividad.objects.none()
     )
+    equipo = (
+        Usuario.objects.filter(delegacion=delegacion, estado='activo')
+        .select_related('cargo')
+        .order_by('apellidos', 'nombres')
+        if delegacion else Usuario.objects.none()
+    )
     return render(request, 'funcionario_demo_app/delegado_actividades.html', {
         'delegado': delegado,
         'delegacion': delegacion,
         'actividades': actividades,
+        'equipo': equipo,
         'active_section': 'actividades',
         'page_title': 'Actividades de la delegación',
         'page_description': 'Consulta las actividades registradas por el equipo de tu delegación.',
@@ -214,10 +224,17 @@ def delegado_atenciones_view(request):
         .order_by('-fecha', '-id')
         if delegacion else AtencionSocial.objects.none()
     )
+    equipo = (
+        Usuario.objects.filter(delegacion=delegacion, estado='activo')
+        .select_related('cargo')
+        .order_by('apellidos', 'nombres')
+        if delegacion else Usuario.objects.none()
+    )
     return render(request, 'funcionario_demo_app/delegado_atenciones.html', {
         'delegado': delegado,
         'delegacion': delegacion,
         'atenciones': atenciones,
+        'equipo': equipo,
         'active_section': 'atenciones',
         'page_title': 'Atención Social',
         'page_description': 'Revisa las gestiones sociales registradas en tu delegación.',
@@ -257,10 +274,17 @@ def delegado_compromisos_view(request):
         .order_by('fecha_comprometida')
         if delegacion else Compromiso.objects.none()
     )
+    equipo = (
+        Usuario.objects.filter(delegacion=delegacion, estado='activo')
+        .select_related('cargo')
+        .order_by('apellidos', 'nombres')
+        if delegacion else Usuario.objects.none()
+    )
     return render(request, 'funcionario_demo_app/delegado_compromisos.html', {
         'delegado': delegado,
         'delegacion': delegacion,
         'compromisos': compromisos,
+        'equipo': equipo,
         'active_section': 'compromisos',
     })
 
@@ -602,6 +626,12 @@ def agenda_colectiva_view(request):
     if delegado:
         delegacion = _delegacion_del_delegado(delegado)
         compromisos = Compromiso.objects.filter(delegacion=delegacion, periodo=periodo) if delegacion and periodo else Compromiso.objects.none()
+        equipo = (
+            Usuario.objects.filter(delegacion=delegacion, estado='activo')
+            .select_related('cargo')
+            .order_by('apellidos', 'nombres')
+            if delegacion else Usuario.objects.none()
+        )
         panel_url = reverse('delegado_demo_view')
         is_delegado = True
     elif funcionario:
@@ -1227,3 +1257,147 @@ def _generar_codigo():
         codigo = f'ACT-{secrets.token_hex(4).upper()}'[:12]
         if not Actividad.objects.filter(codigo_evidencia=codigo).exists():
             return codigo
+
+
+def delegado_reasignar_actividad_view(request, actividad_id):
+    delegado = _delegado_actual(request)
+    delegacion = _delegacion_del_delegado(delegado) if delegado else None
+    if request.method != 'POST' or delegacion is None:
+        return HttpResponseForbidden('Acceso no autorizado.')
+
+    actividad = get_object_or_404(
+        Actividad.objects.select_related('funcionario', 'item', 'item__cargo'),
+        pk=actividad_id,
+        funcionario__delegacion=delegacion,
+    )
+    nuevo_id = request.POST.get('funcionario_id')
+    nuevo = Usuario.objects.filter(
+        pk=nuevo_id,
+        delegacion=delegacion,
+        estado='activo',
+        cargo_id=actividad.item.cargo_id,
+    ).first()
+    if nuevo is None:
+        return HttpResponseForbidden('El funcionario seleccionado no pertenece al mismo área.')
+
+    anterior_id = actividad.funcionario_id
+    if anterior_id != nuevo.pk:
+        with transaction.atomic():
+            actividad.funcionario = nuevo
+            actividad.save(update_fields=['funcionario'])
+            Auditoria.objects.create(
+                usuario=delegado,
+                accion='modificar',
+                entidad='Actividad',
+                id_entidad=actividad.pk,
+                valor_anterior={'funcionario_id': anterior_id},
+                valor_nuevo={'funcionario_id': nuevo.pk},
+            )
+        notificar(nuevo.pk, f'Se te asignó la actividad {actividad.codigo_evidencia}.', 'actividad', reverse('actividad_detalle_view', args=[actividad.pk]), delegado.pk)
+        messages.success(request, f'Actividad reasignada a {nuevo.nombres} {nuevo.apellidos}.')
+    return redirect('delegado_actividades_view')
+
+
+def delegado_reasignar_atencion_view(request, atencion_id):
+    delegado = _delegado_actual(request)
+    delegacion = _delegacion_del_delegado(delegado) if delegado else None
+    if request.method != 'POST' or delegacion is None:
+        return HttpResponseForbidden('Acceso no autorizado.')
+
+    atencion = get_object_or_404(
+        AtencionSocial.objects.select_related('funcionario'),
+        pk=atencion_id,
+        funcionario__delegacion=delegacion,
+    )
+    nuevo = Usuario.objects.filter(
+        pk=request.POST.get('funcionario_id'),
+        delegacion=delegacion,
+        estado='activo',
+        cargo_id=atencion.funcionario.cargo_id,
+    ).first()
+    if nuevo is None:
+        return HttpResponseForbidden('El funcionario seleccionado no pertenece a la delegación.')
+
+    anterior_id = atencion.funcionario_id
+    if anterior_id != nuevo.pk:
+        with transaction.atomic():
+            atencion.funcionario = nuevo
+            atencion.save(update_fields=['funcionario'])
+            Auditoria.objects.create(
+                usuario=delegado,
+                accion='modificar',
+                entidad='AtencionSocial',
+                id_entidad=atencion.pk,
+                valor_anterior={'funcionario_id': anterior_id},
+                valor_nuevo={'funcionario_id': nuevo.pk},
+            )
+        notificar(nuevo.pk, f'Se te asignó la atención social {atencion.persona.referencia_anonima}.', 'sistema', '/funcionario/atencion-social/', delegado.pk)
+        messages.success(request, f'Atención reasignada a {nuevo.nombres} {nuevo.apellidos}.')
+    return redirect('delegado_atenciones_view')
+
+
+def delegado_reasignar_compromiso_view(request, compromiso_id):
+    delegado = _delegado_actual(request)
+    delegacion = _delegacion_del_delegado(delegado) if delegado else None
+    if request.method != 'POST' or delegacion is None:
+        return HttpResponseForbidden('Acceso no autorizado.')
+
+    compromiso = get_object_or_404(
+        Compromiso.objects.select_related('responsable'),
+        pk=compromiso_id,
+        delegacion=delegacion,
+    )
+    nuevo = Usuario.objects.filter(
+        pk=request.POST.get('responsable_id'),
+        delegacion=delegacion,
+        estado='activo',
+        cargo_id=compromiso.responsable.cargo_id,
+    ).first()
+    if nuevo is None:
+        return HttpResponseForbidden('El funcionario seleccionado no pertenece a la delegación.')
+
+    anterior_id = compromiso.responsable_id
+    if anterior_id != nuevo.pk:
+        with transaction.atomic():
+            compromiso.responsable = nuevo
+            compromiso.save(update_fields=['responsable'])
+            _registrar_cambio_compromiso(
+                compromiso,
+                compromiso.estado,
+                delegado,
+                f'Reasignado desde el usuario {anterior_id} al usuario {nuevo.pk}.',
+                estado_anterior=compromiso.estado,
+            )
+            Auditoria.objects.create(
+                usuario=delegado,
+                accion='modificar',
+                entidad='Compromiso',
+                id_entidad=compromiso.pk,
+                valor_anterior={'responsable_id': anterior_id},
+                valor_nuevo={'responsable_id': nuevo.pk},
+            )
+        notificar(nuevo.pk, f'Se te asignó el compromiso de {compromiso.solicitante}.', 'compromiso', reverse('funcionario_compromiso_view', args=[compromiso.pk]), delegado.pk)
+        messages.success(request, f'Compromiso reasignado a {nuevo.nombres} {nuevo.apellidos}.')
+    return redirect('delegado_compromisos_view')
+
+
+def delegado_atencion_detalle_view(request, atencion_id):
+    delegado = _delegado_actual(request)
+    delegacion = _delegacion_del_delegado(delegado) if delegado else None
+    if delegacion is None:
+        return redirect('main:login_view')
+    atencion = get_object_or_404(
+        AtencionSocial.objects.select_related(
+            'persona', 'catalogo_tipo', 'catalogo_subtipo', 'delegacion', 'actividad', 'funcionario',
+        ),
+        pk=atencion_id,
+        funcionario__delegacion=delegacion,
+    )
+    equipo = Usuario.objects.filter(delegacion=delegacion, estado='activo', cargo_id=atencion.funcionario.cargo_id).select_related('cargo').order_by('apellidos', 'nombres')
+    return render(request, 'funcionario_demo_app/delegado_atencion_detalle.html', {
+        'delegado': delegado,
+        'delegacion': delegacion,
+        'atencion': atencion,
+        'equipo': equipo,
+        'active_section': 'atenciones',
+    })

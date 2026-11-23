@@ -169,7 +169,19 @@ def role_dashboard_view(request):
 def organizaciones_comunitarias_dashboard_view(request):
     if request.session.get('user_role') != 'ORGANIZACIONES_COMUNITARIAS':
         return redirect('main:login_view')
+
     organizaciones = OrganizacionJJVV.objects.order_by('-pk')
+    busqueda = request.GET.get('q', '').strip()
+    organizaciones_filtradas = organizaciones
+    if busqueda:
+        organizaciones_filtradas = organizaciones_filtradas.filter(
+            Q(organizaciones__icontains=busqueda)
+            | Q(domicilio_legal__icontains=busqueda)
+            | Q(territorio_deleg__icontains=busqueda)
+            | Q(n_reg_pj__icontains=busqueda)
+            | Q(reg_dir_n__icontains=busqueda)
+        )
+
     return render(request, 'main/organizaciones_comunitarias_dashboard.html', {
         'organizaciones_total': organizaciones.count(),
         'socios_activos_total': organizaciones.aggregate(total=Sum('socios_activos'))['total'] or 0,
@@ -177,6 +189,9 @@ def organizaciones_comunitarias_dashboard_view(request):
             territorio_deleg__isnull=True,
         ).exclude(territorio_deleg='').values('territorio_deleg').distinct().count(),
         'organizaciones_recientes': organizaciones[:5],
+        'organizaciones': organizaciones_filtradas.order_by('organizaciones'),
+        'busqueda': busqueda,
+        'panel_inicial': request.GET.get('panel', 'resumen'),
     })
 
 
@@ -719,7 +734,7 @@ def _coordinator_dashboard(request):
         ),
         'en_proceso': (
             commitment_state_counts.get('en_proceso', 0)
-            + activity_state_counts.get('en_correccion', 0)
+            + activity_state_counts.get('en_proceso', 0)
         ),
         'pendiente': (
             commitment_state_counts.get('pendiente', 0)

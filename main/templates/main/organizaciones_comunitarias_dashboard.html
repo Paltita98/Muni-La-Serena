@@ -17,7 +17,7 @@
             </div>
             <nav aria-label="Navegación de organizaciones comunitarias" class="flex-1 px-3 py-4 space-y-1">
                 <button type="button" data-dashboard-target="resumen" aria-controls="panel-resumen" aria-pressed="true" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition bg-red-900 text-white font-semibold">Resumen</button>
-                <a href="{% url 'main:organizaciones_jjvv_list_view' %}" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Registro OROC</a>
+                <button type="button" data-dashboard-target="registro" aria-controls="panel-registro" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Registro OROC</button>
                 <button type="button" data-dashboard-target="formacion" aria-controls="panel-formacion" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Asesoría y formación</button>
                 <button type="button" data-dashboard-target="territorio" aria-controls="panel-territorio" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Trabajo territorial</button>
                 <button type="button" data-dashboard-target="convocatorias" aria-controls="panel-convocatorias" aria-pressed="false" class="w-full text-left flex items-center px-3 py-2.5 rounded-lg transition text-red-100 hover:bg-red-800">Convocatorias</button>
@@ -37,7 +37,7 @@
             </header>
 
             <div class="p-4 sm:p-7 space-y-6 max-w-screen-2xl mx-auto">
-                <section id="panel-resumen" data-dashboard-panel="resumen" aria-labelledby="titulo-resumen" class="space-y-6">
+                <section id="panel-resumen" data-dashboard-panel="resumen" aria-labelledby="titulo-resumen" {% if panel_inicial != 'resumen' %}hidden{% endif %} class="space-y-6">
                     <div class="relative overflow-hidden bg-[#d61600] text-white rounded-md px-5 py-6 sm:px-8 sm:py-8">
                         <div class="absolute inset-y-0 right-0 w-1/3 opacity-20" aria-hidden="true" style="background-image: radial-gradient(circle at 2px 2px, #fecaca 1px, transparent 0); background-size: 18px 18px;"></div>
                         <div class="relative max-w-3xl">
@@ -53,7 +53,7 @@
                         <article class="bg-white border border-gray-200 border-t-4 border-t-sky-700 rounded-md p-4 sm:p-5"><p class="text-sm font-medium text-gray-600">Territorios representados</p><p class="mt-3 text-3xl font-bold text-gray-900">{{ territorios_total }}</p><p class="mt-1 text-xs text-gray-500">Con organizaciones registradas</p></article>
                     </section>
                     <section class="bg-white border border-gray-200 rounded-md overflow-hidden">
-                        <div class="px-4 py-3 border-b border-gray-100 flex flex-wrap justify-between items-center gap-2"><div><h2 class="text-sm font-bold text-gray-900">Organizaciones recientes</h2><p class="text-xs text-gray-500 mt-1">{{ organizaciones_total }} en el registro</p></div><a href="{% url 'main:organizaciones_jjvv_list_view' %}" class="text-sm font-semibold text-red-800 hover:text-red-950">Ver registro</a></div>
+                        <div class="px-4 py-3 border-b border-gray-100 flex flex-wrap justify-between items-center gap-2"><div><h2 class="text-sm font-bold text-gray-900">Organizaciones recientes</h2><p class="text-xs text-gray-500 mt-1">{{ organizaciones_total }} en el registro</p></div><button type="button" data-dashboard-target="registro" class="text-sm font-semibold text-red-800 hover:text-red-950">Ver registro</button></div>
                         <div class="divide-y divide-gray-100">
                             {% for organizacion in organizaciones_recientes %}<div class="px-4 py-3 flex flex-wrap justify-between items-center gap-2"><div class="min-w-0"><p class="text-sm font-semibold text-gray-900 truncate">{{ organizacion.organizaciones }}</p><p class="text-xs text-gray-500 mt-1">{{ organizacion.territorio_deleg|default:"Territorio no indicado" }} · {{ organizacion.socios_activos|default:"0" }} socios</p></div><a href="{% url 'main:editar_organizacion_jjvv_view' organizacion.pk %}" class="text-xs font-semibold text-red-800 hover:text-red-950">Editar</a></div>
                             {% empty %}<div class="px-4 py-5 text-sm text-gray-500">Todavía no hay organizaciones registradas. <a class="font-semibold text-red-800" href="{% url 'main:nueva_organizacion_jjvv_view' %}">Agregar la primera</a>.</div>{% endfor %}
@@ -62,8 +62,37 @@
                 </section>
 
                 <section id="panel-registro" data-dashboard-panel="registro" aria-labelledby="titulo-registro" hidden class="bg-white border border-gray-200 rounded-md overflow-hidden">
-                    <div class="px-5 py-4 border-b border-gray-100 flex flex-wrap justify-between items-center gap-3"><div><h1 id="titulo-registro" class="text-xl font-bold text-gray-900">Registro OROC</h1><p class="mt-1 text-sm text-gray-500">Registro, vigencia y cierre responsable de organizaciones comunitarias.</p></div><a href="{% url 'main:organizaciones_jjvv_list_view' %}" class="inline-flex items-center rounded-md bg-red-800 px-4 py-2 text-sm font-semibold text-white hover:bg-red-900">Abrir registro</a></div>
-                    <div class="divide-y divide-gray-100"><div class="flex gap-4 p-4"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-50 text-sm font-bold text-red-900">01</span><div><h2 class="text-sm font-semibold text-gray-900">Constitución y legalización</h2><p class="mt-1 text-sm text-gray-600">Orientación para crear nuevas organizaciones y completar sus procesos.</p></div></div><div class="flex gap-4 p-4"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-50 text-sm font-bold text-amber-900">02</span><div><h2 class="text-sm font-semibold text-gray-900">Mantención de vigencia</h2><p class="mt-1 text-sm text-gray-600">Acompañamiento a dirigentes para mantener actualizada la organización.</p></div></div><div class="flex gap-4 p-4"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sm font-bold text-sky-900">03</span><div><h2 class="text-sm font-semibold text-gray-900">Cierre de organizaciones inactivas</h2><p class="mt-1 text-sm text-gray-600">Asesoría en los pasos administrativos para regularizar su situación.</p></div></div></div>
+                    <div class="px-5 py-4 border-b border-gray-100 flex flex-wrap justify-between items-center gap-3">
+                        <div><h1 id="titulo-registro" class="text-xl font-bold text-gray-900">Registro OROC</h1><p class="mt-1 text-sm text-gray-500">Organizaciones comunitarias incorporadas al registro.</p></div>
+                        <a href="{% url 'main:nueva_organizacion_jjvv_view' %}" class="inline-flex items-center rounded-md bg-red-800 px-4 py-2 text-sm font-semibold text-white hover:bg-red-900">Nueva organización</a>
+                    </div>
+                    <form method="get" class="flex gap-2 border-b border-gray-100 p-4">
+                        <input type="hidden" name="panel" value="registro">
+                        <label for="q" class="sr-only">Buscar organizaciones</label>
+                        <input id="q" name="q" value="{{ busqueda }}" type="search" placeholder="Buscar organización, territorio o registro..." class="min-w-0 flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm">
+                        <button type="submit" class="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Buscar</button>
+                        {% if busqueda %}<a href="{% url 'main:organizaciones_comunitarias_dashboard_view' %}?panel=registro" class="px-3 py-2 text-sm font-medium text-gray-600">Limpiar</a>{% endif %}
+                    </form>
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[900px] text-left">
+                            <thead><tr class="bg-gray-50 text-xs uppercase text-gray-500"><th class="px-4 py-3">Organización</th><th class="px-4 py-3">Presidente</th><th class="px-4 py-3">Territorio</th><th class="px-4 py-3">Socios</th><th class="px-4 py-3">Constitución</th><th class="px-4 py-3">Registro PJ</th><th class="px-4 py-3">Acción</th></tr></thead>
+                            <tbody class="divide-y divide-gray-100 text-sm">
+                                {% for organizacion in organizaciones %}
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-4 py-4"><p class="font-semibold text-gray-900">{{ organizacion.organizaciones }}</p><p class="mt-1 text-xs text-gray-500">{{ organizacion.domicilio_legal|default:"Sin domicilio indicado" }}</p></td>
+                                        <td class="px-4 py-4 text-gray-700">{{ organizacion.presidente_n|default:"-" }}</td>
+                                        <td class="px-4 py-4 text-gray-700">{{ organizacion.territorio_deleg|default:"-" }}</td>
+                                        <td class="px-4 py-4 text-gray-700">{{ organizacion.socios_activos|default:"-" }}</td>
+                                        <td class="px-4 py-4 text-gray-700">{{ organizacion.fecha_constitucion|date:"d/m/Y"|default:"-" }}</td>
+                                        <td class="px-4 py-4 text-gray-700">{{ organizacion.n_reg_pj|default:"-" }}</td>
+                                        <td class="px-4 py-4"><a href="{% url 'main:editar_organizacion_jjvv_view' organizacion.pk %}" class="font-semibold text-red-800 hover:text-red-950">Editar</a></td>
+                                    </tr>
+                                {% empty %}
+                                    <tr><td colspan="7" class="px-4 py-12 text-center text-sm text-gray-500">{% if busqueda %}No se encontraron organizaciones.{% else %}Aún no hay organizaciones registradas.{% endif %}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </section>
 
                 <section id="panel-formacion" data-dashboard-panel="formacion" aria-labelledby="titulo-formacion" hidden class="bg-white border border-gray-200 rounded-md">
@@ -97,22 +126,31 @@
         const dashboardButtons = document.querySelectorAll('[data-dashboard-target]');
         const dashboardPanels = document.querySelectorAll('[data-dashboard-panel]');
 
-        dashboardButtons.forEach((button) => {
-            button.addEventListener('click', () => {
-                const target = button.dataset.dashboardTarget;
-                dashboardButtons.forEach((item) => {
-                    const selected = item === button;
-                    item.setAttribute('aria-pressed', String(selected));
-                    item.classList.toggle('bg-red-900', selected);
-                    item.classList.toggle('font-semibold', selected);
-                    item.classList.toggle('text-white', selected);
-                    item.classList.toggle('text-red-100', !selected);
-                });
-                dashboardPanels.forEach((panel) => {
-                    panel.hidden = panel.dataset.dashboardPanel !== target;
-                });
+        const activateDashboardPanel = (target, updateUrl = false) => {
+            dashboardButtons.forEach((item) => {
+                const selected = item.dataset.dashboardTarget === target;
+                item.setAttribute('aria-pressed', String(selected));
+                item.classList.toggle('bg-red-900', selected);
+                item.classList.toggle('font-semibold', selected);
+                item.classList.toggle('text-white', selected);
+                item.classList.toggle('text-red-100', !selected);
             });
+            dashboardPanels.forEach((panel) => {
+                panel.hidden = panel.dataset.dashboardPanel !== target;
+            });
+            if (updateUrl) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('panel', target);
+                url.searchParams.delete('q');
+                window.history.replaceState({}, '', url);
+            }
+        };
+
+        dashboardButtons.forEach((button) => {
+            button.addEventListener('click', () => activateDashboardPanel(button.dataset.dashboardTarget, true));
         });
+
+        activateDashboardPanel('{{ panel_inicial|default:"resumen"|escapejs }}');
     </script>
     {% include 'main/_sweetalerts.html' %}
 </body>
