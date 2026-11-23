@@ -4,16 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro OROC - Organizaciones Comunitarias</title>
+    <title>{% if es_coordinador %}Coordinación - Organizaciones Comunitarias{% else %}Registro OROC - Organizaciones Comunitarias{% endif %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
 <body class="page-shell bg-gray-50 text-gray-800">
     <div class="flex h-screen overflow-hidden">
-        {% include 'main/_oroc_sidebar.html' with active_page='registro' %}
+        {% if es_coordinador %}
+            {% include 'main/_sidebar_coordinador.html' %}
+        {% else %}
+            {% include 'main/_oroc_sidebar.html' with active_page='registro' %}
+        {% endif %}
         <main class="flex-1 min-w-0 overflow-y-auto">
             <header class="sticky top-0 z-10 min-h-16 bg-white border-b border-gray-200 flex items-center gap-4 px-4 sm:px-7 py-3">
-                <div><p class="text-xs text-gray-500">OROC <span class="mx-1">/</span> Organizaciones</p><p class="mt-1 text-sm font-semibold text-gray-900">Registro de organizaciones comunitarias</p></div>
+                <div><p class="text-xs text-gray-500">{% if es_coordinador %}Coordinación{% else %}OROC{% endif %} <span class="mx-1">/</span> Organizaciones</p><p class="mt-1 text-sm font-semibold text-gray-900">Registro de organizaciones comunitarias</p></div>
                 <div class="ml-auto shrink-0">{% include 'main/_notification_bell.html' %}</div>
             </header>
             <div class="p-4 sm:p-7 max-w-screen-2xl mx-auto space-y-5">
